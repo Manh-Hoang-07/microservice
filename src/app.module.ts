@@ -1,0 +1,124 @@
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+
+// Core Technical Modules (Infrastructure)
+import { CoreModule } from '@/core/core.module';
+import { CommonModule } from '@/common/common.module';
+import { CustomLoggerService } from '@/core/logger/logger.service';
+
+// Filter, Interceptors, Guards
+import { HttpExceptionFilter, QueryFailedFilter } from '@/common/http/filters';
+import {
+  TransformInterceptor,
+  LoggingInterceptor,
+  TimeoutInterceptor,
+  PublicHttpCacheInterceptor,
+} from '@/common/http/interceptors';
+import { FilePathInterceptor } from '@/common/file/interceptors';
+import { SecurityGuard } from '@/common/auth/guards';
+import {
+  RequestContextMiddleware,
+  GroupContextMiddleware,
+} from '@/common/http/middlewares';
+import { RateLimitModule } from '@/core/security/throttler.module';
+
+// Auth abstraction
+import {
+  AUTHORIZATION_SERVICE,
+} from '@/common/auth/interfaces/authorization.interface';
+import { LocalAuthorizationService } from '@/common/auth/services/local-authorization.service';
+import { DistributedAuthorizationService } from '@/common/auth/services/distributed-authorization.service';
+import { JwksService } from '@/common/auth/services/jwks.service';
+import { TokenBlacklistService } from '@/core/security/token-blacklist.service';
+import { RbacService } from '@/modules/system/rbac/services/rbac.service';
+import { RbacAuthorizationOrchestrator } from '@/modules/system/rbac/services/rbac-authorization.orchestrator';
+
+// Kafka & Health
+import { KafkaModule } from '@/kafka/kafka.module';
+import { HealthModule } from '@/health/health.module';
+
+// Business Logic Aggregate Modules
+import { SystemModule } from '@/modules/system/system.module';
+import { IntroductionModule } from '@/modules/introduction/introduction.module';
+
+// Other Domain Modules
+import { PostModule } from '@/modules/post/post.module';
+import { EnumModule } from '@/shared/enums';
+import { FileUploadModule } from '@/modules/storage/file-upload/file-upload.module';
+import { MarketingModule } from '@/modules/marketing/marketing.module';
+import { AppMailModule } from '@/core/mail/mail.module';
+import { HomepageModule } from '@/modules/homepage/homepage.module';
+import { ComicsModule } from '@/modules/comics/comic.module';
+
+@Module({
+  imports: [
+    CoreModule,
+    CommonModule,
+    KafkaModule,
+    ScheduleModule.forRoot(),
+    RateLimitModule,
+
+    // Business Logic Modules
+    SystemModule,
+    IntroductionModule,
+
+    // Remaining Independent Modules
+    PostModule,
+    MarketingModule,
+    EnumModule,
+    FileUploadModule,
+    AppMailModule,
+    HomepageModule,
+    ComicsModule,
+
+    // Infrastructure
+    HealthModule,
+  ],
+  controllers: [],
+  providers: [
+    CustomLoggerService,
+
+    // Authorization service — toggle via AUTH_MODE env
+    JwksService,
+    {
+      provide: AUTHORIZATION_SERVICE,
+      useFactory: (
+        tokenBlacklist: TokenBlacklistService,
+        rbac: RbacService,
+        rbacAuthz: RbacAuthorizationOrchestrator,
+        config: ConfigService,
+      ) => {
+        const mode = config.get<string>('AUTH_MODE', 'local');
+        if (mode === 'distributed') {
+          return new DistributedAuthorizationService(config);
+        }
+        return new LocalAuthorizationService(tokenBlacklist, rbac, rbacAuthz);
+      },
+      inject: [
+        TokenBlacklistService,
+        RbacService,
+        RbacAuthorizationOrchestrator,
+        ConfigService,
+      ],
+    },
+
+    // HTTP
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    { provide: APP_FILTER, useClass: QueryFailedFilter },
+    { provide: APP_INTERCEPTOR, useClass: PublicHttpCacheInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: FilePathInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
+    { provide: APP_GUARD, useClass: SecurityGuard },
+  ],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(RequestContextMiddleware, GroupContextMiddleware)
+      .forRoutes('*path');
+  }
+}

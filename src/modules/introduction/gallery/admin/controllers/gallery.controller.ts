@@ -1,0 +1,60 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
+  Query,
+  ValidationPipe,
+} from '@nestjs/common';
+import { GalleryService } from '@/modules/introduction/gallery/admin/services/gallery.service';
+import { CreateGalleryDto } from '@/modules/introduction/gallery/admin/dtos/create-gallery.dto';
+import { UpdateGalleryDto } from '@/modules/introduction/gallery/admin/dtos/update-gallery.dto';
+import { LogRequest } from '@/common/shared/decorators';
+import { Permission } from '@/common/auth/decorators';
+@Controller('admin/gallery')
+export class GalleryController {
+  constructor(private readonly galleryService: GalleryService) {}
+
+  @LogRequest()
+  @Post()
+  @Permission('gallery.manage')
+  create(@Body(ValidationPipe) createGalleryDto: CreateGalleryDto) {
+    return this.galleryService.create(createGalleryDto);
+  }
+
+  @Get()
+  @Permission('gallery.manage')
+  findAll(@Query(ValidationPipe) query: any) {
+    return this.galleryService.getList(query);
+  }
+
+  @Get('simple')
+  @Permission('gallery.manage')
+  getSimpleList(@Query(ValidationPipe) query: any) {
+    return this.galleryService.getSimpleList(query);
+  }
+
+  @Get(':id')
+  @Permission('gallery.manage')
+  findOne(@Param('id') id: string) {
+    return this.galleryService.getOne(id);
+  }
+
+  @Put(':id')
+  @Permission('gallery.manage')
+  update(
+    @Param('id') id: string,
+    @Body(ValidationPipe) updateGalleryDto: UpdateGalleryDto,
+  ) {
+    return this.galleryService.update(id, updateGalleryDto);
+  }
+
+  @Delete(':id')
+  @Permission('gallery.manage')
+  remove(@Param('id') id: string) {
+    return this.galleryService.delete(id);
+  }
+}
