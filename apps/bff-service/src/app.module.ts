@@ -15,7 +15,7 @@ import { BffSearchModule } from './search/search.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['../../.env', '../../.env.docker'],
+      envFilePath: ['.env', '.env.local'],
       load: [bffConfig],
       validationSchema: Joi.object({
         PORT: Joi.number().port().default(3006),

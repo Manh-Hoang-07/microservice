@@ -63,7 +63,10 @@
       "Bash(npx tsc *)",
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
       "Bash(grep -E \"\\\\.ts$\")",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e ' *)",
+      "Bash(grep -v \"^\\\\\\\\.\\\\\\\\./\\\\|^'\\\\\\\\./\")"
     ]
   }
 }

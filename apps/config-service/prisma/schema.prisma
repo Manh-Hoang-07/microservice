@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// System - Config
+// ============================================
+
+model GeneralConfig {
+  id                    BigInt   @id @default(autoincrement())
+  site_name             String   @db.VarChar(255)
+  site_description      String?  @db.Text
+  site_logo             String?  @db.VarChar(500)
+  site_favicon          String?  @db.VarChar(500)
+  site_email            String?  @db.VarChar(255)
+  site_phone            String?  @db.VarChar(20)
+  site_address          String?  @db.Text
+  site_country_id       BigInt?
+  site_province_id      BigInt?
+  site_ward_id          BigInt?
+  site_copyright        String?  @db.VarChar(255)
+  timezone              String   @default("Asia/Ho_Chi_Minh") @db.VarChar(50)
+  locale                String   @default("vi") @db.VarChar(10)
+  currency              String   @default("VND") @db.VarChar(10)
+  contact_channels      Json?
+  meta_title            String?  @db.VarChar(255)
+  meta_keywords         String?  @db.Text
+  og_title              String?  @db.VarChar(255)
+  og_description        String?  @db.Text
+  og_image              String?  @db.VarChar(500)
+  canonical_url         String?  @db.VarChar(500)
+  google_analytics_id   String?  @db.VarChar(50)
+  google_search_console String?  @db.VarChar(255)
+  facebook_pixel_id     String?  @db.VarChar(50)
+  twitter_site          String?  @db.VarChar(50)
+  created_user_id       BigInt?
+  updated_user_id       BigInt?
+  created_at            DateTime @default(now()) @db.Timestamp(0)
+  updated_at            DateTime @updatedAt @db.Timestamp(0)
+
+  @@map("general_configs")
+}
+
+model EmailConfig {
+  id              BigInt   @id @default(autoincrement())
+  smtp_host       String   @db.VarChar(255)
+  smtp_port       Int      @default(587)
+  smtp_secure     Boolean  @default(true)
+  smtp_username   String   @db.VarChar(255)
+  smtp_password   String   @db.VarChar(500)
+  from_email      String   @db.VarChar(255)
+  from_name       String   @db.VarChar(255)
+  reply_to_email  String?  @db.VarChar(255)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+
+  @@map("email_configs")
+}
+
+// ============================================
+// Menu
+// ============================================
+
+model Menu {
+  id                       BigInt   @id @default(autoincrement())
+  code                     String   @unique @db.VarChar(120)
+  name                     String   @db.VarChar(150)
+  path                     String?  @db.VarChar(255)
+  api_path                 String?  @db.VarChar(255)
+  icon                     String?  @db.VarChar(120)
+  type                     String   @default("route") @db.VarChar(30)
+  status                   String   @default("active") @db.VarChar(30)
+  parent_id                BigInt?
+  sort_order               Int      @default(0)
+  is_public                Boolean  @default(false)
+  show_in_menu             Boolean  @default(true)
+  group                    String   @default("admin") @db.VarChar(50)
+  required_permission_code String?  @db.VarChar(120)
+  created_user_id          BigInt?
+  updated_user_id          BigInt?
+  created_at               DateTime @default(now()) @db.Timestamp(0)
+  updated_at               DateTime @updatedAt @db.Timestamp(0)
+
+  parent   Menu?  @relation("MenuHierarchy", fields: [parent_id], references: [id], onDelete: SetNull)
+  children Menu[] @relation("MenuHierarchy")
+
+  @@index([code], map: "menus_idx_code")
+  @@index([parent_id], map: "menus_idx_parent_id")
+  @@index([status, show_in_menu], map: "menus_idx_status_show_in_menu")
+  @@index([group], map: "menus_idx_group")
+  @@map("menus")
+}
+
+// ============================================
+// Location
+// ============================================
+
+model Country {
+  id              BigInt   @id @default(autoincrement())
+  code            String   @unique @db.VarChar(10)
+  code_alpha3     String?  @db.VarChar(10)
+  name            String   @db.VarChar(255)
+  official_name   String?  @db.VarChar(255)
+  phone_code      String?  @db.VarChar(20)
+  currency_code   String?  @db.VarChar(20)
+  flag_emoji      String?  @db.VarChar(20)
+  status          String   @default("active") @db.VarChar(30)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+
+  provinces Province[]
+
+  @@index([status], map: "countries_idx_countries_status")
+  @@map("countries")
+}
+
+model Province {
+  id              BigInt   @id @default(autoincrement())
+  code            String   @unique @db.VarChar(20)
+  name            String   @db.VarChar(255)
+  type            String   @db.VarChar(50)
+  phone_code      String?  @db.VarChar(20)
+  country_id      BigInt
+  status          String   @default("active") @db.VarChar(30)
+  note            String?  @db.Text
+  code_bnv        String?  @db.VarChar(20)
+  code_tms        String?  @db.VarChar(20)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+
+  country Country @relation(fields: [country_id], references: [id], onDelete: Restrict)
+  wards   Ward[]
+
+  @@index([country_id], map: "provinces_idx_provinces_country_id")
+  @@index([status], map: "provinces_idx_provinces_status")
+  @@map("provinces")
+}
+
+model Ward {
+  id              BigInt   @id @default(autoincrement())
+  province_id     BigInt
+  name            String   @db.VarChar(255)
+  type            String   @db.VarChar(50)
+  code            String   @db.VarChar(20)
+  status          String   @default("active") @db.VarChar(30)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+
+  province Province @relation(fields: [province_id], references: [id], onDelete: Cascade)
+
+  @@index([province_id], map: "wards_idx_wards_province_id")
+  @@index([code], map: "wards_idx_wards_code")
+  @@index([status], map: "wards_idx_wards_status")
+  @@index([province_id, status], map: "wards_idx_wards_province_status")
+  @@map("wards")
+}

@@ -1,10 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { PUBLIC } from '@auth-client/jwt-local.guard';
-import { SetMetadata } from '@nestjs/common';
-
-const PERMS_KEY = 'perms_required';
-const Public = () => SetMetadata(PERMS_KEY, [PUBLIC]);
+import { Public } from '../common/permission.decorator';
 
 @ApiTags('Health')
 @Controller('health')
