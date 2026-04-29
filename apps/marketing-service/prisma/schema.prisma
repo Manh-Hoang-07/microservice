@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum ContactStatus {
@@ -15,8 +14,8 @@ enum ContactStatus {
 }
 
 enum BannerLinkTarget {
-  _self  @map("_self")
-  _blank @map("_blank")
+  SELF  @map("_self")
+  BLANK @map("_blank")
 }
 
 model BannerLocation {
@@ -42,7 +41,7 @@ model Banner {
   image        String?          @db.VarChar(500)
   mobile_image String?          @db.VarChar(500)
   link         String?          @db.VarChar(500)
-  link_target  BannerLinkTarget @default(_self)
+  link_target  BannerLinkTarget @default(SELF)
   description  String?          @db.Text
   button_text  String?          @db.VarChar(100)
   button_color String?          @db.VarChar(50)

@@ -1,3 +1,5 @@
+/// <reference types="multer" />
+
 export interface UploadResult {
   path: string;
   url: string;

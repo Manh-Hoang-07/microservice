@@ -9,6 +9,16 @@
     "apps/*"
   ],
   "scripts": {
+    "build:auth": "npm -w apps/auth-service run build",
+    "build:bff": "npm -w apps/bff-service run build",
+    "build:comic": "npm -w apps/comic-service run build",
+    "build:config": "npm -w apps/config-service run build",
+    "build:intro": "npm -w apps/introduction-service run build",
+    "build:marketing": "npm -w apps/marketing-service run build",
+    "build:notif": "npm -w apps/notification-service run build",
+    "build:post": "npm -w apps/post-service run build",
+    "build:storage": "npm -w apps/storage-service run build",
+    "build": "npm run build:auth && npm run build:bff && npm run build:comic && npm run build:config && npm run build:intro && npm run build:marketing && npm run build:notif && npm run build:post && npm run build:storage",
     "start:auth": "npm -w apps/auth-service run start",
     "start:storage": "npm -w apps/storage-service run start",
     "start:config": "npm -w apps/config-service run start",

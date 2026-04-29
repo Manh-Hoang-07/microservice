@@ -5,8 +5,8 @@ import * as jose from 'jose';
 @Injectable()
 export class JwksService implements OnModuleInit {
   private readonly logger = new Logger(JwksService.name);
-  private privateKey: jose.KeyLike | null = null;
-  private publicKey: jose.KeyLike | null = null;
+  private privateKey: CryptoKey | null = null;
+  private publicKey: CryptoKey | null = null;
   private kid = 'auth-key-1';
 
   constructor(private readonly config: ConfigService) {}
@@ -33,11 +33,11 @@ export class JwksService implements OnModuleInit {
     return this.publicKey !== null;
   }
 
-  getPrivateKey(): jose.KeyLike {
+  getPrivateKey(): CryptoKey {
     return this.privateKey!;
   }
 
-  async getPublicKey(): Promise<jose.KeyLike> {
+  async getPublicKey(): Promise<CryptoKey> {
     return this.publicKey!;
   }
 

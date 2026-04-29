@@ -4,8 +4,10 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  GetObjectCommandOutput,
   DeleteObjectCommand,
   HeadObjectCommand,
+  HeadObjectCommandOutput,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import * as path from 'path';
@@ -110,7 +112,7 @@ export class S3StorageStrategy implements IUploadStrategy {
       Key: filename,
     });
 
-    let result: Awaited<ReturnType<typeof this.s3Client.send<GetObjectCommand>>>;
+    let result: GetObjectCommandOutput;
     try {
       result = await this.s3Client.send(command);
     } catch (error: any) {
@@ -187,7 +189,7 @@ export class S3StorageStrategy implements IUploadStrategy {
       Bucket: this.bucket,
       Key: filename,
     });
-    let result: Awaited<ReturnType<typeof this.s3Client.send<HeadObjectCommand>>>;
+    let result: HeadObjectCommandOutput;
     try {
       result = await this.s3Client.send(command);
     } catch (error: any) {

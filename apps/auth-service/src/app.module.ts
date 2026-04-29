@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -15,7 +15,7 @@ import { DatabaseModule } from './database/database.module';
 import { SecurityModule } from './security/security.module';
 import { JwksModule } from './jwks/jwks.module';
 import { JwksService } from './jwks/services/jwks.service';
-import { JwtGuard } from '@package/common';
+import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { HealthModule } from './health/health.module';
@@ -69,9 +69,9 @@ import { KafkaModule } from './kafka/kafka.module';
   providers: [
     {
       provide: APP_GUARD,
-      useFactory: (reflector: Reflector, jwksService: JwksService) =>
-        new JwtGuard(reflector, jwksService),
-      inject: [Reflector, JwksService],
+      useFactory: (reflector: Reflector, config: ConfigService, jwksService: JwksService) =>
+        new AuthJwtGuard(reflector, config, jwksService),
+      inject: [Reflector, ConfigService, JwksService],
     },
   ],
 })

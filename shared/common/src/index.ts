@@ -1,5 +1,5 @@
 // Decorators
-export { Permission, Public, PERMS_KEY } from './decorators/permission.decorator';
+export { Permission, Public, Internal, PERMS_KEY } from './decorators/permission.decorator';
 
 // Guards
 export { JwtGuard } from './guards/jwt.guard';
