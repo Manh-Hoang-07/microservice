@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminPostTagService } from '../services/post-tag.service';
 import { CreatePostTagDto } from '../dtos/create-post-tag.dto';
 import { UpdatePostTagDto } from '../dtos/update-post-tag.dto';

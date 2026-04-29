@@ -10,7 +10,7 @@ import {
   Patch,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminBannerLocationService } from '../services/banner-location.service';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';

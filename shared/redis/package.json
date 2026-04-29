@@ -1,0 +1,13 @@
+{
+  "name": "@package/redis",
+  "version": "1.0.0",
+  "description": "Shared Redis service for microservices",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "private": true,
+  "dependencies": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/config": "^4.0.4",
+    "ioredis": "^5.8.2"
+  }
+}

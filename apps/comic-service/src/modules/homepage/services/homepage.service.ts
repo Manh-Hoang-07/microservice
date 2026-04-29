@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { RedisService } from '../../../redis/redis.service';
+import { RedisService } from '@package/redis';
 import { PUBLIC_COMIC_STATUSES } from '../../../common/enums';
 
 @Injectable()

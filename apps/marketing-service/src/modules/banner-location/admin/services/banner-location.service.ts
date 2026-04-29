@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminBannerLocationService {

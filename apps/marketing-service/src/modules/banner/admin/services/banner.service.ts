@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
-import { createPaginationMeta, toPrimaryKey } from '../../../../common/pagination.helper';
+import { createPaginationMeta, toPrimaryKey } from '@package/common';
 
 @Injectable()
 export class AdminBannerService {

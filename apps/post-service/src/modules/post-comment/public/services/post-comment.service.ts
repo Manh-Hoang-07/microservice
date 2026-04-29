@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class PublicPostCommentService {

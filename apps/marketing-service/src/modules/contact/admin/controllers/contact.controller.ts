@@ -8,7 +8,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminContactService } from '../services/contact.service';
 
 @ApiTags('Admin Contacts')

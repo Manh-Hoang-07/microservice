@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminPartnerService {

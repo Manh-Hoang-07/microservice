@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
+import { RedisService } from '@package/redis';
 import { PUBLIC_POST_STATUSES } from '../../../../common/enums';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class PublicPostService {

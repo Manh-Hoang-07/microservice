@@ -1,5 +1,5 @@
 {
-  "name": "@comic/tracing",
+  "name": "@package/tracing",
   "version": "1.0.0",
   "description": "OpenTelemetry distributed tracing setup for all services",
   "main": "src/index.ts",
@@ -14,6 +14,6 @@
     "@opentelemetry/instrumentation-nestjs-core": "^0.44.0",
     "@opentelemetry/resources": "^1.30.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
-    "@opentelemetry/propagator-w3c-tracecontext": "^0.27.0"
+    "@opentelemetry/core": "^1.30.0"
   }
 }

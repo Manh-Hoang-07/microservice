@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwksService } from '../services/jwks.service';
-import { Public } from '../../common/permission.decorator';
+import { Public } from '@package/common';
 
 @ApiTags('JWKS')
 @Controller('.well-known')

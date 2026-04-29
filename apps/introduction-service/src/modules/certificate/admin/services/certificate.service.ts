@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateCertificateDto } from '../dtos/create-certificate.dto';
 import { UpdateCertificateDto } from '../dtos/update-certificate.dto';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminCertificateService {

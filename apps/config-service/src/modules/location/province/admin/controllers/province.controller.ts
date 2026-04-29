@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ProvinceService } from '../services/province.service';
-import { Permission } from '../../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { CreateProvinceDto } from '../dtos/create-province.dto';
 import { UpdateProvinceDto } from '../dtos/update-province.dto';
 

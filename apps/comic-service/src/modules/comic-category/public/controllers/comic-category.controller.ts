@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Public } from '../../../../common/permission.decorator';
+import { Public } from '@package/common';
 import { PublicCategoryService } from '../services/comic-category.service';
 
 @ApiTags('Public Comic Categories')

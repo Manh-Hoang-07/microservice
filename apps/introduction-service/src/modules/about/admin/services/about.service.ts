@@ -2,8 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
-import { SlugHelper } from '../../../../common/slug.helper';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { SlugHelper } from '@package/common';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminAboutService {

@@ -4,7 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
 import appConfig from './config/app.config';
-import { JwtGuard } from './guards/jwt.guard';
+import { JwtGuard } from '@package/common';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';

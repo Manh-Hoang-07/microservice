@@ -4,7 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
 import bffConfig from './config/bff.config';
-import { JwtGuard } from './guards/jwt.guard';
+import { JwtGuard } from '@package/common';
 import { BffHomepageModule } from './homepage/homepage.module';
 import { BffHealthModule } from './health/health.module';
 import { BffComicsModule } from './comics/comics.module';

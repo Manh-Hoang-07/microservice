@@ -13,8 +13,8 @@ import redisConfig from './config/redis.config';
 
 import { DatabaseModule } from './database/database.module';
 import { MailModule } from './mail/mail.module';
-import { JwtGuard } from './guards/jwt.guard';
-import { BigIntSerializationInterceptor } from './common/bigint-serialization.interceptor';
+import { JwtGuard } from '@package/common';
+import { BigIntSerializationInterceptor } from '@package/common';
 import { HealthModule } from './health/health.module';
 import { NotificationModule } from './notification/notification.module';
 import { ContentTemplateModule } from './content-template/content-template.module';

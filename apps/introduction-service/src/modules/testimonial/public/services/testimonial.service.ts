@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { ACTIVE_STATUS } from '../../../../common/enums';
-import { createPaginationMeta, toPrimaryKey } from '../../../../common/pagination.helper';
+import { createPaginationMeta, toPrimaryKey } from '@package/common';
 
 @Injectable()
 export class PublicTestimonialService {

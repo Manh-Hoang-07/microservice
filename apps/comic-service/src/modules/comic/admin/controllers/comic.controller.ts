@@ -9,7 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminComicService } from '../services/comic.service';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';

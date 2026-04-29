@@ -2,8 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreatePostTagDto } from '../dtos/create-post-tag.dto';
 import { UpdatePostTagDto } from '../dtos/update-post-tag.dto';
-import { SlugHelper } from '../../../../common/slug.helper';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { SlugHelper } from '@package/common';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminPostTagService {

@@ -2,8 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
-import { SlugHelper } from '../../../../common/slug.helper';
-import { createPaginationMeta, toPrimaryKey } from '../../../../common/pagination.helper';
+import { SlugHelper } from '@package/common';
+import { createPaginationMeta, toPrimaryKey } from '@package/common';
 
 @Injectable()
 export class AdminComicService {

@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { UserBookmarkService } from '../services/bookmarks.service';
 import { CreateBookmarkDto } from '../dtos/create-bookmark.dto';
 

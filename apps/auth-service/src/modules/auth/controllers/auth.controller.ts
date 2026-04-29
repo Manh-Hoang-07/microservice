@@ -32,7 +32,7 @@ import { RefreshTokenDto } from '../dto/refresh-token.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendOtpDto } from '../dto/send-otp.dto';
-import { Public } from '../../../common/permission.decorator';
+import { Public } from '@package/common';
 
 @ApiTags('Auth')
 @Controller('auth')

@@ -8,7 +8,7 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GeneralConfigService } from '../services/general-config.service';
 import { UpdateGeneralConfigDto } from '../dtos/update-general-config.dto';
-import { Permission } from '../../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 
 @ApiTags('System Config - General')
 @ApiBearerAuth('access-token')

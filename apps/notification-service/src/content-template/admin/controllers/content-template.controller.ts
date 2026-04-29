@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminContentTemplateService } from '../services/content-template.service';
 import { CreateContentTemplateDto } from '../dtos/create-content-template.dto';
 import { UpdateContentTemplateDto } from '../dtos/update-content-template.dto';

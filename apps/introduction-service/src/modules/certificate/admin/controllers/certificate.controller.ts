@@ -9,7 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminCertificateService } from '../services/certificate.service';
 import { CreateCertificateDto } from '../dtos/create-certificate.dto';
 import { UpdateCertificateDto } from '../dtos/update-certificate.dto';

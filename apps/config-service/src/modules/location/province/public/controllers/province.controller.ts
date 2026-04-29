@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ProvinceService } from '../../admin/services/province.service';
-import { Public } from '../../../../../common/permission.decorator';
+import { Public } from '@package/common';
 
 @ApiTags('Location - Provinces')
 @ApiBearerAuth('access-token')

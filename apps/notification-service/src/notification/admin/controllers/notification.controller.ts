@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminNotificationService } from '../services/notification.service';
 
 @ApiTags('Admin Notifications')

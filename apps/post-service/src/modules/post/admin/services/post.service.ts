@@ -2,8 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
-import { SlugHelper } from '../../../../common/slug.helper';
-import { createPaginationMeta, toPrimaryKey } from '../../../../common/pagination.helper';
+import { SlugHelper } from '@package/common';
+import { createPaginationMeta, toPrimaryKey } from '@package/common';
 
 @Injectable()
 export class AdminPostService {

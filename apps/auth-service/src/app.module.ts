@@ -15,7 +15,7 @@ import { DatabaseModule } from './database/database.module';
 import { SecurityModule } from './security/security.module';
 import { JwksModule } from './jwks/jwks.module';
 import { JwksService } from './jwks/services/jwks.service';
-import { JwtGuard } from './guards/jwt.guard';
+import { JwtGuard } from '@package/common';
 import { AuthModule } from './modules/auth/auth.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { HealthModule } from './health/health.module';

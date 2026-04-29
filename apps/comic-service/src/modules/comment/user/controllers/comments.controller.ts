@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { UserCommentService } from '../services/comments.service';
 import { CreateCommentDto } from '../dtos/create-comment.dto';
 

@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Delete, Param, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { UserFollowService } from '../services/follows.service';
 
 @ApiTags('User Follows')

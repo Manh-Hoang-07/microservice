@@ -1,5 +1,5 @@
 {
-  "name": "@comic/circuit-breaker",
+  "name": "@package/circuit-breaker",
   "version": "1.0.0",
   "description": "Circuit breaker wrapper using cockatiel for inter-service calls",
   "main": "src/index.ts",

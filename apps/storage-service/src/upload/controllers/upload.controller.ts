@@ -18,7 +18,7 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { UploadService } from '../services/upload.service';
 import { FileValidationService } from '../services/file-validation.service';
-import { Permission } from '../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { UploadResponseDto } from '../dtos/upload.dto';
 import { FileMetadata } from '../interfaces/upload-strategy.interface';
 import { Throttle } from '@nestjs/throttler/dist/throttler.decorator';

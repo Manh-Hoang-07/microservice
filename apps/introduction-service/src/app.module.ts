@@ -9,8 +9,8 @@ import * as Joi from 'joi';
 import appConfig from './config/app.config';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard } from './guards/jwt.guard';
-import { BigIntSerializationInterceptor } from './common/bigint-serialization.interceptor';
+import { JwtGuard } from '@package/common';
+import { BigIntSerializationInterceptor } from '@package/common';
 import { HealthModule } from './health/health.module';
 
 import { AboutModule } from './modules/about/about.module';

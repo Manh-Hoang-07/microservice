@@ -11,9 +11,9 @@ import kafkaConfig from './config/kafka.config';
 import redisConfig from './config/redis.config';
 
 import { DatabaseModule } from './database/database.module';
-import { RedisModule } from './redis/redis.module';
-import { JwtGuard } from './guards/jwt.guard';
-import { BigIntSerializationInterceptor } from './common/bigint-serialization.interceptor';
+import { RedisModule } from '@package/redis';
+import { JwtGuard } from '@package/common';
+import { BigIntSerializationInterceptor } from '@package/common';
 import { HealthModule } from './health/health.module';
 import { KafkaModule } from './kafka/kafka.module';
 

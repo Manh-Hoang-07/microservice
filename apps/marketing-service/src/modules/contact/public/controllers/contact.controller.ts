@@ -1,6 +1,6 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Public } from '../../../../common/permission.decorator';
+import { Public } from '@package/common';
 import { PublicContactService } from '../services/contact.service';
 import { CreateContactDto } from '../../admin/dtos/create-contact.dto';
 

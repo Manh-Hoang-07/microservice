@@ -15,7 +15,7 @@ import { MenuService } from '../services/menu.service';
 import { CreateMenuDto } from '../dtos/create-menu.dto';
 import { UpdateMenuDto } from '../dtos/update-menu.dto';
 import { QueryMenuDto } from '../dtos/query-menu.dto';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 
 @ApiTags('Menus')
 @ApiBearerAuth('access-token')

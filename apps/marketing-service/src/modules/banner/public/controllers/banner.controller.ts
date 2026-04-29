@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Public } from '../../../../common/permission.decorator';
+import { Public } from '@package/common';
 import { PublicBannerService } from '../services/banner.service';
 
 @ApiTags('Public Banners')

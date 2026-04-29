@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { WardService } from '../services/ward.service';
-import { Permission } from '../../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { CreateWardDto } from '../dtos/create-ward.dto';
 import { UpdateWardDto } from '../dtos/update-ward.dto';
 

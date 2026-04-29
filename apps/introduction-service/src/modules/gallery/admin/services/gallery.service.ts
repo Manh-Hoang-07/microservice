@@ -2,8 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
-import { SlugHelper } from '../../../../common/slug.helper';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { SlugHelper } from '@package/common';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminGalleryService {

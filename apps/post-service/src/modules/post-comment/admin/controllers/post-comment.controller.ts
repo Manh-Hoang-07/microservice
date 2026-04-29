@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Param, Query, Body } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminPostCommentService } from '../services/post-comment.service';
 
 @ApiTags('Admin Post Comments')

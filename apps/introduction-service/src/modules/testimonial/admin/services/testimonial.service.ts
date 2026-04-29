@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
-import { createPaginationMeta, toPrimaryKey } from '../../../../common/pagination.helper';
+import { createPaginationMeta, toPrimaryKey } from '@package/common';
 
 @Injectable()
 export class AdminTestimonialService {

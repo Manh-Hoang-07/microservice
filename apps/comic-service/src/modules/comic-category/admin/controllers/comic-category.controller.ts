@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminCategoryService } from '../services/comic-category.service';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';

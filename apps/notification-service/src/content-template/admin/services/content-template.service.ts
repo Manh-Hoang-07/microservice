@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../database/prisma.service';
 import { CreateContentTemplateDto } from '../dtos/create-content-template.dto';
 import { UpdateContentTemplateDto } from '../dtos/update-content-template.dto';
-import { createPaginationMeta } from '../../../common/pagination.helper';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminContentTemplateService {

@@ -1,5 +1,5 @@
 // Initialize OpenTelemetry tracing (must be first)
-import { initTracing } from '../../../shared/tracing/src';
+import { initTracing } from '@package/tracing';
 initTracing('storage-service');
 
 import 'reflect-metadata';

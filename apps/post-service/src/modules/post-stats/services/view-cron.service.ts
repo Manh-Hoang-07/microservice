@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../../database/prisma.service';
-import { RedisService } from '../../../redis/redis.service';
+import { RedisService } from '@package/redis';
 
 @Injectable()
 export class ViewCronService {

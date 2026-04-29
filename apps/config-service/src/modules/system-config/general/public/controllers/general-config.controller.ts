@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GeneralConfigService } from '../../admin/services/general-config.service';
-import { Public } from '../../../../../common/permission.decorator';
+import { Public } from '@package/common';
 
 @ApiTags('System Config - General')
 @ApiBearerAuth('access-token')

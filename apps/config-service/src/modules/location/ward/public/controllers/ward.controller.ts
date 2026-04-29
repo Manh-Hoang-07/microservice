@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { WardService } from '../../admin/services/ward.service';
-import { Public } from '../../../../../common/permission.decorator';
+import { Public } from '@package/common';
 
 @ApiTags('Location - Wards')
 @ApiBearerAuth('access-token')

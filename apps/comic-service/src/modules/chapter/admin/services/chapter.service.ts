@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../database/prisma.service';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
-import { createPaginationMeta } from '../../../../common/pagination.helper';
+import { createPaginationMeta } from '@package/common';
 
 @Injectable()
 export class AdminChapterService {

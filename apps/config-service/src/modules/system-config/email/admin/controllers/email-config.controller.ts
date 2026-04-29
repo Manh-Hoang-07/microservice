@@ -8,7 +8,7 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EmailConfigService } from '../services/email-config.service';
 import { UpdateEmailConfigDto } from '../dtos/update-email-config.dto';
-import { Permission } from '../../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 
 @ApiTags('System Config - Email')
 @ApiBearerAuth('access-token')

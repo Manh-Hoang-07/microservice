@@ -5,7 +5,7 @@ import { Reflector } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import * as Joi from 'joi';
 import storageConfig from './config/storage.config';
-import { JwtGuard } from './guards/jwt.guard';
+import { JwtGuard } from '@package/common';
 import { UploadModule } from './upload/upload.module';
 import { StorageHealthModule } from './health/health.module';
 

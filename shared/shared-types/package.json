@@ -1,5 +1,5 @@
 {
-  "name": "@comic/shared-types",
+  "name": "@package/shared-types",
   "version": "1.0.0",
   "description": "Shared TypeScript types and Kafka event definitions",
   "main": "src/index.ts",

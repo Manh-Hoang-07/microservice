@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Param, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { UserNotificationService } from '../services/notification.service';
 
 @ApiTags('User Notifications')

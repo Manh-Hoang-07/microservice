@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service';
-import { createPaginationMeta, toPrimaryKey } from '../../../../common/pagination.helper';
+import { createPaginationMeta, toPrimaryKey } from '@package/common';
 
 @Injectable()
 export class PublicBannerService {

@@ -1,6 +1,6 @@
 import { Controller, Get, Delete, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../../../common/permission.decorator';
+import { Permission } from '@package/common';
 import { AdminReviewService } from '../services/reviews.service';
 
 @ApiTags('Admin Reviews')
