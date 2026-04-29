@@ -1,58 +1,18 @@
-// Initialize OpenTelemetry tracing (must be first)
 import { initTracing } from '@package/tracing';
 initTracing('notification-service');
 
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { createApp } from '@package/bootstrap';
 
-async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    bufferLogs: true,
-  });
-
-  const port = parseInt(process.env.PORT ?? '3004', 10);
-  const prefix = process.env.GLOBAL_PREFIX ?? 'api';
-
-  app.setGlobalPrefix(prefix);
-
-  const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((s) => s.trim()) ?? '*';
-  app.enableCors({ origin: corsOrigins });
-  app.enableShutdownHooks();
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: false,
-    }),
-  );
-
-  if (process.env.NODE_ENV !== 'production') {
-    const doc = new DocumentBuilder()
-      .setTitle('Notification Service')
-      .setDescription('Notification microservice — Comic Platform')
-      .setVersion('1.0')
-      .addBearerAuth(
-        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-        'access-token',
-      )
-      .build();
-    SwaggerModule.setup(
-      `${prefix}/docs`,
-      app,
-      SwaggerModule.createDocument(app, doc),
-    );
-  }
-
-  await app.listen(port);
-  console.log(`Notification Service running on http://localhost:${port}/${prefix}`);
-}
-
-bootstrap().catch((err) => {
+createApp({
+  serviceName: 'Notification Service',
+  defaultPort: 3004,
+  module: AppModule,
+  swagger: {
+    title: 'Notification Service',
+    description: 'Notification microservice — Comic Platform',
+  },
+}).catch((err) => {
   console.error('Notification Service failed to start', err);
   process.exit(1);
 });

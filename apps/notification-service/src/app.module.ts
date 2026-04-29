@@ -2,20 +2,16 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
 
-import appConfig from './config/app.config';
-import kafkaConfig from './config/kafka.config';
+import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import mailConfig from './config/mail.config';
-import redisConfig from './config/redis.config';
 
 import { DatabaseModule } from './database/database.module';
 import { MailModule } from './mail/mail.module';
-import { JwtGuard } from '@package/common';
-import { BigIntSerializationInterceptor } from '@package/common';
-import { HealthModule } from './health/health.module';
+import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { NotificationModule } from './notification/notification.module';
 import { ContentTemplateModule } from './content-template/content-template.module';
 import { QueueModule } from './queue/queue.module';
@@ -26,7 +22,7 @@ import { KafkaConsumerModule } from './kafka-consumer/kafka-consumer.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [appConfig, kafkaConfig, mailConfig, redisConfig],
+      load: [createAppConfig(3004), createKafkaConfig('notification-service'), mailConfig, createRedisConfig('redis://localhost:6382')],
       validationSchema: Joi.object({
         PORT: Joi.number().port().default(3004),
         NODE_ENV: Joi.string()
@@ -48,13 +44,17 @@ import { KafkaConsumerModule } from './kafka-consumer/kafka-consumer.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
     MailModule,
-    HealthModule,
+    HealthModule.register('notification-service'),
     NotificationModule,
     ContentTemplateModule,
     QueueModule,
     KafkaConsumerModule,
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>

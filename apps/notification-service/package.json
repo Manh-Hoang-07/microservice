@@ -13,7 +13,9 @@
     "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
+    "@package/bootstrap": "*",
     "@package/common": "*",
+    "@package/config": "*",
     "@package/tracing": "*",
     "@nestjs/bull": "^11.0.4",
     "@nestjs/common": "^11.1.19",

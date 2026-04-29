@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
-import appConfig from './config/app.config';
-import { JwtGuard } from '@package/common';
+import { createAppConfig } from '@package/config';
+import { JwtGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { DatabaseModule } from './database/database.module';
-import { HealthModule } from './health/health.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { MenuModule } from './modules/menu/menu.module';
 import { LocationModule } from './modules/location/location.module';
@@ -16,7 +15,7 @@ import { LocationModule } from './modules/location/location.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [appConfig],
+      load: [createAppConfig(3005, { internalApiSecret: process.env.INTERNAL_API_SECRET || '' })],
       validationSchema: Joi.object({
         PORT: Joi.number().port().default(3005),
         NODE_ENV: Joi.string()
@@ -28,12 +27,16 @@ import { LocationModule } from './modules/location/location.module';
       }).unknown(true),
     }),
     DatabaseModule,
-    HealthModule,
+    HealthModule.register('config-service'),
     SystemConfigModule,
     MenuModule,
     LocationModule,
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>

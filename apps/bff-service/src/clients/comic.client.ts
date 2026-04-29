@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createCircuitBreaker } from '@package/circuit-breaker';
+import type { CircuitBreakerPolicy } from 'cockatiel';
 
 export interface ComicListItem {
   id: string;
@@ -19,14 +21,19 @@ export interface ComicCategory {
 }
 
 @Injectable()
-export class ComicClient {
+export class ComicClient implements OnModuleInit {
   private readonly logger = new Logger(ComicClient.name);
   private readonly baseUrl: string;
   private readonly timeout: number;
+  private breaker!: CircuitBreakerPolicy;
 
   constructor(private readonly config: ConfigService) {
     this.baseUrl = config.get<string>('bff.comicServiceUrl', 'http://localhost:3001/api');
     this.timeout = config.get<number>('bff.serviceTimeoutMs', 5000);
+  }
+
+  onModuleInit() {
+    this.breaker = createCircuitBreaker({ halfOpenAfterMs: 10_000, maxConsecutiveFailures: 5 });
   }
 
   async getComics(params: {
@@ -106,6 +113,15 @@ export class ComicClient {
   }
 
   private async get<T>(url: string, fallback: T): Promise<T> {
+    try {
+      return await this.breaker.execute(() => this.doGet<T>(url, fallback));
+    } catch (err) {
+      this.logger.warn(`ComicClient circuit open for ${url}: ${(err as Error).message}`);
+      return fallback;
+    }
+  }
+
+  private async doGet<T>(url: string, fallback: T): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
@@ -124,7 +140,7 @@ export class ComicClient {
       return (data as any)?.data ?? (data as T);
     } catch (err) {
       this.logger.warn(`ComicClient GET ${url} failed: ${(err as Error).message}`);
-      return fallback;
+      throw err;
     } finally {
       clearTimeout(timer);
     }

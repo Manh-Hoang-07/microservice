@@ -1,17 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 
-import appConfig from './config/app.config';
+import { createAppConfig } from '@package/config';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard } from '@package/common';
-import { BigIntSerializationInterceptor } from '@package/common';
-import { HealthModule } from './health/health.module';
+import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
 
 import { AboutModule } from './modules/about/about.module';
 import { StaffModule } from './modules/staff/staff.module';
@@ -27,7 +25,7 @@ import { FaqModule } from './modules/faq/faq.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [appConfig],
+      load: [createAppConfig(3008)],
       validationSchema: Joi.object({
         PORT: Joi.number().port().default(3008),
         NODE_ENV: Joi.string()
@@ -39,7 +37,7 @@ import { FaqModule } from './modules/faq/faq.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
-    HealthModule,
+    HealthModule.register('introduction-service'),
     AboutModule,
     StaffModule,
     ProjectModule,
@@ -50,6 +48,10 @@ import { FaqModule } from './modules/faq/faq.module';
     FaqModule,
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>

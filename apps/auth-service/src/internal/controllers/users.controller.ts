@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { PrismaService } from '../../database/prisma.service';
-import { InternalGuard } from '../../guards/internal.guard';
+import { InternalGuard } from '@package/common';
 
 @ApiTags('Internal')
 @UseGuards(InternalGuard)

@@ -13,12 +13,15 @@
     "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
+    "@package/bootstrap": "*",
     "@package/common": "*",
+    "@package/config": "*",
     "@package/tracing": "*",
     "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.19",
     "@nestjs/platform-express": "^11.1.19",
+    "@nestjs/schedule": "^6.1.1",
     "@nestjs/swagger": "^11.2.7",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^7.6.0",

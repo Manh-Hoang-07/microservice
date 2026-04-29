@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
 import bffConfig from './config/bff.config';
-import { JwtGuard } from '@package/common';
+import { JwtGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { BffHomepageModule } from './homepage/homepage.module';
-import { BffHealthModule } from './health/health.module';
 import { BffComicsModule } from './comics/comics.module';
 import { BffPostsModule } from './posts/posts.module';
 import { BffSearchModule } from './search/search.module';
@@ -28,12 +27,16 @@ import { BffSearchModule } from './search/search.module';
       }).unknown(true),
     }),
     BffHomepageModule,
-    BffHealthModule,
+    HealthModule.register('bff-service'),
     BffComicsModule,
     BffPostsModule,
     BffSearchModule,
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) => new JwtGuard(reflector, config),

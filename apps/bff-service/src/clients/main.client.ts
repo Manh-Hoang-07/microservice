@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createCircuitBreaker } from '@package/circuit-breaker';
+import type { CircuitBreakerPolicy } from 'cockatiel';
 
 export interface PostListItem {
   id: string;
@@ -9,14 +11,19 @@ export interface PostListItem {
 }
 
 @Injectable()
-export class MainClient {
+export class MainClient implements OnModuleInit {
   private readonly logger = new Logger(MainClient.name);
   private readonly baseUrl: string;
   private readonly timeout: number;
+  private breaker!: CircuitBreakerPolicy;
 
   constructor(private readonly config: ConfigService) {
     this.baseUrl = config.get<string>('bff.postServiceUrl', config.get<string>('bff.mainServiceUrl', 'http://localhost:3007/api'));
     this.timeout = config.get<number>('bff.serviceTimeoutMs', 5000);
+  }
+
+  onModuleInit() {
+    this.breaker = createCircuitBreaker({ halfOpenAfterMs: 10_000, maxConsecutiveFailures: 5 });
   }
 
   async getLatestPosts(limit = 6): Promise<PostListItem[]> {
@@ -68,6 +75,15 @@ export class MainClient {
   }
 
   private async get<T>(url: string, fallback: T): Promise<T> {
+    try {
+      return await this.breaker.execute(() => this.doGet<T>(url, fallback));
+    } catch (err) {
+      this.logger.warn(`MainClient circuit open for ${url}: ${(err as Error).message}`);
+      return fallback;
+    }
+  }
+
+  private async doGet<T>(url: string, fallback: T): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
@@ -86,7 +102,7 @@ export class MainClient {
       return (data as any)?.data ?? (data as T);
     } catch (err) {
       this.logger.warn(`MainClient GET ${url} failed: ${(err as Error).message}`);
-      return fallback;
+      throw err;
     } finally {
       clearTimeout(timer);
     }

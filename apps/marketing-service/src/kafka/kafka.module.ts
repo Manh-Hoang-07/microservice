@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { OutboxRelayService } from './services/outbox-relay.service';
+import { OutboxRelayService } from '@package/common';
+import { MarketingOutboxCronService } from './services/outbox-relay.service';
 
 @Module({
-  providers: [OutboxRelayService],
+  providers: [OutboxRelayService, MarketingOutboxCronService],
 })
 export class KafkaModule {}

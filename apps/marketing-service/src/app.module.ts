@@ -1,17 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
 
-import appConfig from './config/app.config';
-import kafkaConfig from './config/kafka.config';
+import { createAppConfig, createKafkaConfig } from '@package/config';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard } from '@package/common';
-import { BigIntSerializationInterceptor } from '@package/common';
-import { HealthModule } from './health/health.module';
+import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { KafkaModule } from './kafka/kafka.module';
 
 import { BannerModule } from './modules/banner/banner.module';
@@ -23,7 +21,7 @@ import { ContactModule } from './modules/contact/contact.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [appConfig, kafkaConfig],
+      load: [createAppConfig(3009), createKafkaConfig()],
       validationSchema: Joi.object({
         PORT: Joi.number().port().default(3009),
         NODE_ENV: Joi.string()
@@ -35,15 +33,20 @@ import { ContactModule } from './modules/contact/contact.module';
         EVENT_DRIVER: Joi.string().optional().allow(''),
       }).unknown(true),
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
-    HealthModule,
+    HealthModule.register('marketing-service'),
     KafkaModule,
     BannerModule,
     BannerLocationModule,
     ContactModule,
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>

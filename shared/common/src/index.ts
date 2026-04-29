@@ -1,6 +1,9 @@
 // Decorators
 export { Permission, Public, Internal, PERMS_KEY } from './decorators/permission.decorator';
 
+// Filters
+export { GlobalExceptionFilter } from './filters/global-exception.filter';
+
 // Guards
 export { JwtGuard } from './guards/jwt.guard';
 export { InternalGuard } from './guards/internal.guard';

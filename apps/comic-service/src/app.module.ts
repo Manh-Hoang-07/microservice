@@ -2,19 +2,14 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
 
-import appConfig from './config/app.config';
-import kafkaConfig from './config/kafka.config';
-import redisConfig from './config/redis.config';
-
+import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from '@package/redis';
-import { JwtGuard } from '@package/common';
-import { BigIntSerializationInterceptor } from '@package/common';
-import { HealthModule } from './health/health.module';
+import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { KafkaModule } from './kafka/kafka.module';
 
 import { ComicModule } from './modules/comic/comic.module';
@@ -34,7 +29,7 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [appConfig, kafkaConfig, redisConfig],
+      load: [createAppConfig(3001), createKafkaConfig(), createRedisConfig()],
       validationSchema: Joi.object({
         PORT: Joi.number().port().default(3001),
         NODE_ENV: Joi.string()
@@ -51,7 +46,7 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
     RedisModule,
-    HealthModule,
+    HealthModule.register('comic-service'),
     KafkaModule,
     ComicModule,
     ChapterModule,
@@ -66,6 +61,10 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
     ViewTrackingModule,
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>

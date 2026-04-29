@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import * as Joi from 'joi';
 import storageConfig from './config/storage.config';
-import { JwtGuard } from '@package/common';
+import { JwtGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { UploadModule } from './upload/upload.module';
-import { StorageHealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -25,9 +24,13 @@ import { StorageHealthModule } from './health/health.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     UploadModule,
-    StorageHealthModule,
+    HealthModule.register('storage-service'),
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) => new JwtGuard(reflector, config),

@@ -10,7 +10,10 @@
     "start:prod": "node dist/main"
   },
   "dependencies": {
+    "@package/bootstrap": "*",
+    "@package/circuit-breaker": "*",
     "@package/common": "*",
+    "@package/config": "*",
     "@package/tracing": "*",
     "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",

@@ -2,14 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as Joi from 'joi';
 
-import appConfig from './config/app.config';
+import { createAppConfig, createKafkaConfig } from '@package/config';
 import jwtConfig from './config/jwt.config';
 import mailConfig from './config/mail.config';
-import kafkaConfig from './config/kafka.config';
 
 import { DatabaseModule } from './database/database.module';
 import { SecurityModule } from './security/security.module';
@@ -18,7 +17,7 @@ import { JwksService } from './jwks/services/jwks.service';
 import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { RbacModule } from './modules/rbac/rbac.module';
-import { HealthModule } from './health/health.module';
+import { GlobalExceptionFilter, HealthModule } from '@package/common';
 import { InternalModule } from './internal/internal.module';
 import { KafkaModule } from './kafka/kafka.module';
 
@@ -27,7 +26,15 @@ import { KafkaModule } from './kafka/kafka.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [appConfig, jwtConfig, mailConfig, kafkaConfig],
+      load: [
+        createAppConfig(3002, {
+          internalApiSecret: process.env.INTERNAL_API_SECRET || '',
+          frontendUrl: process.env.GOOGLE_FRONTEND_URL || 'http://localhost:3000',
+        }),
+        jwtConfig,
+        mailConfig,
+        createKafkaConfig(),
+      ],
       validationSchema: Joi.object({
         PORT: Joi.number().port().default(3002),
         NODE_ENV: Joi.string()
@@ -62,11 +69,15 @@ import { KafkaModule } from './kafka/kafka.module';
     JwksModule,
     AuthModule,
     RbacModule,
-    HealthModule,
+    HealthModule.register('auth-service'),
     InternalModule,
     KafkaModule,
   ],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService, jwksService: JwksService) =>

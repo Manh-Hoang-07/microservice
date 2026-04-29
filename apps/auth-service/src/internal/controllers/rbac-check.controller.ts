@@ -7,7 +7,7 @@ import {
 import { ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
 import { IsString, IsArray, IsOptional } from 'class-validator';
 import { RbacService } from '../../modules/rbac/services/rbac.service';
-import { InternalGuard } from '../../guards/internal.guard';
+import { InternalGuard } from '@package/common';
 
 class RbacCheckDto {
   @IsString()
