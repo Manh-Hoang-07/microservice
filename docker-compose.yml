@@ -219,7 +219,7 @@ services:
   # ══ Storage Service (:3003) ═══════════════════════════════════════════════════
   storage-service:
     build:
-      context: ./apps/storage-service
+      context: ./storage-service
     container_name: comic-storage-service
     restart: unless-stopped
     depends_on:
@@ -251,7 +251,7 @@ services:
   # ══ Auth Service (:3002) ══════════════════════════════════════════════════════
   auth-service:
     build:
-      context: ./apps/auth-service
+      context: ./auth-service
     container_name: comic-auth-service
     restart: unless-stopped
     depends_on:
@@ -290,7 +290,7 @@ services:
   # ══ Config Service (:3005) ════════════════════════════════════════════════════
   config-service:
     build:
-      context: ./apps/config-service
+      context: ./config-service
     container_name: comic-config-service
     restart: unless-stopped
     depends_on:
@@ -309,7 +309,7 @@ services:
   # ══ BFF Service (:3006) ═══════════════════════════════════════════════════════
   bff-service:
     build:
-      context: ./apps/bff-service
+      context: ./bff-service
     container_name: comic-bff-service
     restart: unless-stopped
     depends_on:
