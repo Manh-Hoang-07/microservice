@@ -1,3 +1,7 @@
+// Initialize OpenTelemetry tracing (must be first)
+import { initTracing } from '../../shared/tracing/src';
+initTracing('bff-service');
+
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';

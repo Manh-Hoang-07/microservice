@@ -1,0 +1,57 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { Permission } from '../../../../common/permission.decorator';
+import { AdminChapterService } from '../services/chapter.service';
+import { CreateChapterDto } from '../dtos/create-chapter.dto';
+import { UpdateChapterDto } from '../dtos/update-chapter.dto';
+
+@ApiTags('Admin Chapters')
+@Controller('admin/chapters')
+export class AdminChapterController {
+  constructor(private readonly chapterService: AdminChapterService) {}
+
+  @Permission('comic.manage')
+  @Get()
+  async getList(@Query() query: any) {
+    return this.chapterService.getList(query);
+  }
+
+  @Permission('comic.manage')
+  @Get('simple')
+  async getSimpleList(@Query() query: any) {
+    return this.chapterService.getSimpleList(query);
+  }
+
+  @Permission('comic.manage')
+  @Get(':id')
+  async getOne(@Param('id') id: string) {
+    return this.chapterService.getOne(BigInt(id));
+  }
+
+  @Permission('comic.manage')
+  @Post()
+  async create(@Body() dto: CreateChapterDto) {
+    return this.chapterService.create(dto);
+  }
+
+  @Permission('comic.manage')
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateChapterDto) {
+    return this.chapterService.update(BigInt(id), dto);
+  }
+
+  @Permission('comic.manage')
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return this.chapterService.delete(BigInt(id));
+  }
+}

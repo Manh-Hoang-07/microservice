@@ -195,6 +195,17 @@ services:
       - bff_redis_data:/data
     command: redis-server --appendonly yes
 
+  # ══ Observability ═════════════════════════════════════════════════════════════
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: comic-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP receiver
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
   # ══ API Gateway (Nginx) ═══════════════════════════════════════════════════════
   nginx:
     image: nginx:1.25-alpine
@@ -208,6 +219,8 @@ services:
       - bff-service
       - auth-service
       - config-service
+      - comic-service
+      - notification-service
     volumes:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
@@ -243,6 +256,7 @@ services:
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
       UPLOAD_DEST: ${UPLOAD_DEST:-./storage/uploads}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3003:3003"
     volumes:
@@ -284,6 +298,7 @@ services:
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me}
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3002:3002"
 
@@ -303,6 +318,7 @@ services:
       DATABASE_URL: postgresql://postgres:secret@config-db:5432/config_db
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3005:3005"
 
@@ -319,13 +335,71 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3006
       GLOBAL_PREFIX: ${GLOBAL_PREFIX:-api}
-      COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://api:8000/api}
+      COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://comic-service:3001/api}
       MAIN_SERVICE_URL: ${MAIN_SERVICE_URL:-http://api:8000/api}
       BFF_REDIS_URL: redis://bff-redis:6379
       SERVICE_TIMEOUT_MS: ${SERVICE_TIMEOUT_MS:-5000}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3006:3006"
+
+  # ══ Comic Service (:3001) ═════════════════════════════════════════════════��═
+  comic-service:
+    build:
+      context: ./comic-service
+    container_name: comic-comic-service
+    restart: unless-stopped
+    depends_on:
+      comic-db:
+        condition: service_healthy
+      comic-redis:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      GLOBAL_PREFIX: api
+      DATABASE_URL: postgresql://postgres:secret@comic-db:5432/comic_db
+      REDIS_URL: redis://comic-redis:6379
+      AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      EVENT_DRIVER: ${EVENT_DRIVER:-local}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    ports:
+      - "3001:3001"
+
+  # ══ Notification Service (:3004) ═══════════════════════════════════════════
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: comic-notification-service
+    restart: unless-stopped
+    depends_on:
+      notif-db:
+        condition: service_healthy
+      notif-redis:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3004
+      GLOBAL_PREFIX: api
+      DATABASE_URL: postgresql://postgres:secret@notif-db:5432/notif_db
+      REDIS_URL: redis://notif-redis:6379
+      AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_GROUP_ID: notification-service
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    ports:
+      - "3004:3004"
 
   # ══ Main Service (monolith — Phase 0) ═════════════════════════════════════════
   api:
