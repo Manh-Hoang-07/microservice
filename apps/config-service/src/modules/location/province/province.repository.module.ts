@@ -1,15 +1,9 @@
 import { Global, Module } from '@nestjs/common';
-import { PROVINCE_REPOSITORY } from './repositories/province.repository';
-import { ProvinceRepositoryImpl } from './repositories/province.repository.impl';
+import { ProvinceRepository } from './repositories/province.repository';
 
 @Global()
 @Module({
-  providers: [
-    {
-      provide: PROVINCE_REPOSITORY,
-      useClass: ProvinceRepositoryImpl,
-    },
-  ],
-  exports: [PROVINCE_REPOSITORY],
+  providers: [ProvinceRepository],
+  exports: [ProvinceRepository],
 })
 export class ProvinceRepositoryModule {}

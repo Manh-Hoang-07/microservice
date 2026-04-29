@@ -71,7 +71,14 @@
       "Bash(xargs -I {} find {} -type d -maxdepth 1)",
       "Bash(git rm *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && head -50 \"{}\"')",
+      "Bash(cat)",
+      "Bash(bash /tmp/analysis.sh)",
+      "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && grep -A 3 \"@Injectable\" {} | head -5')",
+      "Bash(awk '{print $2}')",
+      "Bash(xargs -I {} ls -la {}/services)",
+      "Bash(grep \"\\\\.service\\\\.ts$\")"
     ]
   }
 }

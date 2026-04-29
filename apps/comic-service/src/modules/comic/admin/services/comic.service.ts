@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta, toPrimaryKey } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { ComicRepository } from '../../repositories/comic.repository';
 
 @Injectable()
 export class AdminComicService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly comicRepo: ComicRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -28,17 +27,8 @@ export class AdminComicService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.comic.findMany({
-        where,
-        include: {
-          stats: true,
-          categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
-        },
-        orderBy: { updated_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.comic.count({ where }),
+      this.comicRepo.findMany(where, { skip, take: limit }),
+      this.comicRepo.count(where),
     ]);
 
     return {
@@ -57,74 +47,58 @@ export class AdminComicService {
       ];
     }
 
-    const data = await this.prisma.comic.findMany({
-      where,
-      select: { id: true, title: true, slug: true, status: true },
-      orderBy: { title: 'asc' },
-      take: limit,
-    });
-
+    const data = await this.comicRepo.findSimpleMany(where, limit);
     return { data };
   }
 
   async getOne(id: bigint) {
-    const comic = await this.prisma.comic.findUnique({
-      where: { id },
-      include: {
-        stats: true,
-        categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
-      },
-    });
+    const comic = await this.comicRepo.findById(id);
     if (!comic) throw new NotFoundException('Comic not found');
     return this.transform(comic);
   }
 
   async create(dto: CreateComicDto) {
     const slug = await SlugHelper.uniqueSlug(dto.title, {
-      findOne: (filter: any) => this.prisma.comic.findFirst({ where: filter }),
+      findOne: (filter: any) => this.comicRepo.findFirst(filter),
     });
 
-    const comic = await this.prisma.comic.create({
-      data: {
-        title: dto.title,
-        slug,
-        description: dto.description,
-        cover_image: dto.cover_image,
-        author: dto.author,
-        status: dto.status || 'draft',
-        is_featured: dto.is_featured || false,
-      },
+    const comic = await this.comicRepo.create({
+      title: dto.title,
+      slug,
+      description: dto.description,
+      cover_image: dto.cover_image,
+      author: dto.author,
+      status: dto.status || 'draft',
+      is_featured: dto.is_featured || false,
     });
 
-    // Initialize stats
-    await this.prisma.comicStats.create({
-      data: { comic_id: comic.id },
-    });
+    await this.comicRepo.createStats(comic.id);
 
-    // Sync categories
     if (dto.category_ids?.length) {
-      await this.syncCategories(comic.id, dto.category_ids);
+      await this.comicRepo.syncCategories(comic.id, dto.category_ids);
     }
 
     return this.getOne(comic.id);
   }
 
   async update(id: bigint, dto: UpdateComicDto) {
-    await this.getOne(id); // check exists
+    await this.getOne(id);
 
     const data: any = { ...dto };
     delete data.category_ids;
 
     if (dto.title || dto.slug) {
-      data.slug = await SlugHelper.uniqueSlug(dto.slug || dto.title || '', {
-        findOne: (filter: any) => this.prisma.comic.findFirst({ where: filter }),
-      }, id);
+      data.slug = await SlugHelper.uniqueSlug(
+        dto.slug || dto.title || '',
+        { findOne: (filter: any) => this.comicRepo.findFirst(filter) },
+        id,
+      );
     }
 
-    await this.prisma.comic.update({ where: { id }, data });
+    await this.comicRepo.update(id, data);
 
     if (dto.category_ids !== undefined) {
-      await this.syncCategories(id, dto.category_ids);
+      await this.comicRepo.syncCategories(id, dto.category_ids);
     }
 
     return this.getOne(id);
@@ -132,20 +106,8 @@ export class AdminComicService {
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.comic.delete({ where: { id } });
+    await this.comicRepo.delete(id);
     return { success: true };
-  }
-
-  private async syncCategories(comicId: bigint, categoryIds: number[]) {
-    await this.prisma.comicCategoryOnComic.deleteMany({ where: { comic_id: comicId } });
-    if (categoryIds.length > 0) {
-      await this.prisma.comicCategoryOnComic.createMany({
-        data: categoryIds.map((catId) => ({
-          comic_id: comicId,
-          comic_category_id: toPrimaryKey(catId),
-        })),
-      });
-    }
   }
 
   private transform(entity: any) {

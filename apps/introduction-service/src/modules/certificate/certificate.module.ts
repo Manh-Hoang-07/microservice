@@ -3,10 +3,11 @@ import { AdminCertificateController } from './admin/controllers/certificate.cont
 import { AdminCertificateService } from './admin/services/certificate.service';
 import { PublicCertificateController } from './public/controllers/certificate.controller';
 import { PublicCertificateService } from './public/services/certificate.service';
+import { CertificateRepository } from './repositories/certificate.repository';
 
 @Module({
   controllers: [AdminCertificateController, PublicCertificateController],
-  providers: [AdminCertificateService, PublicCertificateService],
-  exports: [PublicCertificateService],
+  providers: [CertificateRepository, AdminCertificateService, PublicCertificateService],
+  exports: [CertificateRepository],
 })
 export class CertificateModule {}

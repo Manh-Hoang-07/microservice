@@ -8,7 +8,7 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BasicStatus } from './create-menu.dto';
+import { BasicStatus } from '../../enums/basic-status.enum';
 
 export class QueryMenuDto {
   @IsOptional()

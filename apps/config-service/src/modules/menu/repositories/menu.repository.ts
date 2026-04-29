@@ -1,7 +1,7 @@
-import { Menu } from '@prisma/client';
-import { IRepository } from '../../../common/core/base.service';
-
-export const MENU_REPOSITORY = 'IMenuRepository';
+import { Injectable } from '@nestjs/common';
+import { Menu, Prisma } from '@prisma/client';
+import { PrismaService } from '../../../database/prisma.service';
+import { toPrimaryKey } from '../../../common/core/primary-key.util';
 
 export interface MenuFilter {
   search?: string;
@@ -12,7 +12,97 @@ export interface MenuFilter {
   group?: string;
 }
 
-export interface IMenuRepository extends IRepository<Menu> {
-  findAllWithChildren(filter?: MenuFilter): Promise<Menu[]>;
-  findByCode(code: string): Promise<Menu | null>;
+const DEFAULT_SELECT = {
+  id: true,
+  code: true,
+  name: true,
+  icon: true,
+  path: true,
+  api_path: true,
+  type: true,
+  status: true,
+  sort_order: true,
+  parent_id: true,
+  required_permission_code: true,
+  is_public: true,
+  show_in_menu: true,
+  group: true,
+  created_at: true,
+  updated_at: true,
+  parent: { select: { id: true, name: true, code: true } },
+} as const;
+
+@Injectable()
+export class MenuRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private buildWhere(filter: MenuFilter): Prisma.MenuWhereInput {
+    const where: Prisma.MenuWhereInput = {};
+    if (filter.search) {
+      where.OR = [
+        { name: { contains: filter.search } },
+        { code: { contains: filter.search } },
+      ];
+    }
+    if (filter.status) where.status = filter.status as any;
+    if (filter.type) where.type = filter.type as any;
+    const parentId = filter.parentId !== undefined ? filter.parentId : filter.parent_id;
+    if (parentId !== undefined) {
+      where.parent_id = parentId === null ? null : toPrimaryKey(parentId);
+    }
+    if (filter.group) where.group = filter.group;
+    return where;
+  }
+
+  findMany(filter: MenuFilter, options: { skip: number; take: number }) {
+    return this.prisma.menu.findMany({
+      where: this.buildWhere(filter),
+      select: DEFAULT_SELECT,
+      orderBy: { sort_order: 'asc' },
+      skip: options.skip,
+      take: options.take,
+    });
+  }
+
+  count(filter: MenuFilter) {
+    return this.prisma.menu.count({ where: this.buildWhere(filter) });
+  }
+
+  findById(id: any): Promise<Menu | null> {
+    return this.prisma.menu.findUnique({
+      where: { id: toPrimaryKey(id) },
+      select: DEFAULT_SELECT,
+    }) as any;
+  }
+
+  findByCode(code: string): Promise<Menu | null> {
+    return this.prisma.menu.findFirst({
+      where: { code },
+      select: DEFAULT_SELECT,
+    }) as any;
+  }
+
+  findAllWithChildren(filter: MenuFilter = {}): Promise<Menu[]> {
+    return this.prisma.menu.findMany({
+      where: this.buildWhere(filter),
+      select: DEFAULT_SELECT,
+      orderBy: { sort_order: 'asc' },
+    }) as any;
+  }
+
+  create(data: Prisma.MenuCreateInput): Promise<Menu> {
+    return this.prisma.menu.create({ data, select: DEFAULT_SELECT }) as any;
+  }
+
+  update(id: any, data: Prisma.MenuUpdateInput): Promise<Menu> {
+    return this.prisma.menu.update({
+      where: { id: toPrimaryKey(id) },
+      data,
+      select: DEFAULT_SELECT,
+    }) as any;
+  }
+
+  delete(id: any) {
+    return this.prisma.menu.delete({ where: { id: toPrimaryKey(id) } });
+  }
 }

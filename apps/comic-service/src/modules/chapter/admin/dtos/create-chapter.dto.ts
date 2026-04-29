@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ChapterStatus } from '../../../../common/enums';
+import { ChapterStatus } from '../../enums/chapter-status.enum';
 
 export class CreateChapterPageDto {
   @IsString()

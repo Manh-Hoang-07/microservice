@@ -1,22 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
+import { ComicStatsRepository } from '../../repositories/comic-stats.repository';
 
 @Injectable()
 export class AdminStatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly statsRepo: ComicStatsRepository) {}
 
   async getDashboard() {
     const [totalComics, totalViews, totalFollows] = await Promise.all([
-      this.prisma.comic.count(),
-      this.prisma.comicStats.aggregate({ _sum: { view_count: true } }),
-      this.prisma.comicStats.aggregate({ _sum: { follow_count: true } }),
+      this.statsRepo.countComics(),
+      this.statsRepo.aggregateViews(),
+      this.statsRepo.aggregateFollows(),
     ]);
 
-    const topComics = await this.prisma.comic.findMany({
-      include: { stats: true },
-      orderBy: { stats: { view_count: 'desc' } },
-      take: 10,
-    });
+    const topComics = await this.statsRepo.findTopComics({ stats: { view_count: 'desc' } }, 10);
 
     return {
       total_comics: totalComics,
@@ -37,12 +33,7 @@ export class AdminStatsService {
           ? { stats: { rating_sum: 'desc' } }
           : { stats: { view_count: 'desc' } };
 
-    const data = await this.prisma.comic.findMany({
-      include: { stats: true },
-      orderBy,
-      take: limit,
-    });
-
+    const data = await this.statsRepo.findTopComics(orderBy, limit);
     return { data };
   }
 }

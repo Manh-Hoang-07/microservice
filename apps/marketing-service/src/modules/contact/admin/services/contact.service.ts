@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { createPaginationMeta } from '@package/common';
+import { ContactRepository } from '../../repositories/contact.repository';
 
 @Injectable()
 export class AdminContactService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly contactRepo: ContactRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -22,58 +22,36 @@ export class AdminContactService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.contact.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.contact.count({ where }),
+      this.contactRepo.findMany(where, { skip, take: limit }),
+      this.contactRepo.count(where),
     ]);
 
-    return {
-      data,
-      meta: createPaginationMeta(page, limit, total),
-    };
+    return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const contact = await this.prisma.contact.findUnique({
-      where: { id },
-    });
+    const contact = await this.contactRepo.findById(id);
     if (!contact) throw new NotFoundException('Contact not found');
     return contact;
   }
 
   async reply(id: bigint, replyText: string, userId: bigint) {
     await this.getOne(id);
-
-    return this.prisma.contact.update({
-      where: { id },
-      data: {
-        reply: replyText,
-        status: 'Replied',
-        replied_at: new Date(),
-        replied_by: userId,
-      },
+    return this.contactRepo.update(id, {
+      reply: replyText,
+      status: 'Replied',
+      replied_at: new Date(),
+      replied_by: userId,
     });
   }
 
   async markAsRead(id: bigint) {
     await this.getOne(id);
-
-    return this.prisma.contact.update({
-      where: { id },
-      data: { status: 'Read' },
-    });
+    return this.contactRepo.update(id, { status: 'Read' });
   }
 
   async closeContact(id: bigint) {
     await this.getOne(id);
-
-    return this.prisma.contact.update({
-      where: { id },
-      data: { status: 'Closed' },
-    });
+    return this.contactRepo.update(id, { status: 'Closed' });
   }
 }

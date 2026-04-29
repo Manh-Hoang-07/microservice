@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
 import { createPaginationMeta } from '@package/common';
+import { BannerLocationRepository } from '../../repositories/banner-location.repository';
 
 @Injectable()
 export class AdminBannerLocationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly locationRepo: BannerLocationRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -23,43 +23,28 @@ export class AdminBannerLocationService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.bannerLocation.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.bannerLocation.count({ where }),
+      this.locationRepo.findMany(where, { skip, take: limit }),
+      this.locationRepo.count(where),
     ]);
 
-    return {
-      data,
-      meta: createPaginationMeta(page, limit, total),
-    };
+    return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const location = await this.prisma.bannerLocation.findUnique({
-      where: { id },
-      include: { banners: true },
-    });
+    const location = await this.locationRepo.findById(id);
     if (!location) throw new NotFoundException('Banner location not found');
     return location;
   }
 
   async create(dto: CreateBannerLocationDto) {
-    const existing = await this.prisma.bannerLocation.findUnique({
-      where: { code: dto.code },
-    });
+    const existing = await this.locationRepo.findByCode(dto.code);
     if (existing) throw new ConflictException('Banner location code already exists');
 
-    return this.prisma.bannerLocation.create({
-      data: {
-        code: dto.code,
-        name: dto.name,
-        description: dto.description,
-        status: dto.status || 'active',
-      },
+    return this.locationRepo.create({
+      code: dto.code,
+      name: dto.name,
+      description: dto.description,
+      status: dto.status || 'active',
     });
   }
 
@@ -67,29 +52,21 @@ export class AdminBannerLocationService {
     await this.getOne(id);
 
     if (dto.code) {
-      const existing = await this.prisma.bannerLocation.findFirst({
-        where: { code: dto.code, NOT: { id } },
-      });
+      const existing = await this.locationRepo.findFirst({ code: dto.code, NOT: { id } });
       if (existing) throw new ConflictException('Banner location code already exists');
     }
 
-    return this.prisma.bannerLocation.update({
-      where: { id },
-      data: dto,
-    });
+    return this.locationRepo.update(id, dto);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.bannerLocation.delete({ where: { id } });
+    await this.locationRepo.delete(id);
     return { success: true };
   }
 
   async changeStatus(id: bigint, status: string) {
     await this.getOne(id);
-    return this.prisma.bannerLocation.update({
-      where: { id },
-      data: { status },
-    });
+    return this.locationRepo.update(id, { status });
   }
 }

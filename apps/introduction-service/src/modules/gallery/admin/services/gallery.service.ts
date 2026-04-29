@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { GalleryRepository } from '../../repositories/gallery.repository';
 
 @Injectable()
 export class AdminGalleryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly galleryRepo: GalleryRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -27,40 +26,33 @@ export class AdminGalleryService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.gallery.findMany({
-        where,
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.gallery.count({ where }),
+      this.galleryRepo.findMany(where, { skip, take: limit }),
+      this.galleryRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const item = await this.prisma.gallery.findUnique({ where: { id } });
+    const item = await this.galleryRepo.findById(id);
     if (!item) throw new NotFoundException('Gallery not found');
     return item;
   }
 
   async create(dto: CreateGalleryDto) {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.title, {
-      findOne: (filter: any) => this.prisma.gallery.findFirst({ where: filter }),
+      findOne: (filter: any) => this.galleryRepo.findFirst(filter),
     });
 
-    return this.prisma.gallery.create({
-      data: {
-        title: dto.title,
-        slug,
-        description: dto.description,
-        cover_image: dto.cover_image,
-        images: dto.images ?? [],
-        featured: dto.featured ?? false,
-        status: dto.status || 'active',
-        sort_order: dto.sort_order ?? 0,
-      },
+    return this.galleryRepo.create({
+      title: dto.title,
+      slug,
+      description: dto.description,
+      cover_image: dto.cover_image,
+      images: dto.images ?? [],
+      featured: dto.featured ?? false,
+      status: dto.status || 'active',
+      sort_order: dto.sort_order ?? 0,
     });
   }
 
@@ -71,16 +63,16 @@ export class AdminGalleryService {
 
     if (dto.title || dto.slug) {
       data.slug = await SlugHelper.uniqueSlug(dto.slug || dto.title || '', {
-        findOne: (filter: any) => this.prisma.gallery.findFirst({ where: filter }),
+        findOne: (filter: any) => this.galleryRepo.findFirst(filter),
       }, id);
     }
 
-    return this.prisma.gallery.update({ where: { id }, data });
+    return this.galleryRepo.update(id, data);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.gallery.delete({ where: { id } });
+    await this.galleryRepo.delete(id);
     return { success: true };
   }
 }

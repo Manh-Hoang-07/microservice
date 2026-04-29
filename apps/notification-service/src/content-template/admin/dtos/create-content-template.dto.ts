@@ -1,16 +1,6 @@
 import { IsString, IsOptional, IsEnum, MaxLength } from 'class-validator';
-
-export enum TemplateType {
-  email = 'email',
-  telegram = 'telegram',
-  zalo = 'zalo',
-  sms = 'sms',
-}
-
-export enum TemplateCategory {
-  render = 'render',
-  file = 'file',
-}
+import { TemplateType } from '../../enums/template-type.enum';
+import { TemplateCategory } from '../../enums/template-category.enum';
 
 export class CreateContentTemplateDto {
   @IsString()

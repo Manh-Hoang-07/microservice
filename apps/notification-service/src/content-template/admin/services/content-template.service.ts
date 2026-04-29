@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
 import { CreateContentTemplateDto } from '../dtos/create-content-template.dto';
 import { UpdateContentTemplateDto } from '../dtos/update-content-template.dto';
 import { createPaginationMeta } from '@package/common';
+import { ContentTemplateRepository } from '../../repositories/content-template.repository';
 
 @Injectable()
 export class AdminContentTemplateService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly templateRepo: ContentTemplateRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -25,39 +25,37 @@ export class AdminContentTemplateService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.contentTemplate.findMany({ where, orderBy: { created_at: 'desc' }, skip, take: limit }),
-      this.prisma.contentTemplate.count({ where }),
+      this.templateRepo.findMany(where, { skip, take: limit }),
+      this.templateRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const template = await this.prisma.contentTemplate.findUnique({ where: { id } });
+    const template = await this.templateRepo.findById(id);
     if (!template) throw new NotFoundException('Content template not found');
     return template;
   }
 
   async create(dto: CreateContentTemplateDto) {
-    const existing = await this.prisma.contentTemplate.findUnique({ where: { code: dto.code } });
+    const existing = await this.templateRepo.findByCode(dto.code);
     if (existing) throw new BadRequestException('Template code already exists');
-    return this.prisma.contentTemplate.create({ data: dto as any });
+    return this.templateRepo.create(dto as any);
   }
 
   async update(id: bigint, dto: UpdateContentTemplateDto) {
     await this.getOne(id);
     if (dto.code) {
-      const existing = await this.prisma.contentTemplate.findFirst({
-        where: { code: dto.code, id: { not: id } },
-      });
+      const existing = await this.templateRepo.findFirst({ code: dto.code, id: { not: id } });
       if (existing) throw new BadRequestException('Template code already exists');
     }
-    return this.prisma.contentTemplate.update({ where: { id }, data: dto as any });
+    return this.templateRepo.update(id, dto as any);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.contentTemplate.delete({ where: { id } });
+    await this.templateRepo.delete(id);
     return { success: true };
   }
 }

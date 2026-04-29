@@ -4,9 +4,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import * as Joi from 'joi';
-
 import { createAppConfig } from '@package/config';
+import { envValidationSchema } from './config/env.validation';
 
 import { DatabaseModule } from './database/database.module';
 import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
@@ -26,14 +25,7 @@ import { FaqModule } from './modules/faq/faq.module';
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
       load: [createAppConfig(3008)],
-      validationSchema: Joi.object({
-        PORT: Joi.number().port().default(3008),
-        NODE_ENV: Joi.string()
-          .valid('development', 'staging', 'production')
-          .default('development'),
-        DATABASE_URL: Joi.string().required(),
-        AUTH_JWKS_URL: Joi.string().optional().allow(''),
-      }).unknown(true),
+      validationSchema: envValidationSchema,
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,

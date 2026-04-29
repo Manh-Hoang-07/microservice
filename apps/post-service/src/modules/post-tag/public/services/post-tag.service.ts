@@ -1,16 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
+import { PostTagRepository } from '../../repositories/post-tag.repository';
 
 @Injectable()
 export class PublicPostTagService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly tagRepo: PostTagRepository) {}
 
   async getAll() {
-    const data = await this.prisma.postTag.findMany({
-      where: { is_active: true },
-      select: { id: true, name: true, slug: true, description: true },
-      orderBy: { name: 'asc' },
-    });
+    const data = await this.tagRepo.findAllActive();
     return { data };
   }
 }

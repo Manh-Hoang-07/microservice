@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreatePostCategoryDto } from '../dtos/create-post-category.dto';
 import { UpdatePostCategoryDto } from '../dtos/update-post-category.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { PostCategoryRepository } from '../../repositories/post-category.repository';
 
 @Injectable()
 export class AdminPostCategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly categoryRepo: PostCategoryRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -26,45 +25,34 @@ export class AdminPostCategoryService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.postCategory.findMany({
-        where,
-        include: { children: { orderBy: { sort_order: 'asc' } } },
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.postCategory.count({ where }),
+      this.categoryRepo.findMany(where, { skip, take: limit }),
+      this.categoryRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const category = await this.prisma.postCategory.findUnique({
-      where: { id },
-      include: { children: { orderBy: { sort_order: 'asc' } } },
-    });
+    const category = await this.categoryRepo.findById(id);
     if (!category) throw new NotFoundException('Category not found');
     return category;
   }
 
   async create(dto: CreatePostCategoryDto) {
     const slug = await SlugHelper.uniqueSlug(dto.name, {
-      findOne: (filter: any) => this.prisma.postCategory.findFirst({ where: filter }),
+      findOne: (filter: any) => this.categoryRepo.findFirst(filter),
     });
 
-    return this.prisma.postCategory.create({
-      data: {
-        name: dto.name,
-        slug,
-        description: dto.description,
-        parent_id: dto.parent_id ? BigInt(dto.parent_id) : null,
-        is_active: dto.is_active ?? true,
-        sort_order: dto.sort_order ?? 0,
-        seo_title: dto.seo_title,
-        seo_description: dto.seo_description,
-        seo_keywords: dto.seo_keywords,
-      },
+    return this.categoryRepo.create({
+      name: dto.name,
+      slug,
+      description: dto.description,
+      parent_id: dto.parent_id ? BigInt(dto.parent_id) : null,
+      is_active: dto.is_active ?? true,
+      sort_order: dto.sort_order ?? 0,
+      seo_title: dto.seo_title,
+      seo_description: dto.seo_description,
+      seo_keywords: dto.seo_keywords,
     });
   }
 
@@ -77,17 +65,19 @@ export class AdminPostCategoryService {
     }
 
     if (dto.name) {
-      data.slug = await SlugHelper.uniqueSlug(dto.name, {
-        findOne: (filter: any) => this.prisma.postCategory.findFirst({ where: filter }),
-      }, id);
+      data.slug = await SlugHelper.uniqueSlug(
+        dto.name,
+        { findOne: (filter: any) => this.categoryRepo.findFirst(filter) },
+        id,
+      );
     }
 
-    return this.prisma.postCategory.update({ where: { id }, data });
+    return this.categoryRepo.update(id, data);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.postCategory.delete({ where: { id } });
+    await this.categoryRepo.delete(id);
     return { success: true };
   }
 }

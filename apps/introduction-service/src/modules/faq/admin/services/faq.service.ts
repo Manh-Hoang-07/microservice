@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateFaqDto } from '../dtos/create-faq.dto';
 import { UpdateFaqDto } from '../dtos/update-faq.dto';
 import { createPaginationMeta } from '@package/common';
+import { FaqRepository } from '../../repositories/faq.repository';
 
 @Injectable()
 export class AdminFaqService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly faqRepo: FaqRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -23,43 +23,36 @@ export class AdminFaqService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.faq.findMany({
-        where,
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.faq.count({ where }),
+      this.faqRepo.findMany(where, { skip, take: limit }),
+      this.faqRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const item = await this.prisma.faq.findUnique({ where: { id } });
+    const item = await this.faqRepo.findById(id);
     if (!item) throw new NotFoundException('FAQ not found');
     return item;
   }
 
   async create(dto: CreateFaqDto) {
-    return this.prisma.faq.create({
-      data: {
-        question: dto.question,
-        answer: dto.answer,
-        status: dto.status || 'active',
-        sort_order: dto.sort_order ?? 0,
-      },
+    return this.faqRepo.create({
+      question: dto.question,
+      answer: dto.answer,
+      status: dto.status || 'active',
+      sort_order: dto.sort_order ?? 0,
     });
   }
 
   async update(id: bigint, dto: UpdateFaqDto) {
     await this.getOne(id);
-    return this.prisma.faq.update({ where: { id }, data: dto as any });
+    return this.faqRepo.update(id, dto as any);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.faq.delete({ where: { id } });
+    await this.faqRepo.delete(id);
     return { success: true };
   }
 }

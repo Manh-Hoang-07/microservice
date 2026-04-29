@@ -3,10 +3,11 @@ import { AdminTestimonialController } from './admin/controllers/testimonial.cont
 import { AdminTestimonialService } from './admin/services/testimonial.service';
 import { PublicTestimonialController } from './public/controllers/testimonial.controller';
 import { PublicTestimonialService } from './public/services/testimonial.service';
+import { TestimonialRepository } from './repositories/testimonial.repository';
 
 @Module({
   controllers: [AdminTestimonialController, PublicTestimonialController],
-  providers: [AdminTestimonialService, PublicTestimonialService],
-  exports: [PublicTestimonialService],
+  providers: [TestimonialRepository, AdminTestimonialService, PublicTestimonialService],
+  exports: [TestimonialRepository],
 })
 export class TestimonialModule {}

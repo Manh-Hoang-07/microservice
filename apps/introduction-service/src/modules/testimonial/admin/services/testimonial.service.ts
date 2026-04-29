@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
 import { createPaginationMeta, toPrimaryKey } from '@package/common';
+import { TestimonialRepository } from '../../repositories/testimonial.repository';
 
 @Injectable()
 export class AdminTestimonialService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly testimonialRepo: TestimonialRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -28,44 +28,32 @@ export class AdminTestimonialService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.testimonial.findMany({
-        where,
-        include: { project: { select: { id: true, name: true, slug: true } } },
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.testimonial.count({ where }),
+      this.testimonialRepo.findMany(where, { skip, take: limit }),
+      this.testimonialRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const item = await this.prisma.testimonial.findUnique({
-      where: { id },
-      include: { project: { select: { id: true, name: true, slug: true } } },
-    });
+    const item = await this.testimonialRepo.findById(id);
     if (!item) throw new NotFoundException('Testimonial not found');
     return item;
   }
 
   async create(dto: CreateTestimonialDto) {
-    return this.prisma.testimonial.create({
-      data: {
-        client_name: dto.client_name,
-        client_position: dto.client_position,
-        client_company: dto.client_company,
-        client_avatar: dto.client_avatar,
-        content: dto.content,
-        rating: dto.rating ?? 5,
-        project_id: dto.project_id ? toPrimaryKey(dto.project_id) : undefined,
-        featured: dto.featured ?? false,
-        status: dto.status || 'active',
-        sort_order: dto.sort_order ?? 0,
-      },
-      include: { project: { select: { id: true, name: true, slug: true } } },
-    });
+    return this.testimonialRepo.create({
+      client_name: dto.client_name,
+      client_position: dto.client_position,
+      client_company: dto.client_company,
+      client_avatar: dto.client_avatar,
+      content: dto.content,
+      rating: dto.rating ?? 5,
+      project_id: dto.project_id ? toPrimaryKey(dto.project_id) : undefined,
+      featured: dto.featured ?? false,
+      status: dto.status || 'active',
+      sort_order: dto.sort_order ?? 0,
+    } as any);
   }
 
   async update(id: bigint, dto: UpdateTestimonialDto) {
@@ -76,16 +64,12 @@ export class AdminTestimonialService {
       data.project_id = dto.project_id ? toPrimaryKey(dto.project_id) : null;
     }
 
-    return this.prisma.testimonial.update({
-      where: { id },
-      data,
-      include: { project: { select: { id: true, name: true, slug: true } } },
-    });
+    return this.testimonialRepo.update(id, data);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.testimonial.delete({ where: { id } });
+    await this.testimonialRepo.delete(id);
     return { success: true };
   }
 }

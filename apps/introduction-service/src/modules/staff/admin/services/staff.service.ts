@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateStaffDto } from '../dtos/create-staff.dto';
 import { UpdateStaffDto } from '../dtos/update-staff.dto';
 import { createPaginationMeta } from '@package/common';
+import { StaffRepository } from '../../repositories/staff.repository';
 
 @Injectable()
 export class AdminStaffService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly staffRepo: StaffRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -25,51 +25,44 @@ export class AdminStaffService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.staff.findMany({
-        where,
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.staff.count({ where }),
+      this.staffRepo.findMany(where, { skip, take: limit }),
+      this.staffRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const item = await this.prisma.staff.findUnique({ where: { id } });
+    const item = await this.staffRepo.findById(id);
     if (!item) throw new NotFoundException('Staff not found');
     return item;
   }
 
   async create(dto: CreateStaffDto) {
-    return this.prisma.staff.create({
-      data: {
-        name: dto.name,
-        position: dto.position,
-        department: dto.department,
-        bio: dto.bio,
-        avatar: dto.avatar,
-        email: dto.email,
-        phone: dto.phone,
-        social_links: dto.social_links ?? {},
-        experience: dto.experience,
-        expertise: dto.expertise,
-        status: dto.status || 'active',
-        sort_order: dto.sort_order ?? 0,
-      },
+    return this.staffRepo.create({
+      name: dto.name,
+      position: dto.position,
+      department: dto.department,
+      bio: dto.bio,
+      avatar: dto.avatar,
+      email: dto.email,
+      phone: dto.phone,
+      social_links: dto.social_links ?? {},
+      experience: dto.experience,
+      expertise: dto.expertise,
+      status: dto.status || 'active',
+      sort_order: dto.sort_order ?? 0,
     });
   }
 
   async update(id: bigint, dto: UpdateStaffDto) {
     await this.getOne(id);
-    return this.prisma.staff.update({ where: { id }, data: dto as any });
+    return this.staffRepo.update(id, dto as any);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.staff.delete({ where: { id } });
+    await this.staffRepo.delete(id);
     return { success: true };
   }
 }

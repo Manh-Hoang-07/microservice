@@ -1,21 +1,11 @@
-import {
-  Injectable,
-  Inject,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import {
-  IGeneralConfigRepository,
-  GENERAL_CONFIG_REPOSITORY,
-} from '../../repositories/general-config.repository';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { GeneralConfigRepository } from '../../repositories/general-config.repository';
 import { UpdateGeneralConfigDto } from '../dtos/update-general-config.dto';
 import { buildConfigPayload } from '../../../helpers/config-payload.helper';
 
 @Injectable()
 export class GeneralConfigService {
-  constructor(
-    @Inject(GENERAL_CONFIG_REPOSITORY)
-    private readonly generalConfigRepo: IGeneralConfigRepository,
-  ) {}
+  constructor(private readonly generalConfigRepo: GeneralConfigRepository) {}
 
   async getConfig(): Promise<any> {
     const config = await this.generalConfigRepo.getConfig();
@@ -26,7 +16,6 @@ export class GeneralConfigService {
     const existing = await this.generalConfigRepo.getConfig();
 
     const bigIntFields = ['site_country_id', 'site_province_id', 'site_ward_id'];
-
     const payload = buildConfigPayload(dto, bigIntFields, userId, existing);
 
     let result: any;
@@ -43,9 +32,7 @@ export class GeneralConfigService {
     }
 
     if (!result) {
-      throw new InternalServerErrorException(
-        'Failed to create or update general config',
-      );
+      throw new InternalServerErrorException('Failed to create or update general config');
     }
 
     return result;

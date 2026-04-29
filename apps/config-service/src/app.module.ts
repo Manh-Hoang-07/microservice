@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
-import * as Joi from 'joi';
 import { createAppConfig } from '@package/config';
+import { envValidationSchema } from './config/env.validation';
 import { JwtGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { DatabaseModule } from './database/database.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
@@ -16,15 +16,7 @@ import { LocationModule } from './modules/location/location.module';
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
       load: [createAppConfig(3005, { internalApiSecret: process.env.INTERNAL_API_SECRET || '' })],
-      validationSchema: Joi.object({
-        PORT: Joi.number().port().default(3005),
-        NODE_ENV: Joi.string()
-          .valid('development', 'staging', 'production')
-          .default('development'),
-        DATABASE_URL: Joi.string().required(),
-        AUTH_JWKS_URL: Joi.string().uri().optional().allow(''),
-        INTERNAL_API_SECRET: Joi.string().optional().allow(''),
-      }).unknown(true),
+      validationSchema: envValidationSchema,
     }),
     DatabaseModule,
     HealthModule.register('config-service'),

@@ -1,10 +1,10 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
-import { PrismaService } from '../../database/prisma.service';
 import { AdminNotificationService } from '../../notification/admin/services/notification.service';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { FollowersProjectionRepository } from '../repositories/followers-projection.repository';
 
 @Injectable()
 export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
@@ -13,7 +13,7 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly followersProjectionRepo: FollowersProjectionRepository,
     private readonly notifService: AdminNotificationService,
     @InjectQueue('notification') private readonly notifQueue: Queue,
   ) {}
@@ -36,7 +36,6 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
       this.consumer = kafka.consumer({ groupId: groupId || 'notification-service' });
       await this.consumer.connect();
 
-      // Subscribe to all relevant topics
       const topics = [
         'comic.chapter.published',
         'comic.comment.created',
@@ -111,21 +110,12 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * New chapter published → notify all followers (bulk insert)
-   */
   private async handleChapterPublished(payload: any) {
     const { comic_id, comic_title, comic_slug, chapter_label } = payload;
 
-    // Get followers from local projection
-    const followers = await this.prisma.comicFollowersProjection.findMany({
-      where: { comic_id: BigInt(comic_id) },
-      select: { user_id: true },
-    });
-
+    const followers = await this.followersProjectionRepo.findByComicId(BigInt(comic_id));
     if (!followers.length) return;
 
-    // Bulk insert notifications (batch 500)
     const batchSize = 500;
     for (let i = 0; i < followers.length; i += batchSize) {
       const batch = followers.slice(i, i + batchSize);
@@ -143,9 +133,6 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(`Notified ${followers.length} followers for comic ${comic_id}`);
   }
 
-  /**
-   * Comment reply → notify parent comment author
-   */
   private async handleCommentCreated(payload: any) {
     const { parent_comment_user_id, user_id, comic_id } = payload;
     if (!parent_comment_user_id || parent_comment_user_id === user_id) return;
@@ -159,37 +146,20 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  /**
-   * User followed comic → update local projection
-   */
   private async handleUserFollowed(payload: any) {
     const { user_id, comic_id, followed_at } = payload;
-    await this.prisma.comicFollowersProjection.upsert({
-      where: {
-        user_id_comic_id: { user_id: BigInt(user_id), comic_id: BigInt(comic_id) },
-      },
-      create: {
-        user_id: BigInt(user_id),
-        comic_id: BigInt(comic_id),
-        followed_at: followed_at ? new Date(followed_at) : new Date(),
-      },
-      update: {},
-    });
+    await this.followersProjectionRepo.upsert(
+      BigInt(user_id),
+      BigInt(comic_id),
+      followed_at ? new Date(followed_at) : new Date(),
+    );
   }
 
-  /**
-   * User unfollowed comic → remove from local projection
-   */
   private async handleUserUnfollowed(payload: any) {
     const { user_id, comic_id } = payload;
-    await this.prisma.comicFollowersProjection.deleteMany({
-      where: { user_id: BigInt(user_id), comic_id: BigInt(comic_id) },
-    });
+    await this.followersProjectionRepo.deleteMany(BigInt(user_id), BigInt(comic_id));
   }
 
-  /**
-   * User registered → queue welcome email
-   */
   private async handleUserRegistered(payload: any) {
     const { email, username } = payload;
     if (!email) return;
@@ -200,16 +170,9 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
         to: email,
         variables: { name: username || email, username, email },
       },
-    }, {
-      attempts: 3,
-      backoff: 5000,
-      removeOnComplete: true,
-    });
+    }, { attempts: 3, backoff: 5000, removeOnComplete: true });
   }
 
-  /**
-   * Password reset → queue reset email
-   */
   private async handlePasswordReset(payload: any) {
     const { email, username } = payload;
     if (!email) return;
@@ -223,16 +186,9 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
           time: new Date().toLocaleString('vi-VN'),
         },
       },
-    }, {
-      attempts: 3,
-      backoff: 5000,
-      removeOnComplete: true,
-    });
+    }, { attempts: 3, backoff: 5000, removeOnComplete: true });
   }
 
-  /**
-   * Contact form submitted → queue admin alert email
-   */
   private async handleContactSubmitted(payload: any) {
     await this.notifQueue.add('send_email_template', {
       templateCode: 'contact_submitted',
@@ -240,16 +196,9 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
         to: payload.admin_email || 'admin@comic-platform.com',
         variables: payload,
       },
-    }, {
-      attempts: 3,
-      backoff: 5000,
-      removeOnComplete: true,
-    });
+    }, { attempts: 3, backoff: 5000, removeOnComplete: true });
   }
 
-  /**
-   * Post comment reply → notify parent comment author
-   */
   private async handlePostCommentCreated(payload: any) {
     const { parent_comment_user_id, user_id, post_id } = payload;
     if (!parent_comment_user_id || parent_comment_user_id === user_id) return;

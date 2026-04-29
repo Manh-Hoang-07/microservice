@@ -7,7 +7,7 @@ import {
   IsBoolean,
   MaxLength,
 } from 'class-validator';
-import { ComicStatus } from '../../../../common/enums';
+import { ComicStatus } from '../../enums/comic-status.enum';
 
 export class CreateComicDto {
   @IsString()

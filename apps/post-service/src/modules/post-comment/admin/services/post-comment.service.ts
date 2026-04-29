@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { createPaginationMeta } from '@package/common';
+import { PostCommentRepository } from '../../repositories/post-comment.repository';
 
 @Injectable()
 export class AdminPostCommentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly commentRepo: PostCommentRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -16,21 +16,16 @@ export class AdminPostCommentService {
     if (query.status) where.status = query.status;
 
     const [data, total] = await Promise.all([
-      this.prisma.postComment.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.postComment.count({ where }),
+      this.commentRepo.findMany(where, { skip, take: limit }),
+      this.commentRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async updateStatus(id: bigint, status: string) {
-    const comment = await this.prisma.postComment.findUnique({ where: { id } });
+    const comment = await this.commentRepo.findById(id);
     if (!comment) throw new NotFoundException('Comment not found');
-    return this.prisma.postComment.update({ where: { id }, data: { status } });
+    return this.commentRepo.update(id, { status });
   }
 }

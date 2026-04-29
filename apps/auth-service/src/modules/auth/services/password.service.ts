@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../../../database/prisma.service';
+import { UserRepository } from '../repositories/user.repository';
 import { AttemptLimiterService } from '../../../security/services/attempt-limiter.service';
 import { AuthOtpService } from './auth-otp.service';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
@@ -13,14 +13,14 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 @Injectable()
 export class PasswordService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly userRepo: UserRepository,
     private readonly otpService: AuthOtpService,
     private readonly accountLockoutService: AttemptLimiterService,
   ) {}
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
     const email = dto.email.toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.userRepo.findByEmail(email);
     if (!user) {
       throw new NotFoundException('Email does not exist in the system.');
     }
@@ -39,13 +39,13 @@ export class PasswordService {
       throw new BadRequestException('Invalid or expired OTP code.');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.userRepo.findByEmail(email);
     if (!user) {
       throw new NotFoundException('User does not exist.');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    await this.prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+    await this.userRepo.update(user.id, { password: hashedPassword });
 
     await this.accountLockoutService.reset('auth:login', email);
   }

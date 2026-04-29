@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { createPaginationMeta } from '@package/common';
+import { ComicReviewRepository } from '../../repositories/comic-review.repository';
 
 @Injectable()
 export class PublicReviewService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly reviewRepo: ComicReviewRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -15,16 +15,11 @@ export class PublicReviewService {
     if (query.comic_id) where.comic_id = BigInt(query.comic_id);
 
     const [data, total] = await Promise.all([
-      this.prisma.comicReview.findMany({ where, orderBy: { created_at: 'desc' }, skip, take: limit }),
-      this.prisma.comicReview.count({ where }),
+      this.reviewRepo.findMany(where, { skip, take: limit }),
+      this.reviewRepo.count(where),
     ]);
 
-    // Calculate average rating
-    const agg = await this.prisma.comicReview.aggregate({
-      where,
-      _avg: { rating: true },
-      _count: true,
-    });
+    const agg = await this.reviewRepo.aggregateRatingWithAvg(where);
 
     return {
       data,

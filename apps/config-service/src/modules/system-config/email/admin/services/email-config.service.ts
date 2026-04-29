@@ -1,21 +1,11 @@
-import {
-  Injectable,
-  Inject,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import {
-  IEmailConfigRepository,
-  EMAIL_CONFIG_REPOSITORY,
-} from '../../repositories/email-config.repository';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { EmailConfigRepository } from '../../repositories/email-config.repository';
 import { UpdateEmailConfigDto } from '../dtos/update-email-config.dto';
 import { buildConfigPayload } from '../../../helpers/config-payload.helper';
 
 @Injectable()
 export class EmailConfigService {
-  constructor(
-    @Inject(EMAIL_CONFIG_REPOSITORY)
-    private readonly emailConfigRepo: IEmailConfigRepository,
-  ) {}
+  constructor(private readonly emailConfigRepo: EmailConfigRepository) {}
 
   async getConfig(): Promise<any> {
     const config = await this.emailConfigRepo.getConfig();

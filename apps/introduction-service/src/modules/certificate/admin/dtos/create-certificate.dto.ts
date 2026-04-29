@@ -6,7 +6,7 @@ import {
   IsEnum,
   MaxLength,
 } from 'class-validator';
-import { CertificateType } from '../../../../common/enums';
+import { CertificateType } from '../../enums/certificate-type.enum';
 
 export class CreateCertificateDto {
   @IsString()

@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { createPaginationMeta } from '@package/common';
+import { ProjectRepository } from '../../repositories/project.repository';
 
 const PUBLIC_PROJECT_STATUSES = ['planning', 'in_progress', 'completed'];
 
 @Injectable()
 export class PublicProjectService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly projectRepo: ProjectRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -25,41 +25,21 @@ export class PublicProjectService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.project.findMany({
-        where,
-        include: {
-          testimonials: {
-            where: { status: 'active' },
-            orderBy: { sort_order: 'asc' },
-          },
-        },
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.project.count({ where }),
+      this.projectRepo.findManyPublic(where, { skip, take: limit }),
+      this.projectRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getBySlug(slug: string) {
-    const item = await this.prisma.project.findFirst({
-      where: { slug, status: { in: PUBLIC_PROJECT_STATUSES } },
-      include: {
-        testimonials: {
-          where: { status: 'active' },
-          orderBy: { sort_order: 'asc' },
-        },
-      },
+    const item = await this.projectRepo.findFirstPublic({
+      slug,
+      status: { in: PUBLIC_PROJECT_STATUSES },
     });
     if (!item) throw new NotFoundException('Project not found');
 
-    // Increment view_count
-    await this.prisma.project.update({
-      where: { id: item.id },
-      data: { view_count: { increment: 1 } },
-    });
+    await this.projectRepo.increment(item.id, 'view_count');
 
     return { ...item, view_count: item.view_count + 1 };
   }

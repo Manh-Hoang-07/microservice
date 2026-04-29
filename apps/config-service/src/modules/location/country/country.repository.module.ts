@@ -1,15 +1,9 @@
 import { Global, Module } from '@nestjs/common';
-import { COUNTRY_REPOSITORY } from './repositories/country.repository';
-import { CountryRepositoryImpl } from './repositories/country.repository.impl';
+import { CountryRepository } from './repositories/country.repository';
 
 @Global()
 @Module({
-  providers: [
-    {
-      provide: COUNTRY_REPOSITORY,
-      useClass: CountryRepositoryImpl,
-    },
-  ],
-  exports: [COUNTRY_REPOSITORY],
+  providers: [CountryRepository],
+  exports: [CountryRepository],
 })
 export class CountryRepositoryModule {}

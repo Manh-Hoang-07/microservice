@@ -1,15 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
+import { ComicCategoryRepository } from '../../repositories/comic-category.repository';
 
 @Injectable()
 export class PublicCategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly categoryRepo: ComicCategoryRepository) {}
 
   async getAll() {
-    const data = await this.prisma.comicCategory.findMany({
-      select: { id: true, name: true, slug: true, description: true },
-      orderBy: { name: 'asc' },
-    });
+    const data = await this.categoryRepo.findAll();
     return { data };
   }
 }

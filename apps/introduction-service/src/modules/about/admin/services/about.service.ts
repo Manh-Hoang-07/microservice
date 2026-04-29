@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { AboutSectionRepository } from '../../repositories/about-section.repository';
 
 @Injectable()
 export class AdminAboutService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly aboutRepo: AboutSectionRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -25,40 +24,33 @@ export class AdminAboutService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.aboutSection.findMany({
-        where,
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.aboutSection.count({ where }),
+      this.aboutRepo.findMany(where, { skip, take: limit }),
+      this.aboutRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const item = await this.prisma.aboutSection.findUnique({ where: { id } });
+    const item = await this.aboutRepo.findById(id);
     if (!item) throw new NotFoundException('About section not found');
     return item;
   }
 
   async create(dto: CreateAboutDto) {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.title, {
-      findOne: (filter: any) => this.prisma.aboutSection.findFirst({ where: filter }),
+      findOne: (filter: any) => this.aboutRepo.findFirst(filter),
     });
 
-    return this.prisma.aboutSection.create({
-      data: {
-        title: dto.title,
-        slug,
-        content: dto.content,
-        image: dto.image,
-        video_url: dto.video_url,
-        section_type: dto.section_type || 'general',
-        status: dto.status || 'active',
-        sort_order: dto.sort_order ?? 0,
-      },
+    return this.aboutRepo.create({
+      title: dto.title,
+      slug,
+      content: dto.content,
+      image: dto.image,
+      video_url: dto.video_url,
+      section_type: dto.section_type || 'general',
+      status: dto.status || 'active',
+      sort_order: dto.sort_order ?? 0,
     });
   }
 
@@ -69,16 +61,16 @@ export class AdminAboutService {
 
     if (dto.title || dto.slug) {
       data.slug = await SlugHelper.uniqueSlug(dto.slug || dto.title || '', {
-        findOne: (filter: any) => this.prisma.aboutSection.findFirst({ where: filter }),
+        findOne: (filter: any) => this.aboutRepo.findFirst(filter),
       }, id);
     }
 
-    return this.prisma.aboutSection.update({ where: { id }, data });
+    return this.aboutRepo.update(id, data);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.aboutSection.delete({ where: { id } });
+    await this.aboutRepo.delete(id);
     return { success: true };
   }
 }

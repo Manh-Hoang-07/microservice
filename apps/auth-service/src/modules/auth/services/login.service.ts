@@ -4,17 +4,17 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../../../database/prisma.service';
 import { RedisService } from '../../../security/services/redis.service';
 import { TokenBlacklistService } from '../../../security/services/token-blacklist.service';
 import { AttemptLimiterService } from '../../../security/services/attempt-limiter.service';
 import { TokenService, PrimaryKey } from './token.service';
 import { LoginDto } from '../dto/login.dto';
+import { UserRepository } from '../repositories/user.repository';
 
 @Injectable()
 export class LoginService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly userRepo: UserRepository,
     private readonly redis: RedisService,
     private readonly tokenBlacklistService: TokenBlacklistService,
     private readonly tokenService: TokenService,
@@ -25,7 +25,6 @@ export class LoginService {
     const identifier = dto.email.toLowerCase();
     const scope = 'auth:login';
 
-    // 1. Check Lockout
     const lockout = await this.accountLockoutService.check(scope, identifier);
     if (lockout.isLocked) {
       throw new ForbiddenException(
@@ -33,11 +32,7 @@ export class LoginService {
       );
     }
 
-    // 2. Validate Credentials
-    const user = await this.prisma.user.findUnique({
-      where: { email: identifier },
-      select: { id: true, email: true, status: true, password: true },
-    });
+    const user = await this.userRepo.findByEmailSelect(identifier);
 
     if (!user || !user.password) {
       await this.accountLockoutService.add(scope, identifier);
@@ -50,18 +45,13 @@ export class LoginService {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    // 3. Check Account Status
     if (user.status !== 'active') {
       throw new ForbiddenException('Account is locked or inactive.');
     }
 
-    // 4. Success Tasks
     await this.accountLockoutService.reset(scope, identifier);
-    this.prisma.user
-      .update({ where: { id: user.id }, data: { last_login_at: new Date() } })
-      .catch(() => undefined);
+    this.userRepo.updateLastLogin(user.id);
 
-    // 5. Issue Tokens
     const userPk = user.id as unknown as PrimaryKey;
     const { accessToken, refreshToken, refreshJti, accessTtlSec } =
       await this.tokenService.generateTokens(userPk, user.email!);

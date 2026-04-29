@@ -7,7 +7,8 @@ import {
   IsBoolean,
   MaxLength,
 } from 'class-validator';
-import { PostStatus, PostType } from '../../../../common/enums';
+import { PostStatus } from '../../enums/post-status.enum';
+import { PostType } from '../../enums/post-type.enum';
 
 export class CreatePostDto {
   @IsString()

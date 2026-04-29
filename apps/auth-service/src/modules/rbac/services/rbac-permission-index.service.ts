@@ -1,5 +1,5 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
+import { RbacRepository } from '../repositories/rbac.repository';
 import { RedisService } from '../../../security/services/redis.service';
 import { PERM } from '../constants/rbac.constants';
 
@@ -16,7 +16,7 @@ export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy
   private prewarmTimer: NodeJS.Timeout | null = null;
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly rbacRepo: RbacRepository,
     private readonly redis: RedisService,
   ) {}
 
@@ -71,10 +71,7 @@ export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy
 
     this.permissionIndexRefreshInFlight = (async () => {
       const byCode = new Map<string, PermissionNode>();
-      const nodes = await this.prisma.permission.findMany({
-        where: { status: 'active' },
-        select: { id: true, code: true, parent_id: true },
-      });
+      const nodes = await this.rbacRepo.findPermissions();
       const byId = new Map<string, { code: string; parent_id: string | null }>();
       for (const n of nodes) {
         byId.set(String(n.id), {

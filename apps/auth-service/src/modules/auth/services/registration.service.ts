@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../../../database/prisma.service';
+import { UserRepository } from '../repositories/user.repository';
 import { AuthOtpService } from './auth-otp.service';
 import { RegisterDto } from '../dto/register.dto';
 import { safeUser } from '../utils/user.util';
@@ -8,7 +8,7 @@ import { safeUser } from '../utils/user.util';
 @Injectable()
 export class RegistrationService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly userRepo: UserRepository,
     private readonly otpService: AuthOtpService,
   ) {}
 
@@ -26,15 +26,13 @@ export class RegistrationService {
 
     // 3. Create User
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        username: dto.username ?? email,
-        email,
-        phone: dto.phone ?? null,
-        password: hashedPassword,
-        name: dto.name,
-        status: 'active',
-      },
+    const user = await this.userRepo.create({
+      username: dto.username ?? email,
+      email,
+      phone: dto.phone ?? null,
+      password: hashedPassword,
+      name: dto.name,
+      status: 'active',
     });
 
     return { user: safeUser(user) };
@@ -43,13 +41,13 @@ export class RegistrationService {
   private async validateUniqueness(dto: RegisterDto): Promise<void> {
     const email = dto.email.toLowerCase();
 
-    if (await this.prisma.user.findUnique({ where: { email } })) {
+    if (await this.userRepo.findByEmail(email)) {
       throw new BadRequestException('Email is already in use.');
     }
-    if (dto.username && await this.prisma.user.findUnique({ where: { username: dto.username } })) {
+    if (dto.username && await this.userRepo.findByUsername(dto.username)) {
       throw new BadRequestException('Username is already in use.');
     }
-    if (dto.phone && await this.prisma.user.findUnique({ where: { phone: dto.phone } })) {
+    if (dto.phone && await this.userRepo.findByPhone(dto.phone)) {
       throw new BadRequestException('Phone number is already in use.');
     }
   }

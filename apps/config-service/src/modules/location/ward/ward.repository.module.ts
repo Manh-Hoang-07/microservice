@@ -1,15 +1,9 @@
 import { Global, Module } from '@nestjs/common';
-import { WARD_REPOSITORY } from './repositories/ward.repository';
-import { WardRepositoryImpl } from './repositories/ward.repository.impl';
+import { WardRepository } from './repositories/ward.repository';
 
 @Global()
 @Module({
-  providers: [
-    {
-      provide: WARD_REPOSITORY,
-      useClass: WardRepositoryImpl,
-    },
-  ],
-  exports: [WARD_REPOSITORY],
+  providers: [WardRepository],
+  exports: [WardRepository],
 })
 export class WardRepositoryModule {}

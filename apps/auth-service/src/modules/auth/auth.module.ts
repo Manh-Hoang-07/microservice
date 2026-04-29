@@ -11,6 +11,7 @@ import { RegistrationService } from './services/registration.service';
 import { PasswordService } from './services/password.service';
 import { SocialAuthService } from './services/social-auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { UserRepository } from './repositories/user.repository';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
   ],
   controllers: [AuthController],
   providers: [
+    UserRepository,
     AuthService,
     TokenService,
     LoginService,

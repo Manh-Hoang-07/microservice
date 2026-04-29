@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { RedisService } from '@package/redis';
-import { PUBLIC_POST_STATUSES } from '../../../../common/enums';
+import { PUBLIC_POST_STATUSES } from '../../enums/post-status.enum';
 import { createPaginationMeta } from '@package/common';
+import { PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
 export class PublicPostService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly postRepo: PostRepository,
     private readonly redis: RedisService,
   ) {}
 
@@ -24,18 +24,12 @@ export class PublicPostService {
       ];
     }
     if (query.post_category_id) {
-      where.categoryLinks = {
-        some: { post_category_id: BigInt(query.post_category_id) },
-      };
+      where.categoryLinks = { some: { post_category_id: BigInt(query.post_category_id) } };
     }
     if (query.post_tag_id) {
-      where.tagLinks = {
-        some: { post_tag_id: BigInt(query.post_tag_id) },
-      };
+      where.tagLinks = { some: { post_tag_id: BigInt(query.post_tag_id) } };
     }
-    if (query.post_type) {
-      where.post_type = query.post_type;
-    }
+    if (query.post_type) where.post_type = query.post_type;
     if (query.is_featured !== undefined) {
       where.is_featured = query.is_featured === 'true' || query.is_featured === true;
     }
@@ -43,7 +37,6 @@ export class PublicPostService {
       where.is_pinned = query.is_pinned === 'true' || query.is_pinned === true;
     }
 
-    // Parse sort
     let orderBy: any = { published_at: 'desc' };
     if (query.sort) {
       const [field, dir] = query.sort.split(':');
@@ -54,37 +47,9 @@ export class PublicPostService {
       }
     }
 
-    const select = {
-      id: true,
-      slug: true,
-      name: true,
-      excerpt: true,
-      image: true,
-      cover_image: true,
-      status: true,
-      post_type: true,
-      video_url: true,
-      audio_url: true,
-      is_featured: true,
-      is_pinned: true,
-      published_at: true,
-      seo_title: true,
-      seo_description: true,
-      seo_keywords: true,
-      created_at: true,
-      updated_at: true,
-      stats: true,
-      categoryLinks: {
-        select: { category: { select: { id: true, name: true, slug: true } } },
-      },
-      tagLinks: {
-        select: { tag: { select: { id: true, name: true, slug: true } } },
-      },
-    };
-
     const [data, total] = await Promise.all([
-      this.prisma.post.findMany({ where, select, orderBy, skip, take: limit }),
-      this.prisma.post.count({ where }),
+      this.postRepo.findManyPublic(where, { skip, take: limit }, orderBy),
+      this.postRepo.count(where),
     ]);
 
     return {
@@ -94,17 +59,9 @@ export class PublicPostService {
   }
 
   async getBySlug(slug: string) {
-    const post = await this.prisma.post.findFirst({
-      where: { slug, status: { in: PUBLIC_POST_STATUSES } },
-      include: {
-        stats: true,
-        categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
-        tagLinks: { select: { tag: { select: { id: true, name: true, slug: true } } } },
-      },
-    });
+    const post = await this.postRepo.findBySlug(slug, PUBLIC_POST_STATUSES);
     if (!post) throw new NotFoundException('Post not found');
 
-    // Increment view via Redis buffer
     if (this.redis.isEnabled()) {
       await this.redis.hincrby('post:views:buffer', post.id.toString(), 1);
     }

@@ -8,7 +8,7 @@ import {
   IsArray,
   MaxLength,
 } from 'class-validator';
-import { ProjectStatus } from '../../../../common/enums';
+import { ProjectStatus } from '../../enums/project-status.enum';
 
 export class CreateProjectDto {
   @IsString()

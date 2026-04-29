@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { ProjectRepository } from '../../repositories/project.repository';
 
 @Injectable()
 export class AdminProjectService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly projectRepo: ProjectRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -28,55 +27,43 @@ export class AdminProjectService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.project.findMany({
-        where,
-        include: { testimonials: true },
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.project.count({ where }),
+      this.projectRepo.findMany(where, { skip, take: limit }),
+      this.projectRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const item = await this.prisma.project.findUnique({
-      where: { id },
-      include: { testimonials: true },
-    });
+    const item = await this.projectRepo.findById(id);
     if (!item) throw new NotFoundException('Project not found');
     return item;
   }
 
   async create(dto: CreateProjectDto) {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.name, {
-      findOne: (filter: any) => this.prisma.project.findFirst({ where: filter }),
+      findOne: (filter: any) => this.projectRepo.findFirst(filter),
     });
 
-    return this.prisma.project.create({
-      data: {
-        name: dto.name,
-        slug,
-        description: dto.description,
-        short_description: dto.short_description,
-        cover_image: dto.cover_image,
-        location: dto.location,
-        area: dto.area,
-        start_date: dto.start_date ? new Date(dto.start_date) : undefined,
-        end_date: dto.end_date ? new Date(dto.end_date) : undefined,
-        status: dto.status || 'planning',
-        client_name: dto.client_name,
-        budget: dto.budget,
-        images: dto.images ?? [],
-        featured: dto.featured ?? false,
-        sort_order: dto.sort_order ?? 0,
-        seo_title: dto.seo_title,
-        seo_description: dto.seo_description,
-        seo_keywords: dto.seo_keywords,
-      },
-      include: { testimonials: true },
+    return this.projectRepo.create({
+      name: dto.name,
+      slug,
+      description: dto.description,
+      short_description: dto.short_description,
+      cover_image: dto.cover_image,
+      location: dto.location,
+      area: dto.area,
+      start_date: dto.start_date ? new Date(dto.start_date) : undefined,
+      end_date: dto.end_date ? new Date(dto.end_date) : undefined,
+      status: dto.status || 'planning',
+      client_name: dto.client_name,
+      budget: dto.budget,
+      images: dto.images ?? [],
+      featured: dto.featured ?? false,
+      sort_order: dto.sort_order ?? 0,
+      seo_title: dto.seo_title,
+      seo_description: dto.seo_description,
+      seo_keywords: dto.seo_keywords,
     });
   }
 
@@ -87,23 +74,19 @@ export class AdminProjectService {
 
     if (dto.name || dto.slug) {
       data.slug = await SlugHelper.uniqueSlug(dto.slug || dto.name || '', {
-        findOne: (filter: any) => this.prisma.project.findFirst({ where: filter }),
+        findOne: (filter: any) => this.projectRepo.findFirst(filter),
       }, id);
     }
 
     if (dto.start_date) data.start_date = new Date(dto.start_date);
     if (dto.end_date) data.end_date = new Date(dto.end_date);
 
-    return this.prisma.project.update({
-      where: { id },
-      data,
-      include: { testimonials: true },
-    });
+    return this.projectRepo.update(id, data);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.project.delete({ where: { id } });
+    await this.projectRepo.delete(id);
     return { success: true };
   }
 }

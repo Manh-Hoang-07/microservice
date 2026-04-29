@@ -1,18 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
-import { ACTIVE_STATUS } from '../../../../common/enums';
 import { createPaginationMeta } from '@package/common';
+import { CertificateRepository } from '../../repositories/certificate.repository';
 
 @Injectable()
 export class PublicCertificateService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly certificateRepo: CertificateRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
     const limit = Math.max(Number(query.limit) || 10, 1);
     const skip = (page - 1) * limit;
 
-    const where: any = { status: ACTIVE_STATUS };
+    const where: any = { status: 'active' };
     if (query.type) where.type = query.type;
     if (query.search) {
       where.OR = [
@@ -22,22 +21,15 @@ export class PublicCertificateService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.certificate.findMany({
-        where,
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.certificate.count({ where }),
+      this.certificateRepo.findMany(where, { skip, take: limit }),
+      this.certificateRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const item = await this.prisma.certificate.findFirst({
-      where: { id, status: ACTIVE_STATUS },
-    });
+    const item = await this.certificateRepo.findFirst({ id, status: 'active' });
     if (!item) throw new NotFoundException('Certificate not found');
     return item;
   }

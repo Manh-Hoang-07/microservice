@@ -1,5 +1,5 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
+import { UserRepository } from '../repositories/user.repository';
 import { RedisService } from '../../../security/services/redis.service';
 import { TokenService, PrimaryKey } from './token.service';
 import { safeUser } from '../utils/user.util';
@@ -7,7 +7,7 @@ import { safeUser } from '../utils/user.util';
 @Injectable()
 export class SocialAuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly userRepo: UserRepository,
     private readonly tokenService: TokenService,
     private readonly redis: RedisService,
   ) {}
@@ -22,7 +22,7 @@ export class SocialAuthService {
     const email = profile.email.toLowerCase();
     const now = new Date();
 
-    let dbUser = await this.prisma.user.findUnique({ where: { email } });
+    let dbUser = await this.userRepo.findByEmail(email);
 
     const userData = {
       name: this.resolveFullName(profile),
@@ -34,12 +34,10 @@ export class SocialAuthService {
     };
 
     if (dbUser) {
-      dbUser = await this.prisma.user.update({ where: { id: dbUser.id }, data: userData });
+      dbUser = await this.userRepo.update(dbUser.id, userData);
     } else {
       const username = this.generateUsername(email);
-      dbUser = await this.prisma.user.create({
-        data: { ...userData, email, username },
-      });
+      dbUser = await this.userRepo.create({ ...userData, email, username });
     }
 
     if (dbUser.status !== 'active') {

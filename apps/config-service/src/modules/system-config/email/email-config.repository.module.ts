@@ -1,12 +1,9 @@
 import { Global, Module } from '@nestjs/common';
-import { EMAIL_CONFIG_REPOSITORY } from './repositories/email-config.repository';
-import { EmailConfigRepositoryImpl } from './repositories/email-config.repository.impl';
+import { EmailConfigRepository } from './repositories/email-config.repository';
 
 @Global()
 @Module({
-  providers: [
-    { provide: EMAIL_CONFIG_REPOSITORY, useClass: EmailConfigRepositoryImpl },
-  ],
-  exports: [EMAIL_CONFIG_REPOSITORY],
+  providers: [EmailConfigRepository],
+  exports: [EmailConfigRepository],
 })
 export class EmailConfigRepositoryModule {}

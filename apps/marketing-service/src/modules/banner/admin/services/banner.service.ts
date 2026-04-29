@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
 import { createPaginationMeta, toPrimaryKey } from '@package/common';
+import { BannerRepository } from '../../repositories/banner.repository';
+import { BannerLocationRepository } from '../../../banner-location/repositories/banner-location.repository';
 
 @Injectable()
 export class AdminBannerService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly bannerRepo: BannerRepository,
+    private readonly locationRepo: BannerLocationRepository,
+  ) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -24,27 +28,15 @@ export class AdminBannerService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.banner.findMany({
-        where,
-        include: { location: true },
-        orderBy: { sort_order: 'asc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.banner.count({ where }),
+      this.bannerRepo.findMany(where, { skip, take: limit }),
+      this.bannerRepo.count(where),
     ]);
 
-    return {
-      data,
-      meta: createPaginationMeta(page, limit, total),
-    };
+    return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const banner = await this.prisma.banner.findUnique({
-      where: { id },
-      include: { location: true },
-    });
+    const banner = await this.bannerRepo.findById(id);
     if (!banner) throw new NotFoundException('Banner not found');
     return banner;
   }
@@ -52,9 +44,7 @@ export class AdminBannerService {
   async create(dto: CreateBannerDto) {
     const locationId = toPrimaryKey(dto.location_id);
 
-    const location = await this.prisma.bannerLocation.findUnique({
-      where: { id: locationId },
-    });
+    const location = await this.locationRepo.findById(locationId);
     if (!location) throw new NotFoundException('Banner location not found');
 
     const data: any = {
@@ -76,7 +66,7 @@ export class AdminBannerService {
     if (dto.start_date) data.start_date = new Date(dto.start_date);
     if (dto.end_date) data.end_date = new Date(dto.end_date);
 
-    const banner = await this.prisma.banner.create({ data });
+    const banner = await this.bannerRepo.create(data);
     return this.getOne(banner.id);
   }
 
@@ -85,9 +75,7 @@ export class AdminBannerService {
 
     if (dto.location_id) {
       const locationId = toPrimaryKey(dto.location_id);
-      const location = await this.prisma.bannerLocation.findUnique({
-        where: { id: locationId },
-      });
+      const location = await this.locationRepo.findById(locationId);
       if (!location) throw new NotFoundException('Banner location not found');
     }
 
@@ -96,13 +84,13 @@ export class AdminBannerService {
     if (dto.start_date) data.start_date = new Date(dto.start_date);
     if (dto.end_date) data.end_date = new Date(dto.end_date);
 
-    await this.prisma.banner.update({ where: { id }, data });
+    await this.bannerRepo.update(id, data);
     return this.getOne(id);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.banner.delete({ where: { id } });
+    await this.bannerRepo.delete(id);
     return { success: true };
   }
 }

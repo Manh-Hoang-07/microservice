@@ -1,12 +1,12 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../../../database/prisma.service';
 import { createPaginationMeta } from '@package/common';
+import { ComicFollowRepository } from '../../repositories/comic-follow.repository';
 
 @Injectable()
 export class UserFollowService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly followRepo: ComicFollowRepository,
     private readonly config: ConfigService,
   ) {}
 
@@ -18,47 +18,28 @@ export class UserFollowService {
     const where = { user_id: userId };
 
     const [data, total] = await Promise.all([
-      this.prisma.comicFollow.findMany({
-        where,
-        include: {
-          comic: {
-            select: { id: true, title: true, slug: true, cover_image: true, stats: true },
-          },
-        },
-        orderBy: { created_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.comicFollow.count({ where }),
+      this.followRepo.findMany(where, { skip, take: limit }),
+      this.followRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async follow(userId: bigint, comicId: bigint) {
-    // Check if already following
-    const existing = await this.prisma.comicFollow.findUnique({
-      where: { user_id_comic_id: { user_id: userId, comic_id: comicId } },
-    });
+    const existing = await this.followRepo.findUnique(userId, comicId);
     if (existing) throw new ConflictException('Already following');
 
-    const follow = await this.prisma.comicFollow.create({
-      data: { user_id: userId, comic_id: comicId },
-    });
+    const follow = await this.followRepo.create(userId, comicId);
 
-    // Sync follow count
-    await this.syncFollowCount(comicId);
+    await this.followRepo.syncFollowCount(comicId);
 
-    // Write outbox event
     if (this.config.get<boolean>('kafka.enabled')) {
-      await this.prisma.comicOutbox.create({
-        data: {
-          event_type: 'user.followed.comic',
-          payload: {
-            user_id: Number(userId),
-            comic_id: Number(comicId),
-            followed_at: new Date().toISOString(),
-          },
+      await this.followRepo.createOutbox({
+        event_type: 'user.followed.comic',
+        payload: {
+          user_id: Number(userId),
+          comic_id: Number(comicId),
+          followed_at: new Date().toISOString(),
         },
       });
     }
@@ -67,38 +48,22 @@ export class UserFollowService {
   }
 
   async unfollow(userId: bigint, comicId: bigint) {
-    const existing = await this.prisma.comicFollow.findUnique({
-      where: { user_id_comic_id: { user_id: userId, comic_id: comicId } },
-    });
+    const existing = await this.followRepo.findUnique(userId, comicId);
     if (!existing) throw new NotFoundException('Not following');
 
-    await this.prisma.comicFollow.delete({
-      where: { user_id_comic_id: { user_id: userId, comic_id: comicId } },
-    });
-
-    await this.syncFollowCount(comicId);
+    await this.followRepo.delete(userId, comicId);
+    await this.followRepo.syncFollowCount(comicId);
 
     if (this.config.get<boolean>('kafka.enabled')) {
-      await this.prisma.comicOutbox.create({
-        data: {
-          event_type: 'user.unfollowed.comic',
-          payload: {
-            user_id: Number(userId),
-            comic_id: Number(comicId),
-          },
+      await this.followRepo.createOutbox({
+        event_type: 'user.unfollowed.comic',
+        payload: {
+          user_id: Number(userId),
+          comic_id: Number(comicId),
         },
       });
     }
 
     return { success: true };
-  }
-
-  private async syncFollowCount(comicId: bigint) {
-    const count = await this.prisma.comicFollow.count({ where: { comic_id: comicId } });
-    await this.prisma.comicStats.upsert({
-      where: { comic_id: comicId },
-      create: { comic_id: comicId, follow_count: BigInt(count) },
-      update: { follow_count: BigInt(count) },
-    });
   }
 }

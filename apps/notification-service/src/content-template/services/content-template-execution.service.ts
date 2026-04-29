@@ -1,14 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
 import { ContentRendererService } from './content-renderer.service';
 import { MailService } from '../../mail/mail.service';
+import { ContentTemplateRepository } from '../repositories/content-template.repository';
 
 @Injectable()
 export class ContentTemplateExecutionService {
   private readonly logger = new Logger(ContentTemplateExecutionService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly templateRepo: ContentTemplateRepository,
     private readonly renderer: ContentRendererService,
     private readonly mail: MailService,
   ) {}
@@ -21,9 +21,7 @@ export class ContentTemplateExecutionService {
       subject?: string;
     },
   ): Promise<void> {
-    const template = await this.prisma.contentTemplate.findFirst({
-      where: { code, status: 'active', category: 'render' },
-    });
+    const template = await this.templateRepo.findFirst({ code, status: 'active', category: 'render' });
 
     if (!template) {
       this.logger.warn(`Template not found or inactive: ${code}`);
@@ -37,7 +35,6 @@ export class ContentTemplateExecutionService {
 
     const renderedContent = this.renderer.render(template.content, options.variables);
 
-    // Determine subject
     const metadata = template.metadata as any;
     const subject = options.subject || metadata?.subject || template.name;
 

@@ -10,17 +10,8 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum MenuType {
-  route = 'route',
-  group = 'group',
-  link = 'link',
-}
-
-export enum BasicStatus {
-  active = 'active',
-  inactive = 'inactive',
-}
+import { MenuType } from '../../enums/menu-type.enum';
+import { BasicStatus } from '../../enums/basic-status.enum';
 
 export class CreateMenuDto {
   @IsString()

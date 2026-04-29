@@ -5,7 +5,7 @@ import {
   IsInt,
   MaxLength,
 } from 'class-validator';
-import { AboutSectionType } from '../../../../common/enums';
+import { AboutSectionType } from '../../enums/about-section-type.enum';
 
 export class CreateAboutDto {
   @IsString()

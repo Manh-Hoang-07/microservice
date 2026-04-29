@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { ComicCategoryRepository } from '../../repositories/comic-category.repository';
 
 @Injectable()
 export class AdminCategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly categoryRepo: ComicCategoryRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -23,27 +22,25 @@ export class AdminCategoryService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.comicCategory.findMany({ where, orderBy: { name: 'asc' }, skip, take: limit }),
-      this.prisma.comicCategory.count({ where }),
+      this.categoryRepo.findMany(where, { skip, take: limit }),
+      this.categoryRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const category = await this.prisma.comicCategory.findUnique({ where: { id } });
+    const category = await this.categoryRepo.findById(id);
     if (!category) throw new NotFoundException('Category not found');
     return category;
   }
 
   async create(dto: CreateCategoryDto) {
     const slug = await SlugHelper.uniqueSlug(dto.name, {
-      findOne: (filter: any) => this.prisma.comicCategory.findFirst({ where: filter }),
+      findOne: (filter: any) => this.categoryRepo.findFirst(filter),
     });
 
-    return this.prisma.comicCategory.create({
-      data: { name: dto.name, slug, description: dto.description },
-    });
+    return this.categoryRepo.create({ name: dto.name, slug, description: dto.description });
   }
 
   async update(id: bigint, dto: UpdateCategoryDto) {
@@ -51,17 +48,19 @@ export class AdminCategoryService {
     const data: any = { ...dto };
 
     if (dto.name) {
-      data.slug = await SlugHelper.uniqueSlug(dto.name, {
-        findOne: (filter: any) => this.prisma.comicCategory.findFirst({ where: filter }),
-      }, id);
+      data.slug = await SlugHelper.uniqueSlug(
+        dto.name,
+        { findOne: (filter: any) => this.categoryRepo.findFirst(filter) },
+        id,
+      );
     }
 
-    return this.prisma.comicCategory.update({ where: { id }, data });
+    return this.categoryRepo.update(id, data);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.comicCategory.delete({ where: { id } });
+    await this.categoryRepo.delete(id);
     return { success: true };
   }
 }

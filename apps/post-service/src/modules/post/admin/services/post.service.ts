@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta, toPrimaryKey } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
 export class AdminPostService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly postRepo: PostRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -31,18 +30,8 @@ export class AdminPostService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.post.findMany({
-        where,
-        include: {
-          stats: true,
-          categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
-          tagLinks: { select: { tag: { select: { id: true, name: true, slug: true } } } },
-        },
-        orderBy: { updated_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.post.count({ where }),
+      this.postRepo.findMany(where, { skip, take: limit }),
+      this.postRepo.count(where),
     ]);
 
     return {
@@ -61,98 +50,80 @@ export class AdminPostService {
       ];
     }
 
-    const data = await this.prisma.post.findMany({
-      where,
-      select: { id: true, name: true, slug: true, status: true },
-      orderBy: { name: 'asc' },
-      take: limit,
-    });
-
+    const data = await this.postRepo.findSimpleMany(where, limit);
     return { data };
   }
 
   async getOne(id: bigint) {
-    const post = await this.prisma.post.findUnique({
-      where: { id },
-      include: {
-        stats: true,
-        categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
-        tagLinks: { select: { tag: { select: { id: true, name: true, slug: true } } } },
-      },
-    });
+    const post = await this.postRepo.findById(id);
     if (!post) throw new NotFoundException('Post not found');
     return this.transform(post);
   }
 
   async create(dto: CreatePostDto) {
     const slug = await SlugHelper.uniqueSlug(dto.name, {
-      findOne: (filter: any) => this.prisma.post.findFirst({ where: filter }),
+      findOne: (filter: any) => this.postRepo.findFirst(filter),
     });
 
-    const post = await this.prisma.post.create({
-      data: {
-        name: dto.name,
-        slug,
-        excerpt: dto.excerpt,
-        content: dto.content,
-        image: dto.image,
-        cover_image: dto.cover_image,
-        status: dto.status || 'draft',
-        post_type: dto.post_type || 'text',
-        video_url: dto.video_url,
-        audio_url: dto.audio_url,
-        is_featured: dto.is_featured || false,
-        is_pinned: dto.is_pinned || false,
-        published_at: dto.published_at ? new Date(dto.published_at) : null,
-        seo_title: dto.seo_title,
-        seo_description: dto.seo_description,
-        seo_keywords: dto.seo_keywords,
-      },
+    const post = await this.postRepo.create({
+      name: dto.name,
+      slug,
+      excerpt: dto.excerpt,
+      content: dto.content,
+      image: dto.image,
+      cover_image: dto.cover_image,
+      status: dto.status || 'draft',
+      post_type: dto.post_type || 'text',
+      video_url: dto.video_url,
+      audio_url: dto.audio_url,
+      is_featured: dto.is_featured || false,
+      is_pinned: dto.is_pinned || false,
+      published_at: dto.published_at ? new Date(dto.published_at) : null,
+      seo_title: dto.seo_title,
+      seo_description: dto.seo_description,
+      seo_keywords: dto.seo_keywords,
     });
 
-    // Initialize stats
-    await this.prisma.postStats.create({
-      data: { post_id: post.id },
-    });
+    await this.postRepo.createStats(post.id);
 
-    // Sync categories
     if (dto.category_ids?.length) {
-      await this.syncCategories(post.id, dto.category_ids);
+      await this.postRepo.syncCategories(post.id, dto.category_ids);
     }
 
-    // Sync tags
     if (dto.tag_ids?.length) {
-      await this.syncTags(post.id, dto.tag_ids);
+      await this.postRepo.syncTags(post.id, dto.tag_ids);
     }
 
     return this.getOne(post.id);
   }
 
   async update(id: bigint, dto: UpdatePostDto) {
-    await this.getOne(id); // check exists
+    await this.getOne(id);
 
     const data: any = { ...dto };
     delete data.category_ids;
     delete data.tag_ids;
 
     if (dto.name || dto.slug) {
-      data.slug = await SlugHelper.uniqueSlug(dto.slug || dto.name || '', {
-        findOne: (filter: any) => this.prisma.post.findFirst({ where: filter }),
-      }, id);
+      data.slug = await SlugHelper.uniqueSlug(
+        dto.slug || dto.name || '',
+        { findOne: (filter: any) => this.postRepo.findFirst(filter) },
+        id,
+      );
     }
 
     if (dto.published_at !== undefined) {
       data.published_at = dto.published_at ? new Date(dto.published_at) : null;
     }
 
-    await this.prisma.post.update({ where: { id }, data });
+    await this.postRepo.update(id, data);
 
     if (dto.category_ids !== undefined) {
-      await this.syncCategories(id, dto.category_ids);
+      await this.postRepo.syncCategories(id, dto.category_ids);
     }
 
     if (dto.tag_ids !== undefined) {
-      await this.syncTags(id, dto.tag_ids);
+      await this.postRepo.syncTags(id, dto.tag_ids);
     }
 
     return this.getOne(id);
@@ -160,32 +131,8 @@ export class AdminPostService {
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.post.delete({ where: { id } });
+    await this.postRepo.delete(id);
     return { success: true };
-  }
-
-  private async syncCategories(postId: bigint, categoryIds: number[]) {
-    await this.prisma.postPostcategory.deleteMany({ where: { post_id: postId } });
-    if (categoryIds.length > 0) {
-      await this.prisma.postPostcategory.createMany({
-        data: categoryIds.map((catId) => ({
-          post_id: postId,
-          post_category_id: toPrimaryKey(catId),
-        })),
-      });
-    }
-  }
-
-  private async syncTags(postId: bigint, tagIds: number[]) {
-    await this.prisma.postPosttag.deleteMany({ where: { post_id: postId } });
-    if (tagIds.length > 0) {
-      await this.prisma.postPosttag.createMany({
-        data: tagIds.map((tagId) => ({
-          post_id: postId,
-          post_tag_id: toPrimaryKey(tagId),
-        })),
-      });
-    }
   }
 
   private transform(entity: any) {

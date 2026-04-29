@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../database/prisma.service';
 import { CreatePostTagDto } from '../dtos/create-post-tag.dto';
 import { UpdatePostTagDto } from '../dtos/update-post-tag.dto';
-import { SlugHelper } from '@package/common';
-import { createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta } from '@package/common';
+import { PostTagRepository } from '../../repositories/post-tag.repository';
 
 @Injectable()
 export class AdminPostTagService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly tagRepo: PostTagRepository) {}
 
   async getList(query: any) {
     const page = Math.max(Number(query.page) || 1, 1);
@@ -23,31 +22,29 @@ export class AdminPostTagService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.postTag.findMany({ where, orderBy: { name: 'asc' }, skip, take: limit }),
-      this.prisma.postTag.count({ where }),
+      this.tagRepo.findMany(where, { skip, take: limit }),
+      this.tagRepo.count(where),
     ]);
 
     return { data, meta: createPaginationMeta(page, limit, total) };
   }
 
   async getOne(id: bigint) {
-    const tag = await this.prisma.postTag.findUnique({ where: { id } });
+    const tag = await this.tagRepo.findById(id);
     if (!tag) throw new NotFoundException('Tag not found');
     return tag;
   }
 
   async create(dto: CreatePostTagDto) {
     const slug = await SlugHelper.uniqueSlug(dto.name, {
-      findOne: (filter: any) => this.prisma.postTag.findFirst({ where: filter }),
+      findOne: (filter: any) => this.tagRepo.findFirst(filter),
     });
 
-    return this.prisma.postTag.create({
-      data: {
-        name: dto.name,
-        slug,
-        description: dto.description,
-        is_active: dto.is_active ?? true,
-      },
+    return this.tagRepo.create({
+      name: dto.name,
+      slug,
+      description: dto.description,
+      is_active: dto.is_active ?? true,
     });
   }
 
@@ -56,17 +53,19 @@ export class AdminPostTagService {
     const data: any = { ...dto };
 
     if (dto.name) {
-      data.slug = await SlugHelper.uniqueSlug(dto.name, {
-        findOne: (filter: any) => this.prisma.postTag.findFirst({ where: filter }),
-      }, id);
+      data.slug = await SlugHelper.uniqueSlug(
+        dto.name,
+        { findOne: (filter: any) => this.tagRepo.findFirst(filter) },
+        id,
+      );
     }
 
-    return this.prisma.postTag.update({ where: { id }, data });
+    return this.tagRepo.update(id, data);
   }
 
   async delete(id: bigint) {
     await this.getOne(id);
-    await this.prisma.postTag.delete({ where: { id } });
+    await this.tagRepo.delete(id);
     return { success: true };
   }
 }
