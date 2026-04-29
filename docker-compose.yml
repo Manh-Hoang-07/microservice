@@ -54,24 +54,6 @@ services:
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
 
   # ══ PostgreSQL — 1 DB per service ═════════════════════════════════════════════
-  main-db:
-    image: postgres:15-alpine
-    container_name: comic-main-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: main_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - main_db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d main_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   auth-db:
     image: postgres:15-alpine
     container_name: comic-auth-db
@@ -144,17 +126,61 @@ services:
       timeout: 5s
       retries: 5
 
-  # ══ Redis — 1 instance per service ════════════════════════════════════════════
-  main-redis:
-    image: redis:7-alpine
-    container_name: comic-main-redis
+  post-db:
+    image: postgres:15-alpine
+    container_name: comic-post-db
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: post_db
     ports:
-      - "6379:6379"
+      - "5438:5432"
     volumes:
-      - main_redis_data:/data
-    command: redis-server --appendonly yes
+      - post_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d post_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  introduction-db:
+    image: postgres:15-alpine
+    container_name: comic-introduction-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: introduction_db
+    ports:
+      - "5439:5432"
+    volumes:
+      - introduction_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d introduction_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  marketing-db:
+    image: postgres:15-alpine
+    container_name: comic-marketing-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: marketing_db
+    ports:
+      - "5440:5432"
+    volumes:
+      - marketing_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketing_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ══ Redis — 1 instance per service ════════════════════════════════════════════
   auth-redis:
     image: redis:7-alpine
     container_name: comic-auth-redis
@@ -183,6 +209,16 @@ services:
       - "6382:6379"
     volumes:
       - notif_redis_data:/data
+    command: redis-server --appendonly yes
+
+  post-redis:
+    image: redis:7-alpine
+    container_name: comic-post-redis
+    restart: unless-stopped
+    ports:
+      - "6384:6379"
+    volumes:
+      - post_redis_data:/data
     command: redis-server --appendonly yes
 
   bff-redis:
@@ -214,13 +250,15 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - api
       - storage-service
       - bff-service
       - auth-service
       - config-service
       - comic-service
       - notification-service
+      - post-service
+      - introduction-service
+      - marketing-service
     volumes:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
@@ -232,7 +270,7 @@ services:
   # ══ Storage Service (:3003) ═══════════════════════════════════════════════════
   storage-service:
     build:
-      context: ./storage-service
+      context: ./apps/storage-service
     container_name: comic-storage-service
     restart: unless-stopped
     depends_on:
@@ -265,7 +303,7 @@ services:
   # ══ Auth Service (:3002) ══════════════════════════════════════════════════════
   auth-service:
     build:
-      context: ./auth-service
+      context: ./apps/auth-service
     container_name: comic-auth-service
     restart: unless-stopped
     depends_on:
@@ -305,7 +343,7 @@ services:
   # ══ Config Service (:3005) ════════════════════════════════════════════════════
   config-service:
     build:
-      context: ./config-service
+      context: ./apps/config-service
     container_name: comic-config-service
     restart: unless-stopped
     depends_on:
@@ -325,7 +363,7 @@ services:
   # ══ BFF Service (:3006) ═══════════════════════════════════════════════════════
   bff-service:
     build:
-      context: ./bff-service
+      context: ./apps/bff-service
     container_name: comic-bff-service
     restart: unless-stopped
     depends_on:
@@ -336,7 +374,7 @@ services:
       PORT: 3006
       GLOBAL_PREFIX: ${GLOBAL_PREFIX:-api}
       COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://comic-service:3001/api}
-      MAIN_SERVICE_URL: ${MAIN_SERVICE_URL:-http://api:8000/api}
+      MAIN_SERVICE_URL: ${MAIN_SERVICE_URL:-http://post-service:3007/api}
       BFF_REDIS_URL: redis://bff-redis:6379
       SERVICE_TIMEOUT_MS: ${SERVICE_TIMEOUT_MS:-5000}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
@@ -347,7 +385,7 @@ services:
   # ══ Comic Service (:3001) ═════════════════════════════════════════════════��═
   comic-service:
     build:
-      context: ./comic-service
+      context: ./apps/comic-service
     container_name: comic-comic-service
     restart: unless-stopped
     depends_on:
@@ -373,7 +411,7 @@ services:
   # ══ Notification Service (:3004) ═══════════════════════════════════════════
   notification-service:
     build:
-      context: ./notification-service
+      context: ./apps/notification-service
     container_name: comic-notification-service
     restart: unless-stopped
     depends_on:
@@ -401,73 +439,76 @@ services:
     ports:
       - "3004:3004"
 
-  # ══ Main Service (monolith — Phase 0) ═════════════════════════════════════════
-  api:
+  # ══ Post Service (:3007) ═════════════════════════════════════════════════
+  post-service:
     build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: comic-api
+      context: ./apps/post-service
+    container_name: comic-post-service
     restart: unless-stopped
     depends_on:
-      main-db:
+      post-db:
         condition: service_healthy
-      main-redis:
+      post-redis:
         condition: service_started
       kafka:
         condition: service_healthy
     environment:
-      NODE_ENV: ${NODE_ENV}
-      PORT: ${PORT}
-      GLOBAL_PREFIX: ${GLOBAL_PREFIX}
-      CORS_ENABLED: ${CORS_ENABLED}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-      APP_TIMEZONE: ${APP_TIMEZONE}
-
-      DATABASE_URL: ${DATABASE_URL}
-      DIRECT_URL: ${DIRECT_URL}
-      REDIS_URL: ${REDIS_URL}
-      CACHE_DRIVER: ${CACHE_DRIVER}
-      THROTTLE_DISABLED: ${THROTTLE_DISABLED}
-
-      # Auth
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
-
-      # Microservice toggles
-      AUTH_MODE: ${AUTH_MODE:-local}
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3007
+      GLOBAL_PREFIX: api
+      DATABASE_URL: postgresql://postgres:secret@post-db:5432/post_db
+      REDIS_URL: redis://post-redis:6379
+      AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
-
-      # Auth Service (distributed mode)
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-}
-      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
-      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-}
-
-      # Kafka
-      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
-      KAFKA_CLIENT_ID: ${KAFKA_CLIENT_ID:-comic-platform-main}
-
-      # Storage
-      STORAGE_TYPE: ${STORAGE_TYPE}
-      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET}
-      STORAGE_S3_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID}
-      STORAGE_S3_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY}
-      STORAGE_S3_REGION: ${STORAGE_S3_REGION}
-      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT}
-      STORAGE_S3_FORCE_PATH_STYLE: ${STORAGE_S3_FORCE_PATH_STYLE}
-      STORAGE_S3_BASE_URL: ${STORAGE_S3_BASE_URL}
-
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      GOOGLE_FRONTEND_URL: ${GOOGLE_FRONTEND_URL}
-
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "8000:8000"
+      - "3007:3007"
+
+  # ══ Introduction Service (:3008) ═══════════════════════════════════════════
+  introduction-service:
+    build:
+      context: ./apps/introduction-service
+    container_name: comic-introduction-service
+    restart: unless-stopped
+    depends_on:
+      introduction-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3008
+      GLOBAL_PREFIX: api
+      DATABASE_URL: postgresql://postgres:secret@introduction-db:5432/introduction_db
+      AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    ports:
+      - "3008:3008"
+
+  # ══ Marketing Service (:3009) ══════════════════════════════════════════════
+  marketing-service:
+    build:
+      context: ./apps/marketing-service
+    container_name: comic-marketing-service
+    restart: unless-stopped
+    depends_on:
+      marketing-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3009
+      GLOBAL_PREFIX: api
+      DATABASE_URL: postgresql://postgres:secret@marketing-db:5432/marketing_db
+      AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      EVENT_DRIVER: ${EVENT_DRIVER:-local}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    ports:
+      - "3009:3009"
+
+  # ══ Main Service (monolith) — REMOVED ══════════════════════════════════════
+  # Monolith fully decomposed into microservices. No longer needed.
 
 volumes:
   # Storage
@@ -477,14 +518,16 @@ volumes:
   zookeeper_logs:
   kafka_data:
   # PostgreSQL
-  main_db_data:
   auth_db_data:
   comic_db_data:
   notif_db_data:
   config_db_data:
   # Redis
-  main_redis_data:
   auth_redis_data:
   comic_redis_data:
   notif_redis_data:
+  post_db_data:
+  introduction_db_data:
+  marketing_db_data:
+  post_redis_data:
   bff_redis_data:

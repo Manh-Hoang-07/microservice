@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id                BigInt    @id @default(autoincrement())
+  name              String    @db.VarChar(255)
+  slug              String    @unique @db.VarChar(255)
+  description       String?   @db.Text
+  short_description String?   @db.VarChar(500)
+  cover_image       String?   @db.VarChar(500)
+  location          String?   @db.VarChar(255)
+  area              String?   @db.VarChar(255)
+  start_date        DateTime? @db.Date
+  end_date          DateTime? @db.Date
+  status            String    @default("planning") @db.VarChar(30)
+  client_name       String?   @db.VarChar(255)
+  budget            String?   @db.VarChar(255)
+  images            Json?     @default("[]")
+  featured          Boolean   @default(false)
+  view_count        Int       @default(0)
+  sort_order        Int       @default(0)
+  seo_title         String?   @db.VarChar(255)
+  seo_description   String?   @db.VarChar(500)
+  seo_keywords      String?   @db.VarChar(500)
+  created_at        DateTime  @default(now()) @db.Timestamp(0)
+  updated_at        DateTime  @updatedAt @db.Timestamp(0)
+
+  testimonials Testimonial[]
+
+  @@index([slug], map: "projects_idx_slug")
+  @@index([status], map: "projects_idx_status")
+  @@index([featured], map: "projects_idx_featured")
+  @@index([sort_order], map: "projects_idx_sort_order")
+  @@map("projects")
+}
+
+model AboutSection {
+  id           BigInt   @id @default(autoincrement())
+  title        String   @db.VarChar(255)
+  slug         String   @unique @db.VarChar(255)
+  content      String?  @db.Text
+  image        String?  @db.VarChar(500)
+  video_url    String?  @db.VarChar(500)
+  section_type String   @default("general") @db.VarChar(30)
+  status       String   @default("active") @db.VarChar(30)
+  sort_order   Int      @default(0)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+  updated_at   DateTime @updatedAt @db.Timestamp(0)
+
+  @@index([slug], map: "about_sections_idx_slug")
+  @@index([section_type], map: "about_sections_idx_section_type")
+  @@index([status], map: "about_sections_idx_status")
+  @@index([sort_order], map: "about_sections_idx_sort_order")
+  @@map("about_sections")
+}
+
+model Staff {
+  id           BigInt   @id @default(autoincrement())
+  name         String   @db.VarChar(255)
+  position     String?  @db.VarChar(255)
+  department   String?  @db.VarChar(255)
+  bio          String?  @db.Text
+  avatar       String?  @db.VarChar(500)
+  email        String?  @db.VarChar(255)
+  phone        String?  @db.VarChar(50)
+  social_links Json?    @default("{}")
+  experience   String?  @db.Text
+  expertise    String?  @db.Text
+  status       String   @default("active") @db.VarChar(30)
+  sort_order   Int      @default(0)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+  updated_at   DateTime @updatedAt @db.Timestamp(0)
+
+  @@index([status], map: "staff_idx_status")
+  @@index([department], map: "staff_idx_department")
+  @@index([sort_order], map: "staff_idx_sort_order")
+  @@map("staff")
+}
+
+model Testimonial {
+  id              BigInt   @id @default(autoincrement())
+  client_name     String   @db.VarChar(255)
+  client_position String?  @db.VarChar(255)
+  client_company  String?  @db.VarChar(255)
+  client_avatar   String?  @db.VarChar(500)
+  content         String   @db.Text
+  rating          Int?     @default(5)
+  project_id      BigInt?
+  featured        Boolean  @default(false)
+  status          String   @default("active") @db.VarChar(30)
+  sort_order      Int      @default(0)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+
+  project Project? @relation(fields: [project_id], references: [id], onDelete: SetNull)
+
+  @@index([project_id], map: "testimonials_idx_project_id")
+  @@index([featured], map: "testimonials_idx_featured")
+  @@index([status], map: "testimonials_idx_status")
+  @@index([sort_order], map: "testimonials_idx_sort_order")
+  @@map("testimonials")
+}
+
+model Partner {
+  id          BigInt   @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  logo        String?  @db.VarChar(500)
+  website     String?  @db.VarChar(500)
+  description String?  @db.Text
+  type        String?  @db.VarChar(50)
+  status      String   @default("active") @db.VarChar(30)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @updatedAt @db.Timestamp(0)
+
+  @@index([type], map: "partners_idx_type")
+  @@index([status], map: "partners_idx_status")
+  @@index([sort_order], map: "partners_idx_sort_order")
+  @@map("partners")
+}
+
+model Gallery {
+  id          BigInt   @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  slug        String   @unique @db.VarChar(255)
+  description String?  @db.Text
+  cover_image String?  @db.VarChar(500)
+  images      Json?    @default("[]")
+  featured    Boolean  @default(false)
+  status      String   @default("active") @db.VarChar(30)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @updatedAt @db.Timestamp(0)
+
+  @@index([slug], map: "galleries_idx_slug")
+  @@index([featured], map: "galleries_idx_featured")
+  @@index([status], map: "galleries_idx_status")
+  @@index([sort_order], map: "galleries_idx_sort_order")
+  @@map("galleries")
+}
+
+model Certificate {
+  id                 BigInt    @id @default(autoincrement())
+  name               String    @db.VarChar(255)
+  image              String?   @db.VarChar(500)
+  issued_by          String?   @db.VarChar(255)
+  issued_date        DateTime? @db.Date
+  expiry_date        DateTime? @db.Date
+  certificate_number String?   @db.VarChar(255)
+  description        String?   @db.Text
+  type               String?   @db.VarChar(50)
+  status             String    @default("active") @db.VarChar(30)
+  sort_order         Int       @default(0)
+  created_at         DateTime  @default(now()) @db.Timestamp(0)
+  updated_at         DateTime  @updatedAt @db.Timestamp(0)
+
+  @@index([type], map: "certificates_idx_type")
+  @@index([status], map: "certificates_idx_status")
+  @@index([sort_order], map: "certificates_idx_sort_order")
+  @@map("certificates")
+}
+
+model Faq {
+  id            BigInt   @id @default(autoincrement())
+  question      String   @db.Text
+  answer        String   @db.Text
+  view_count    Int      @default(0)
+  helpful_count Int      @default(0)
+  status        String   @default("active") @db.VarChar(30)
+  sort_order    Int      @default(0)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  updated_at    DateTime @updatedAt @db.Timestamp(0)
+
+  @@index([status], map: "faqs_idx_status")
+  @@index([sort_order], map: "faqs_idx_sort_order")
+  @@map("faqs")
+}
