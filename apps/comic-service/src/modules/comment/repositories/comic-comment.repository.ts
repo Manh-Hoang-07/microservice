@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class ComicCommentRepository {
@@ -31,15 +32,15 @@ export class ComicCommentRepository {
     return this.prisma.comicComment.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.comicComment.findUnique({ where: { id } });
   }
 
   create(data: {
-    user_id: bigint;
-    comic_id: bigint;
-    chapter_id?: bigint | null;
-    parent_id?: bigint | null;
+    user_id: PrimaryKey;
+    comic_id: PrimaryKey;
+    chapter_id?: PrimaryKey | null;
+    parent_id?: PrimaryKey | null;
     content: string;
   }) {
     return this.prisma.comicComment.create({ data });
@@ -49,11 +50,11 @@ export class ComicCommentRepository {
     return this.prisma.comicOutbox.create({ data });
   }
 
-  update(id: bigint, data: Prisma.ComicCommentUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.ComicCommentUpdateInput) {
     return this.prisma.comicComment.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.comicComment.delete({ where: { id } });
   }
 }

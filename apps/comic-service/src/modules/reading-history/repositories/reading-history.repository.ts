@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -23,7 +24,7 @@ export class ReadingHistoryRepository {
     return this.prisma.readingHistory.count({ where });
   }
 
-  upsert(userId: bigint, comicId: bigint, chapterId: bigint) {
+  upsert(userId: PrimaryKey, comicId: PrimaryKey, chapterId: PrimaryKey) {
     return this.prisma.readingHistory.upsert({
       where: { user_id_comic_id: { user_id: userId, comic_id: comicId } },
       create: { user_id: userId, comic_id: comicId, chapter_id: chapterId },

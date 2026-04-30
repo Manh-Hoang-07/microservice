@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
-import { SlugHelper, createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { ProjectRepository } from '../../repositories/project.repository';
 
 @Injectable()
@@ -9,32 +10,23 @@ export class AdminProjectService {
   constructor(private readonly projectRepo: ProjectRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.featured !== undefined) {
       where.featured = query.featured === 'true' || query.featured === true;
     }
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-        { client_name: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.projectRepo.findMany(where, { skip, take: limit }),
+      this.projectRepo.findMany(where, options),
       this.projectRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const item = await this.projectRepo.findById(id);
     if (!item) throw new NotFoundException('Project not found');
     return item;
@@ -67,7 +59,7 @@ export class AdminProjectService {
     });
   }
 
-  async update(id: bigint, dto: UpdateProjectDto) {
+  async update(id: PrimaryKey, dto: UpdateProjectDto) {
     await this.getOne(id);
 
     const data: any = { ...dto };
@@ -84,7 +76,7 @@ export class AdminProjectService {
     return this.projectRepo.update(id, data);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.projectRepo.delete(id);
     return { success: true };

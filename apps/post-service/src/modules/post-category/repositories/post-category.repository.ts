@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -20,7 +21,7 @@ export class PostCategoryRepository {
     return this.prisma.postCategory.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.postCategory.findUnique({
       where: { id },
       include: { children: { orderBy: { sort_order: 'asc' } } },
@@ -67,11 +68,11 @@ export class PostCategoryRepository {
     return this.prisma.postCategory.create({ data });
   }
 
-  update(id: bigint, data: Prisma.PostCategoryUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.PostCategoryUpdateInput) {
     return this.prisma.postCategory.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.postCategory.delete({ where: { id } });
   }
 }

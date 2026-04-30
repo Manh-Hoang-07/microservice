@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
-import { SlugHelper, createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { ComicCategoryRepository } from '../../repositories/comic-category.repository';
 
 @Injectable()
@@ -9,27 +10,19 @@ export class AdminCategoryService {
   constructor(private readonly categoryRepo: ComicCategoryRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.categoryRepo.findMany(where, { skip, take: limit }),
+      this.categoryRepo.findMany(where, options),
       this.categoryRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const category = await this.categoryRepo.findById(id);
     if (!category) throw new NotFoundException('Category not found');
     return category;
@@ -43,7 +36,7 @@ export class AdminCategoryService {
     return this.categoryRepo.create({ name: dto.name, slug, description: dto.description });
   }
 
-  async update(id: bigint, dto: UpdateCategoryDto) {
+  async update(id: PrimaryKey, dto: UpdateCategoryDto) {
     await this.getOne(id);
     const data: any = { ...dto };
 
@@ -58,7 +51,7 @@ export class AdminCategoryService {
     return this.categoryRepo.update(id, data);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.categoryRepo.delete(id);
     return { success: true };

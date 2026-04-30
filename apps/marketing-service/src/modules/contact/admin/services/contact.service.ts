@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { ContactRepository } from '../../repositories/contact.repository';
 
 @Injectable()
@@ -7,35 +8,26 @@ export class AdminContactService {
   constructor(private readonly contactRepo: ContactRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { email: { contains: query.search } },
-        { phone: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.contactRepo.findMany(where, { skip, take: limit }),
+      this.contactRepo.findMany(where, options),
       this.contactRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const contact = await this.contactRepo.findById(id);
     if (!contact) throw new NotFoundException('Contact not found');
     return contact;
   }
 
-  async reply(id: bigint, replyText: string, userId: bigint) {
+  async reply(id: PrimaryKey, replyText: string, userId: PrimaryKey) {
     await this.getOne(id);
     return this.contactRepo.update(id, {
       reply: replyText,
@@ -45,12 +37,12 @@ export class AdminContactService {
     });
   }
 
-  async markAsRead(id: bigint) {
+  async markAsRead(id: PrimaryKey) {
     await this.getOne(id);
     return this.contactRepo.update(id, { status: 'Read' });
   }
 
-  async closeContact(id: bigint) {
+  async closeContact(id: PrimaryKey) {
     await this.getOne(id);
     return this.contactRepo.update(id, { status: 'Closed' });
   }

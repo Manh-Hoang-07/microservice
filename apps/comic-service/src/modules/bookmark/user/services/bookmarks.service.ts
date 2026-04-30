@@ -1,28 +1,27 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateBookmarkDto } from '../dtos/create-bookmark.dto';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { BookmarkRepository } from '../../repositories/bookmark.repository';
 
 @Injectable()
 export class UserBookmarkService {
   constructor(private readonly bookmarkRepo: BookmarkRepository) {}
 
-  async getList(userId: bigint, query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+  async getList(userId: PrimaryKey, query: any) {
+    const options = parseQueryOptions(query);
 
     const where = { user_id: userId };
 
     const [data, total] = await Promise.all([
-      this.bookmarkRepo.findMany(where, { skip, take: limit }),
+      this.bookmarkRepo.findMany(where, options),
       this.bookmarkRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async create(userId: bigint, dto: CreateBookmarkDto) {
+  async create(userId: PrimaryKey, dto: CreateBookmarkDto) {
     return this.bookmarkRepo.create({
       user_id: userId,
       chapter_id: BigInt(dto.chapter_id),
@@ -30,7 +29,7 @@ export class UserBookmarkService {
     });
   }
 
-  async delete(userId: bigint, id: bigint) {
+  async delete(userId: PrimaryKey, id: PrimaryKey) {
     const bookmark = await this.bookmarkRepo.findById(id);
     if (!bookmark) throw new NotFoundException('Bookmark not found');
     if (bookmark.user_id !== userId) throw new ForbiddenException('Not your bookmark');

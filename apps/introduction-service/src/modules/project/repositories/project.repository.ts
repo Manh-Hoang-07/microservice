@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -32,7 +33,7 @@ export class ProjectRepository {
     return this.prisma.project.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.project.findUnique({
       where: { id },
       include: { testimonials: true },
@@ -59,7 +60,7 @@ export class ProjectRepository {
     });
   }
 
-  update(id: bigint, data: Prisma.ProjectUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.ProjectUpdateInput) {
     return this.prisma.project.update({
       where: { id },
       data,
@@ -67,14 +68,14 @@ export class ProjectRepository {
     });
   }
 
-  increment(id: bigint, field: 'view_count') {
+  increment(id: PrimaryKey, field: 'view_count') {
     return this.prisma.project.update({
       where: { id },
       data: { [field]: { increment: 1 } },
     });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.project.delete({ where: { id } });
   }
 }

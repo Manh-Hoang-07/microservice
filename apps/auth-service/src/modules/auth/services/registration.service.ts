@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { UserRepository } from '../repositories/user.repository';
 import { AuthOtpService } from './auth-otp.service';
 import { RegisterDto } from '../dto/register.dto';
@@ -10,21 +11,20 @@ export class RegistrationService {
   constructor(
     private readonly userRepo: UserRepository,
     private readonly otpService: AuthOtpService,
+    private readonly i18n: I18nService,
   ) {}
 
   async register(dto: RegisterDto) {
+    const lang = I18nContext.current()?.lang ?? 'en';
     const email = dto.email.toLowerCase();
 
-    // 1. Verify OTP
     const isOtpValid = await this.otpService.verifyAndDelete('register', email, dto.otp);
     if (!isOtpValid) {
-      throw new BadRequestException('Invalid or expired OTP code.');
+      throw new BadRequestException(this.i18n.t('auth.INVALID_OTP', { lang }));
     }
 
-    // 2. Uniqueness Checks
-    await this.validateUniqueness(dto);
+    await this.validateUniqueness(dto, lang);
 
-    // 3. Create User
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = await this.userRepo.create({
       username: dto.username ?? email,
@@ -38,17 +38,17 @@ export class RegistrationService {
     return { user: safeUser(user) };
   }
 
-  private async validateUniqueness(dto: RegisterDto): Promise<void> {
+  private async validateUniqueness(dto: RegisterDto, lang: string): Promise<void> {
     const email = dto.email.toLowerCase();
 
     if (await this.userRepo.findByEmail(email)) {
-      throw new BadRequestException('Email is already in use.');
+      throw new BadRequestException(this.i18n.t('auth.EMAIL_IN_USE', { lang }));
     }
     if (dto.username && await this.userRepo.findByUsername(dto.username)) {
-      throw new BadRequestException('Username is already in use.');
+      throw new BadRequestException(this.i18n.t('auth.USERNAME_IN_USE', { lang }));
     }
     if (dto.phone && await this.userRepo.findByPhone(dto.phone)) {
-      throw new BadRequestException('Phone number is already in use.');
+      throw new BadRequestException(this.i18n.t('auth.PHONE_IN_USE', { lang }));
     }
   }
 }

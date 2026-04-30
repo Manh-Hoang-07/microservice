@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class BookmarkRepository {
@@ -29,15 +30,15 @@ export class BookmarkRepository {
     return this.prisma.bookmark.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.bookmark.findUnique({ where: { id } });
   }
 
-  create(data: { user_id: bigint; chapter_id: bigint; page_number?: number | null }) {
+  create(data: { user_id: PrimaryKey; chapter_id: PrimaryKey; page_number?: number | null }) {
     return this.prisma.bookmark.create({ data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.bookmark.delete({ where: { id } });
   }
 }

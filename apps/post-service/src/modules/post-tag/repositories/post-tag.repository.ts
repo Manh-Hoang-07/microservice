@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class PostTagRepository {
     return this.prisma.postTag.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.postTag.findUnique({ where: { id } });
   }
 
@@ -39,11 +40,11 @@ export class PostTagRepository {
     return this.prisma.postTag.create({ data });
   }
 
-  update(id: bigint, data: Prisma.PostTagUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.PostTagUpdateInput) {
     return this.prisma.postTag.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.postTag.delete({ where: { id } });
   }
 }

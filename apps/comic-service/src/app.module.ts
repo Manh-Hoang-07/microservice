@@ -8,7 +8,7 @@ import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from '@package/redis';
-import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { KafkaModule } from './kafka/kafka.module';
 
 import { ComicModule } from './modules/comic/comic.module';
@@ -58,6 +58,12 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new JwtGuard(reflector, config),
+      inject: [Reflector, ConfigService],
+    },
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService) =>
+        new RbacGuard(reflector, config),
       inject: [Reflector, ConfigService],
     },
     {

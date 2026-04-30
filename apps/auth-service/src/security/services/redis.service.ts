@@ -1,10 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(RedisService.name);
   private client: Redis | null = null;
   private subscriberClient: Redis | null = null;
   private readonly channelCallbacks = new Map<string, Array<(message: string) => void>>();
@@ -14,17 +13,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     const redisUrl = this.config.get<string>('REDIS_URL');
-    if (!redisUrl) {
-      this.logger.warn('REDIS_URL not set — running without Redis');
-      return;
-    }
+    if (!redisUrl) return;
     try {
       this.client = new Redis(redisUrl, { lazyConnect: true, enableOfflineQueue: false });
       await this.client.connect();
       this.enabled = true;
-      this.logger.log('Redis connected');
-    } catch (err) {
-      this.logger.warn(`Redis connection failed: ${(err as Error).message}`);
+    } catch {
       this.client = null;
     }
   }
@@ -94,12 +88,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async subscribe(channel: string, callback: (message: string) => void): Promise<void> {
     const redisUrl = this.config.get<string>('REDIS_URL');
     if (!redisUrl) return;
-    // Register callback
     const callbacks = this.channelCallbacks.get(channel) || [];
     callbacks.push(callback);
     this.channelCallbacks.set(channel, callbacks);
     try {
-      // Reuse shared subscriber client
       if (!this.subscriberClient) {
         this.subscriberClient = new Redis(redisUrl);
         this.subscriberClient.on('message', (ch: string, msg: string) => {

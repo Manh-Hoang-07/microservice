@@ -1,6 +1,7 @@
 import { Controller, Get, Patch, Param, Query, Body } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminPostCommentService } from '../services/post-comment.service';
 
 @ApiTags('Admin Post Comments')
@@ -17,6 +18,6 @@ export class AdminPostCommentController {
   @Permission('post.manage')
   @Patch(':id')
   async updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
-    return this.commentService.updateStatus(BigInt(id), body.status);
+    return this.commentService.updateStatus(toPrimaryKey(id), body.status);
   }
 }

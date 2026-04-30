@@ -1,6 +1,7 @@
 import { Controller, Get, Delete, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminReviewService } from '../services/reviews.service';
 
 @ApiTags('Admin Reviews')
@@ -17,6 +18,6 @@ export class AdminReviewController {
   @Permission('comic.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.reviewService.delete(BigInt(id));
+    return this.reviewService.delete(toPrimaryKey(id));
   }
 }

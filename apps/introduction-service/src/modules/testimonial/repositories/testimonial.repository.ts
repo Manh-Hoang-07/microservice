@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 const PROJECT_SELECT = { id: true, name: true, slug: true } as const;
@@ -22,7 +23,7 @@ export class TestimonialRepository {
     return this.prisma.testimonial.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.testimonial.findUnique({
       where: { id },
       include: { project: { select: PROJECT_SELECT } },
@@ -43,7 +44,7 @@ export class TestimonialRepository {
     });
   }
 
-  update(id: bigint, data: Prisma.TestimonialUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.TestimonialUpdateInput) {
     return this.prisma.testimonial.update({
       where: { id },
       data,
@@ -51,7 +52,7 @@ export class TestimonialRepository {
     });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.testimonial.delete({ where: { id } });
   }
 }

@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { BannerLocationRepository } from '../../repositories/banner-location.repository';
 
 @Injectable()
@@ -9,28 +10,20 @@ export class AdminBannerLocationService {
   constructor(private readonly locationRepo: BannerLocationRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { code: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.locationRepo.findMany(where, { skip, take: limit }),
+      this.locationRepo.findMany(where, options),
       this.locationRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const location = await this.locationRepo.findById(id);
     if (!location) throw new NotFoundException('Banner location not found');
     return location;
@@ -48,7 +41,7 @@ export class AdminBannerLocationService {
     });
   }
 
-  async update(id: bigint, dto: UpdateBannerLocationDto) {
+  async update(id: PrimaryKey, dto: UpdateBannerLocationDto) {
     await this.getOne(id);
 
     if (dto.code) {
@@ -59,13 +52,13 @@ export class AdminBannerLocationService {
     return this.locationRepo.update(id, dto);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.locationRepo.delete(id);
     return { success: true };
   }
 
-  async changeStatus(id: bigint, status: string) {
+  async changeStatus(id: PrimaryKey, status: string) {
     await this.getOne(id);
     return this.locationRepo.update(id, { status });
   }

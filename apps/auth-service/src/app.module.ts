@@ -4,10 +4,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
+import * as path from 'path';
+import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { createAppConfig, createKafkaConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
 import jwtConfig from './config/jwt.config';
-import mailConfig from './config/mail.config';
 
 import { DatabaseModule } from './database/database.module';
 import { SecurityModule } from './security/security.module';
@@ -15,7 +16,6 @@ import { JwksModule } from './jwks/jwks.module';
 import { JwksService } from './jwks/services/jwks.service';
 import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { AuthModule } from './modules/auth/auth.module';
-import { RbacModule } from './modules/rbac/rbac.module';
 import { GlobalExceptionFilter, HealthModule } from '@package/common';
 import { InternalModule } from './internal/internal.module';
 import { KafkaModule } from './kafka/kafka.module';
@@ -28,13 +28,22 @@ import { KafkaModule } from './kafka/kafka.module';
       load: [
         createAppConfig(3002, {
           internalApiSecret: process.env.INTERNAL_API_SECRET || '',
-          frontendUrl: process.env.GOOGLE_FRONTEND_URL || 'http://localhost:3000',
         }),
         jwtConfig,
-        mailConfig,
         createKafkaConfig(),
       ],
       validationSchema: envValidationSchema,
+    }),
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: path.join(__dirname, 'i18n'),
+        watch: process.env.NODE_ENV !== 'production',
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+      ],
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
@@ -42,7 +51,6 @@ import { KafkaModule } from './kafka/kafka.module';
     SecurityModule,
     JwksModule,
     AuthModule,
-    RbacModule,
     HealthModule.register('auth-service'),
     InternalModule,
     KafkaModule,

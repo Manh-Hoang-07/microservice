@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { toPrimaryKey, PrimaryKey } from 'src/types';
 import { ConfigService } from '@nestjs/config';
 import { CreateCommentDto } from '../dtos/create-comment.dto';
 import { ComicCommentRepository } from '../../repositories/comic-comment.repository';
@@ -10,25 +11,25 @@ export class UserCommentService {
     private readonly config: ConfigService,
   ) {}
 
-  async create(userId: bigint, dto: CreateCommentDto) {
+  async create(userId: PrimaryKey, dto: CreateCommentDto) {
     if (dto.parent_id) {
-      const parent = await this.commentRepo.findById(BigInt(dto.parent_id));
+      const parent = await this.commentRepo.findById(toPrimaryKey(dto.parent_id));
       if (!parent) throw new NotFoundException('Parent comment not found');
-      if (parent.comic_id !== BigInt(dto.comic_id)) {
+      if (parent.comic_id !== toPrimaryKey(dto.comic_id)) {
         throw new ForbiddenException('Parent comment belongs to a different comic');
       }
     }
 
     const comment = await this.commentRepo.create({
       user_id: userId,
-      comic_id: BigInt(dto.comic_id),
-      chapter_id: dto.chapter_id ? BigInt(dto.chapter_id) : null,
-      parent_id: dto.parent_id ? BigInt(dto.parent_id) : null,
+      comic_id: toPrimaryKey(dto.comic_id),
+      chapter_id: dto.chapter_id ? toPrimaryKey(dto.chapter_id) : null,
+      parent_id: dto.parent_id ? toPrimaryKey(dto.parent_id) : null,
       content: dto.content,
     });
 
     if (dto.parent_id && this.config.get<boolean>('kafka.enabled')) {
-      const parent = await this.commentRepo.findById(BigInt(dto.parent_id));
+      const parent = await this.commentRepo.findById(toPrimaryKey(dto.parent_id));
       if (parent && parent.user_id !== userId) {
         await this.commentRepo.createOutbox({
           event_type: 'comic.comment.created',
@@ -47,14 +48,14 @@ export class UserCommentService {
     return comment;
   }
 
-  async update(userId: bigint, id: bigint, content: string) {
+  async update(userId: PrimaryKey, id: PrimaryKey, content: string) {
     const comment = await this.commentRepo.findById(id);
     if (!comment) throw new NotFoundException('Comment not found');
     if (comment.user_id !== userId) throw new ForbiddenException('Not your comment');
     return this.commentRepo.update(id, { content });
   }
 
-  async delete(userId: bigint, id: bigint) {
+  async delete(userId: PrimaryKey, id: PrimaryKey) {
     const comment = await this.commentRepo.findById(id);
     if (!comment) throw new NotFoundException('Comment not found');
     if (comment.user_id !== userId) throw new ForbiddenException('Not your comment');

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class ComicReviewRepository {
@@ -19,11 +20,11 @@ export class ComicReviewRepository {
     return this.prisma.comicReview.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.comicReview.findUnique({ where: { id } });
   }
 
-  upsert(userId: bigint, comicId: bigint, data: { rating: number; content?: string }) {
+  upsert(userId: PrimaryKey, comicId: PrimaryKey, data: { rating: number; content?: string }) {
     return this.prisma.comicReview.upsert({
       where: { user_id_comic_id: { user_id: userId, comic_id: comicId } },
       create: { user_id: userId, comic_id: comicId, rating: data.rating, content: data.content },
@@ -31,11 +32,11 @@ export class ComicReviewRepository {
     });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.comicReview.delete({ where: { id } });
   }
 
-  aggregateRating(comicId: bigint) {
+  aggregateRating(comicId: PrimaryKey) {
     return this.prisma.comicReview.aggregate({
       where: { comic_id: comicId },
       _count: true,
@@ -51,7 +52,7 @@ export class ComicReviewRepository {
     });
   }
 
-  async syncRatingStats(comicId: bigint) {
+  async syncRatingStats(comicId: PrimaryKey) {
     const agg = await this.aggregateRating(comicId);
     return this.prisma.comicStats.upsert({
       where: { comic_id: comicId },

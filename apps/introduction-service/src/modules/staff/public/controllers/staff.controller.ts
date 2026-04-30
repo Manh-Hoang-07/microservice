@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { PublicStaffService } from '../services/staff.service';
 
 @ApiTags('Public Staff')
@@ -17,6 +18,6 @@ export class PublicStaffController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.staffService.getOne(BigInt(id));
+    return this.staffService.getOne(toPrimaryKey(id));
   }
 }

@@ -7,12 +7,14 @@ export { GlobalExceptionFilter } from './filters/global-exception.filter';
 // Guards
 export { JwtGuard } from './guards/jwt.guard';
 export { InternalGuard } from './guards/internal.guard';
+export { RbacGuard } from './guards/rbac.guard';
 
 // Interceptors
 export { BigIntSerializationInterceptor } from './interceptors/bigint-serialization.interceptor';
 
 // Helpers
-export { createPaginationMeta, toPrimaryKey, parsePaginationQuery, type PaginationMeta } from './helpers/pagination.helper';
+export { createPaginationMeta, parseQueryOptions, type PaginationMeta, type QueryOptions } from './helpers/pagination.helper';
+export { parseDurationToSeconds } from './helpers/duration.helper';
 export { SlugHelper } from './helpers/slug.helper';
 export { SanitizeHtmlPipe } from './pipes/sanitize-html.pipe';
 export { ImageValidator } from './validators/image-validator';

@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { PartnerRepository } from '../../repositories/partner.repository';
 
 @Injectable()
@@ -9,29 +10,21 @@ export class AdminPartnerService {
   constructor(private readonly partnerRepo: PartnerRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.type) where.type = query.type;
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { description: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.partnerRepo.findMany(where, { skip, take: limit }),
+      this.partnerRepo.findMany(where, options),
       this.partnerRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const item = await this.partnerRepo.findById(id);
     if (!item) throw new NotFoundException('Partner not found');
     return item;
@@ -49,12 +42,12 @@ export class AdminPartnerService {
     });
   }
 
-  async update(id: bigint, dto: UpdatePartnerDto) {
+  async update(id: PrimaryKey, dto: UpdatePartnerDto) {
     await this.getOne(id);
     return this.partnerRepo.update(id, dto as any);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.partnerRepo.delete(id);
     return { success: true };

@@ -5,6 +5,7 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  InternalServerErrorException,
   Post,
   Req,
   Res,
@@ -171,20 +172,18 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Google OAuth callback handler' })
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+    const frontendUrl = this.configService.get<string>('googleOAuth.frontendUrl');
+    if (!frontendUrl) throw new InternalServerErrorException('GOOGLE_FRONTEND_URL not configured');
+
     const user = req.user as any;
     const result = await this.authService.handleGoogleAuth(user);
 
     if (result?.token) {
-      const frontendUrl =
-        this.configService.get<string>('googleOAuth.frontendUrl') ||
-        'http://localhost:3000';
-      const redirectUrl = `${frontendUrl}/auth/google/callback?token=${result.token}&refreshToken=${result.refreshToken}&expiresIn=${result.expiresIn}`;
-      return res.redirect(redirectUrl);
+      return res.redirect(
+        `${frontendUrl}/auth/google/callback?token=${result.token}&refreshToken=${result.refreshToken}&expiresIn=${result.expiresIn}`,
+      );
     }
 
-    return res.redirect(
-      (this.configService.get<string>('googleOAuth.frontendUrl') || 'http://localhost:3000') +
-        '/login?error=auth_failed',
-    );
+    return res.redirect(`${frontendUrl}/login?error=auth_failed`);
   }
 }

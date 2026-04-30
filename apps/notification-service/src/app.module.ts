@@ -4,25 +4,36 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
+import { I18nModule, QueryResolver, AcceptLanguageResolver } from 'nestjs-i18n';
+import { join } from 'path';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
-import mailConfig from './config/mail.config';
-
 import { DatabaseModule } from './database/database.module';
-import { MailModule } from './mail/mail.module';
+import { MailModule } from './modules/mail/mail.module';
 import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
-import { NotificationModule } from './notification/notification.module';
-import { ContentTemplateModule } from './content-template/content-template.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { ContentTemplateModule } from './modules/content-template/content-template.module';
 import { QueueModule } from './queue/queue.module';
-import { KafkaConsumerModule } from './kafka-consumer/kafka-consumer.module';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [createAppConfig(3004), createKafkaConfig('notification-service'), mailConfig, createRedisConfig('redis://localhost:6382')],
+      load: [createAppConfig(3004), createKafkaConfig('notification-service'), createRedisConfig('redis://localhost:6382')],
       validationSchema: envValidationSchema,
+    }),
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: join(__dirname, 'i18n'),
+        watch: false,
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+      ],
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
@@ -32,7 +43,7 @@ import { KafkaConsumerModule } from './kafka-consumer/kafka-consumer.module';
     NotificationModule,
     ContentTemplateModule,
     QueueModule,
-    KafkaConsumerModule,
+    KafkaModule,
   ],
   providers: [
     {

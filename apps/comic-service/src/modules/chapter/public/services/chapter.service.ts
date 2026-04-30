@@ -1,17 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ChapterRepository } from '../../repositories/chapter.repository';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class PublicChapterService {
   constructor(private readonly chapterRepo: ChapterRepository) {}
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const chapter = await this.chapterRepo.findPublicOne(id);
     if (!chapter) throw new NotFoundException('Chapter not found');
     return chapter;
   }
 
-  async getPages(id: bigint) {
+  async getPages(id: PrimaryKey) {
     const chapter = await this.chapterRepo.findFirst({ id, status: 'published' });
     if (!chapter) throw new NotFoundException('Chapter not found');
 
@@ -19,7 +20,7 @@ export class PublicChapterService {
     return { data: pages };
   }
 
-  async getNext(id: bigint) {
+  async getNext(id: PrimaryKey) {
     const current = await this.chapterRepo.findById(id);
     if (!current) throw new NotFoundException('Chapter not found');
 
@@ -27,7 +28,7 @@ export class PublicChapterService {
     return next || null;
   }
 
-  async getPrev(id: bigint) {
+  async getPrev(id: PrimaryKey) {
     const current = await this.chapterRepo.findById(id);
     if (!current) throw new NotFoundException('Chapter not found');
 

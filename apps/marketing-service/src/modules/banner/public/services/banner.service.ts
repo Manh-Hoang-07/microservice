@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { createPaginationMeta, toPrimaryKey } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { BannerRepository } from '../../repositories/banner.repository';
 
 @Injectable()
@@ -7,9 +8,7 @@ export class PublicBannerService {
   constructor(private readonly bannerRepo: BannerRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 20, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const now = new Date();
     const where: any = {
@@ -22,10 +21,10 @@ export class PublicBannerService {
     if (query.location_code) where.location = { code: query.location_code };
 
     const [data, total] = await Promise.all([
-      this.bannerRepo.findManyPublic(where, { skip, take: limit }),
+      this.bannerRepo.findManyPublic(where, options),
       this.bannerRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 }

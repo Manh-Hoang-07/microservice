@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class StaffRepository {
     return this.prisma.staff.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.staff.findUnique({ where: { id } });
   }
 
@@ -31,11 +32,11 @@ export class StaffRepository {
     return this.prisma.staff.create({ data });
   }
 
-  update(id: bigint, data: Prisma.StaffUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.StaffUpdateInput) {
     return this.prisma.staff.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.staff.delete({ where: { id } });
   }
 }

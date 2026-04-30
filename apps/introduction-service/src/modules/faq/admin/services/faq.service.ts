@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateFaqDto } from '../dtos/create-faq.dto';
 import { UpdateFaqDto } from '../dtos/update-faq.dto';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { FaqRepository } from '../../repositories/faq.repository';
 
 @Injectable()
@@ -9,28 +10,20 @@ export class AdminFaqService {
   constructor(private readonly faqRepo: FaqRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
-    if (query.search) {
-      where.OR = [
-        { question: { contains: query.search } },
-        { answer: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.faqRepo.findMany(where, { skip, take: limit }),
+      this.faqRepo.findMany(where, options),
       this.faqRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const item = await this.faqRepo.findById(id);
     if (!item) throw new NotFoundException('FAQ not found');
     return item;
@@ -45,12 +38,12 @@ export class AdminFaqService {
     });
   }
 
-  async update(id: bigint, dto: UpdateFaqDto) {
+  async update(id: PrimaryKey, dto: UpdateFaqDto) {
     await this.getOne(id);
     return this.faqRepo.update(id, dto as any);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.faqRepo.delete(id);
     return { success: true };

@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
-import { SlugHelper, createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { GalleryRepository } from '../../repositories/gallery.repository';
 
 @Injectable()
@@ -9,31 +10,23 @@ export class AdminGalleryService {
   constructor(private readonly galleryRepo: GalleryRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.featured !== undefined) {
       where.featured = query.featured === 'true' || query.featured === true;
     }
-    if (query.search) {
-      where.OR = [
-        { title: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.galleryRepo.findMany(where, { skip, take: limit }),
+      this.galleryRepo.findMany(where, options),
       this.galleryRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const item = await this.galleryRepo.findById(id);
     if (!item) throw new NotFoundException('Gallery not found');
     return item;
@@ -56,7 +49,7 @@ export class AdminGalleryService {
     });
   }
 
-  async update(id: bigint, dto: UpdateGalleryDto) {
+  async update(id: PrimaryKey, dto: UpdateGalleryDto) {
     await this.getOne(id);
 
     const data: any = { ...dto };
@@ -70,7 +63,7 @@ export class AdminGalleryService {
     return this.galleryRepo.update(id, data);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.galleryRepo.delete(id);
     return { success: true };

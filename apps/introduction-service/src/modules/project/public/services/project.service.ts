@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { ProjectRepository } from '../../repositories/project.repository';
 
 const PUBLIC_PROJECT_STATUSES = ['planning', 'in_progress', 'completed'];
@@ -9,27 +9,19 @@ export class PublicProjectService {
   constructor(private readonly projectRepo: ProjectRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = { status: { in: PUBLIC_PROJECT_STATUSES } };
     if (query.featured !== undefined) {
       where.featured = query.featured === 'true' || query.featured === true;
     }
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.projectRepo.findManyPublic(where, { skip, take: limit }),
+      this.projectRepo.findManyPublic(where, options),
       this.projectRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
   async getBySlug(slug: string) {

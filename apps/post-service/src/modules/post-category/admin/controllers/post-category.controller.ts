@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminPostCategoryService } from '../services/post-category.service';
 import { CreatePostCategoryDto } from '../dtos/create-post-category.dto';
 import { UpdatePostCategoryDto } from '../dtos/update-post-category.dto';
@@ -19,7 +20,7 @@ export class AdminPostCategoryController {
   @Permission('post.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.categoryService.getOne(BigInt(id));
+    return this.categoryService.getOne(toPrimaryKey(id));
   }
 
   @Permission('post.manage')
@@ -31,12 +32,12 @@ export class AdminPostCategoryController {
   @Permission('post.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdatePostCategoryDto) {
-    return this.categoryService.update(BigInt(id), dto);
+    return this.categoryService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('post.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.categoryService.delete(BigInt(id));
+    return this.categoryService.delete(toPrimaryKey(id));
   }
 }

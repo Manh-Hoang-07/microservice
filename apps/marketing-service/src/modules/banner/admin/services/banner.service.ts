@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
-import { createPaginationMeta, toPrimaryKey } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { toPrimaryKey, PrimaryKey } from 'src/types';
 import { BannerRepository } from '../../repositories/banner.repository';
 import { BannerLocationRepository } from '../../../banner-location/repositories/banner-location.repository';
 
@@ -13,29 +14,21 @@ export class AdminBannerService {
   ) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.location_id) where.location_id = toPrimaryKey(query.location_id);
-    if (query.search) {
-      where.OR = [
-        { title: { contains: query.search } },
-        { subtitle: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.bannerRepo.findMany(where, { skip, take: limit }),
+      this.bannerRepo.findMany(where, options),
       this.bannerRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const banner = await this.bannerRepo.findById(id);
     if (!banner) throw new NotFoundException('Banner not found');
     return banner;
@@ -70,7 +63,7 @@ export class AdminBannerService {
     return this.getOne(banner.id);
   }
 
-  async update(id: bigint, dto: UpdateBannerDto) {
+  async update(id: PrimaryKey, dto: UpdateBannerDto) {
     await this.getOne(id);
 
     if (dto.location_id) {
@@ -88,7 +81,7 @@ export class AdminBannerService {
     return this.getOne(id);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.bannerRepo.delete(id);
     return { success: true };

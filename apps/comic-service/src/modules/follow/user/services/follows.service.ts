@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { ComicFollowRepository } from '../../repositories/comic-follow.repository';
 
 @Injectable()
@@ -10,22 +11,20 @@ export class UserFollowService {
     private readonly config: ConfigService,
   ) {}
 
-  async getList(userId: bigint, query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+  async getList(userId: PrimaryKey, query: any) {
+    const options = parseQueryOptions(query);
 
     const where = { user_id: userId };
 
     const [data, total] = await Promise.all([
-      this.followRepo.findMany(where, { skip, take: limit }),
+      this.followRepo.findMany(where, options),
       this.followRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async follow(userId: bigint, comicId: bigint) {
+  async follow(userId: PrimaryKey, comicId: PrimaryKey) {
     const existing = await this.followRepo.findUnique(userId, comicId);
     if (existing) throw new ConflictException('Already following');
 
@@ -47,7 +46,7 @@ export class UserFollowService {
     return follow;
   }
 
-  async unfollow(userId: bigint, comicId: bigint) {
+  async unfollow(userId: PrimaryKey, comicId: PrimaryKey) {
     const existing = await this.followRepo.findUnique(userId, comicId);
     if (!existing) throw new NotFoundException('Not following');
 

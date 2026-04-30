@@ -1,15 +1,10 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { PrismaService } from '../../database/prisma.service';
-import { InternalGuard } from '@package/common';
+import { Internal } from '@package/common';
 
 @ApiTags('Internal')
-@UseGuards(InternalGuard)
+@Internal()
 @Controller('internal/users')
 export class InternalUsersController {
   constructor(private readonly prisma: PrismaService) {}

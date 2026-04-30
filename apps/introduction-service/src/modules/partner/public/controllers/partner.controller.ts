@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { PublicPartnerService } from '../services/partner.service';
 
 @ApiTags('Public Partners')
@@ -17,6 +18,6 @@ export class PublicPartnerController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.partnerService.getOne(BigInt(id));
+    return this.partnerService.getOne(toPrimaryKey(id));
   }
 }

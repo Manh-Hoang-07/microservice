@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class UserRepository {
@@ -14,7 +15,7 @@ export class UserRepository {
     return this.prisma.user.findUnique({ where: { email }, include: { profile: true } });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.user.findUnique({ where: { id }, include: { profile: true } });
   }
 
@@ -37,11 +38,11 @@ export class UserRepository {
     return this.prisma.user.create({ data });
   }
 
-  update(id: bigint, data: Prisma.UserUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.UserUpdateInput) {
     return this.prisma.user.update({ where: { id }, data });
   }
 
-  updateLastLogin(id: bigint) {
+  updateLastLogin(id: PrimaryKey) {
     return this.prisma.user
       .update({ where: { id }, data: { last_login_at: new Date() } })
       .catch(() => undefined);

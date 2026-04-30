@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { PublicCertificateService } from '../services/certificate.service';
 
 @ApiTags('Public Certificates')
@@ -17,6 +18,6 @@ export class PublicCertificateController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.certificateService.getOne(BigInt(id));
+    return this.certificateService.getOne(toPrimaryKey(id));
   }
 }

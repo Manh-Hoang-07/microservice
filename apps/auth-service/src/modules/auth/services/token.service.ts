@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { parseDurationToSeconds } from '@package/common';
 import { RedisService } from '../../../security/services/redis.service';
 import { JwksService } from '../../../jwks/services/jwks.service';
 
@@ -8,8 +9,8 @@ export type PrimaryKey = string | number | bigint;
 
 @Injectable()
 export class TokenService {
-  private readonly DEFAULT_AT_TTL = 3600; // 1h
-  private readonly DEFAULT_RT_TTL = 604800; // 7d
+  private readonly DEFAULT_AT_TTL = 3600;
+  private readonly DEFAULT_RT_TTL = 604800;
 
   constructor(
     private readonly jwksService: JwksService,
@@ -17,29 +18,12 @@ export class TokenService {
     private readonly redis: RedisService,
   ) {}
 
-  private parseDurationToSeconds(input: string | undefined | null, fallback: number): number {
-    if (!input) return fallback;
-    const match = /^(\d+)([smhd])?$/.exec(input.trim());
-    if (!match) return fallback;
-    const val = parseInt(match[1], 10);
-    const unit = match[2] || 's';
-    switch (unit) {
-      case 's': return val;
-      case 'm': return val * 60;
-      case 'h': return val * 3600;
-      case 'd': return val * 86400;
-      default: return fallback;
-    }
-  }
-
   getAccessTtlSec(): number {
-    const exp = this.config.get<string>('jwt.expiresIn');
-    return this.parseDurationToSeconds(exp, this.DEFAULT_AT_TTL);
+    return parseDurationToSeconds(this.config.get<string>('jwt.expiresIn'), this.DEFAULT_AT_TTL);
   }
 
   getRefreshTtlSec(): number {
-    const exp = this.config.get<string>('jwt.refreshExpiresIn');
-    return this.parseDurationToSeconds(exp, this.DEFAULT_RT_TTL);
+    return parseDurationToSeconds(this.config.get<string>('jwt.refreshExpiresIn'), this.DEFAULT_RT_TTL);
   }
 
   buildRefreshKey(userId: PrimaryKey, jti: string): string {
@@ -51,8 +35,8 @@ export class TokenService {
     const accessTtlSec = this.getAccessTtlSec();
     const refreshTtlSec = this.getRefreshTtlSec();
 
-    const expiresIn = this.config.get<string>('jwt.expiresIn') || '1h';
-    const refreshExpiresIn = this.config.get<string>('jwt.refreshExpiresIn') || '7d';
+    const expiresIn = this.config.get<string>('jwt.expiresIn')!;
+    const refreshExpiresIn = this.config.get<string>('jwt.refreshExpiresIn')!;
 
     const accessToken = await this.jwksService.signToken(
       { sub: String(userId), email },

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class BannerLocationRepository {
     return this.prisma.bannerLocation.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.bannerLocation.findUnique({ where: { id }, include: { banners: true } });
   }
 
@@ -35,11 +36,11 @@ export class BannerLocationRepository {
     return this.prisma.bannerLocation.create({ data });
   }
 
-  update(id: bigint, data: Prisma.BannerLocationUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.BannerLocationUpdateInput) {
     return this.prisma.bannerLocation.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.bannerLocation.delete({ where: { id } });
   }
 }

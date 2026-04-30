@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
-import { SlugHelper, createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { AboutSectionRepository } from '../../repositories/about-section.repository';
 
 @Injectable()
@@ -9,29 +10,21 @@ export class AdminAboutService {
   constructor(private readonly aboutRepo: AboutSectionRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.section_type) where.section_type = query.section_type;
-    if (query.search) {
-      where.OR = [
-        { title: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.aboutRepo.findMany(where, { skip, take: limit }),
+      this.aboutRepo.findMany(where, options),
       this.aboutRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const item = await this.aboutRepo.findById(id);
     if (!item) throw new NotFoundException('About section not found');
     return item;
@@ -54,7 +47,7 @@ export class AdminAboutService {
     });
   }
 
-  async update(id: bigint, dto: UpdateAboutDto) {
+  async update(id: PrimaryKey, dto: UpdateAboutDto) {
     await this.getOne(id);
 
     const data: any = { ...dto };
@@ -68,7 +61,7 @@ export class AdminAboutService {
     return this.aboutRepo.update(id, data);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.aboutRepo.delete(id);
     return { success: true };

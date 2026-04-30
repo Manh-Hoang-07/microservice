@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
-import { SlugHelper, createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
@@ -9,19 +10,11 @@ export class AdminPostService {
   constructor(private readonly postRepo: PostRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.post_type) where.post_type = query.post_type;
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
     if (query.is_featured !== undefined) {
       where.is_featured = query.is_featured === 'true' || query.is_featured === true;
     }
@@ -30,31 +23,25 @@ export class AdminPostService {
     }
 
     const [data, total] = await Promise.all([
-      this.postRepo.findMany(where, { skip, take: limit }),
+      this.postRepo.findMany(where, options),
       this.postRepo.count(where),
     ]);
 
     return {
       data: data.map((p) => this.transform(p)),
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta(options, total),
     };
   }
 
   async getSimpleList(query: any) {
     const limit = Math.max(Number(query.limit) || 50, 1);
     const where: any = {};
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
 
     const data = await this.postRepo.findSimpleMany(where, limit);
     return { data };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const post = await this.postRepo.findById(id);
     if (!post) throw new NotFoundException('Post not found');
     return this.transform(post);
@@ -97,7 +84,7 @@ export class AdminPostService {
     return this.getOne(post.id);
   }
 
-  async update(id: bigint, dto: UpdatePostDto) {
+  async update(id: PrimaryKey, dto: UpdatePostDto) {
     await this.getOne(id);
 
     const data: any = { ...dto };
@@ -129,7 +116,7 @@ export class AdminPostService {
     return this.getOne(id);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.postRepo.delete(id);
     return { success: true };

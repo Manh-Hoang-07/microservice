@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
-import { toPrimaryKey } from '@package/common';
+import { toPrimaryKey, PrimaryKey } from 'src/types';
 
 const POST_WITH_RELATIONS = {
   stats: true,
@@ -64,7 +64,7 @@ export class PostRepository {
     return this.prisma.post.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.post.findUnique({ where: { id }, include: POST_WITH_RELATIONS });
   }
 
@@ -83,11 +83,11 @@ export class PostRepository {
     return this.prisma.post.create({ data });
   }
 
-  createStats(postId: bigint) {
+  createStats(postId: PrimaryKey) {
     return this.prisma.postStats.create({ data: { post_id: postId } });
   }
 
-  async syncCategories(postId: bigint, categoryIds: number[]) {
+  async syncCategories(postId: PrimaryKey, categoryIds: number[]) {
     await this.prisma.postPostcategory.deleteMany({ where: { post_id: postId } });
     if (categoryIds.length > 0) {
       await this.prisma.postPostcategory.createMany({
@@ -99,7 +99,7 @@ export class PostRepository {
     }
   }
 
-  async syncTags(postId: bigint, tagIds: number[]) {
+  async syncTags(postId: PrimaryKey, tagIds: number[]) {
     await this.prisma.postPosttag.deleteMany({ where: { post_id: postId } });
     if (tagIds.length > 0) {
       await this.prisma.postPosttag.createMany({
@@ -111,11 +111,11 @@ export class PostRepository {
     }
   }
 
-  update(id: bigint, data: Prisma.PostUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.PostUpdateInput) {
     return this.prisma.post.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.post.delete({ where: { id } });
   }
 }

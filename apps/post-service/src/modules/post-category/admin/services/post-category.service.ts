@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePostCategoryDto } from '../dtos/create-post-category.dto';
 import { UpdatePostCategoryDto } from '../dtos/update-post-category.dto';
-import { SlugHelper, createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { PostCategoryRepository } from '../../repositories/post-category.repository';
 
 @Injectable()
@@ -9,30 +10,22 @@ export class AdminPostCategoryService {
   constructor(private readonly categoryRepo: PostCategoryRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
     if (query.parent_id !== undefined) {
       where.parent_id = query.parent_id === 'null' ? null : BigInt(query.parent_id);
     }
 
     const [data, total] = await Promise.all([
-      this.categoryRepo.findMany(where, { skip, take: limit }),
+      this.categoryRepo.findMany(where, options),
       this.categoryRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const category = await this.categoryRepo.findById(id);
     if (!category) throw new NotFoundException('Category not found');
     return category;
@@ -56,7 +49,7 @@ export class AdminPostCategoryService {
     });
   }
 
-  async update(id: bigint, dto: UpdatePostCategoryDto) {
+  async update(id: PrimaryKey, dto: UpdatePostCategoryDto) {
     await this.getOne(id);
     const data: any = { ...dto };
 
@@ -75,7 +68,7 @@ export class AdminPostCategoryService {
     return this.categoryRepo.update(id, data);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.categoryRepo.delete(id);
     return { success: true };

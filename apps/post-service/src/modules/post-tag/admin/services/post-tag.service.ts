@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePostTagDto } from '../dtos/create-post-tag.dto';
 import { UpdatePostTagDto } from '../dtos/update-post-tag.dto';
-import { SlugHelper, createPaginationMeta } from '@package/common';
+import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { PostTagRepository } from '../../repositories/post-tag.repository';
 
 @Injectable()
@@ -9,27 +10,19 @@ export class AdminPostTagService {
   constructor(private readonly tagRepo: PostTagRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.tagRepo.findMany(where, { skip, take: limit }),
+      this.tagRepo.findMany(where, options),
       this.tagRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const tag = await this.tagRepo.findById(id);
     if (!tag) throw new NotFoundException('Tag not found');
     return tag;
@@ -48,7 +41,7 @@ export class AdminPostTagService {
     });
   }
 
-  async update(id: bigint, dto: UpdatePostTagDto) {
+  async update(id: PrimaryKey, dto: UpdatePostTagDto) {
     await this.getOne(id);
     const data: any = { ...dto };
 
@@ -63,7 +56,7 @@ export class AdminPostTagService {
     return this.tagRepo.update(id, data);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.tagRepo.delete(id);
     return { success: true };

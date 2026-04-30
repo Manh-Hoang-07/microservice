@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class CertificateRepository {
     return this.prisma.certificate.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.certificate.findUnique({ where: { id } });
   }
 
@@ -31,11 +32,11 @@ export class CertificateRepository {
     return this.prisma.certificate.create({ data });
   }
 
-  update(id: bigint, data: Prisma.CertificateUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.CertificateUpdateInput) {
     return this.prisma.certificate.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.certificate.delete({ where: { id } });
   }
 }

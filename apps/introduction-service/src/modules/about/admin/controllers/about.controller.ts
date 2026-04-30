@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminAboutService } from '../services/about.service';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
@@ -28,7 +29,7 @@ export class AdminAboutController {
   @Permission('introduction.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.aboutService.getOne(BigInt(id));
+    return this.aboutService.getOne(toPrimaryKey(id));
   }
 
   @Permission('introduction.manage')
@@ -40,12 +41,12 @@ export class AdminAboutController {
   @Permission('introduction.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateAboutDto) {
-    return this.aboutService.update(BigInt(id), dto);
+    return this.aboutService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('introduction.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.aboutService.delete(BigInt(id));
+    return this.aboutService.delete(toPrimaryKey(id));
   }
 }

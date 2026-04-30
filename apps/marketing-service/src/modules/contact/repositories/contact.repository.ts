@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class ContactRepository {
     return this.prisma.contact.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.contact.findUnique({ where: { id } });
   }
 
@@ -31,7 +32,7 @@ export class ContactRepository {
     return this.prisma.marketingOutbox.create({ data });
   }
 
-  update(id: bigint, data: Prisma.ContactUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.ContactUpdateInput) {
     return this.prisma.contact.update({ where: { id }, data });
   }
 }

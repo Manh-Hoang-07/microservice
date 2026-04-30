@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class GalleryRepository {
     return this.prisma.gallery.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.gallery.findUnique({ where: { id } });
   }
 
@@ -31,11 +32,11 @@ export class GalleryRepository {
     return this.prisma.gallery.create({ data });
   }
 
-  update(id: bigint, data: Prisma.GalleryUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.GalleryUpdateInput) {
     return this.prisma.gallery.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.gallery.delete({ where: { id } });
   }
 }

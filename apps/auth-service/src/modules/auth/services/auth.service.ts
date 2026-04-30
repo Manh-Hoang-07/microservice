@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly otpService: AuthOtpService,
     private readonly socialAuthService: SocialAuthService,
+    private readonly i18n: I18nService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -42,8 +44,9 @@ export class AuthService {
   }
 
   async me(userId: PrimaryKey) {
+    const lang = I18nContext.current()?.lang ?? 'en';
     const user = await this.userRepo.findById(BigInt(String(userId)));
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException(this.i18n.t('auth.USER_NOT_FOUND', { lang }));
     return safeUser(user);
   }
 
@@ -60,17 +63,19 @@ export class AuthService {
   }
 
   async sendOtpForRegister(dto: SendOtpDto) {
+    const lang = I18nContext.current()?.lang ?? 'en';
     const existing = await this.userRepo.findByEmail(dto.email.toLowerCase());
-    if (existing) throw new BadRequestException('Email is already in use.');
+    if (existing) throw new BadRequestException(this.i18n.t('auth.EMAIL_IN_USE', { lang }));
     await this.otpService.sendRegisterOtp(dto.email);
-    return { message: 'OTP has been sent to your email.' };
+    return { message: this.i18n.t('auth.OTP_SENT', { lang }) };
   }
 
   async sendOtpForForgotPassword(dto: SendOtpDto) {
+    const lang = I18nContext.current()?.lang ?? 'en';
     const existing = await this.userRepo.findByEmail(dto.email.toLowerCase());
-    if (!existing) throw new NotFoundException('Email does not exist in the system.');
+    if (!existing) throw new NotFoundException(this.i18n.t('auth.EMAIL_NOT_FOUND', { lang }));
     await this.otpService.sendForgotPasswordOtp(dto.email);
-    return { message: 'OTP has been sent to your email.' };
+    return { message: this.i18n.t('auth.OTP_SENT', { lang }) };
   }
 
   async handleGoogleAuth(profile: any) {

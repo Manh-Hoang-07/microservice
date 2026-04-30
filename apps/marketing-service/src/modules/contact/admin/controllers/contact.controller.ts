@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminContactService } from '../services/contact.service';
 
 @ApiTags('Admin Contacts')
@@ -25,7 +26,7 @@ export class AdminContactController {
   @Permission('marketing.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.contactService.getOne(BigInt(id));
+    return this.contactService.getOne(toPrimaryKey(id));
   }
 
   @Permission('marketing.manage')
@@ -36,18 +37,18 @@ export class AdminContactController {
     @Req() req: any,
   ) {
     const userId = BigInt(req.user?.sub || req.user?.id || 0);
-    return this.contactService.reply(BigInt(id), reply, userId);
+    return this.contactService.reply(toPrimaryKey(id), reply, userId);
   }
 
   @Permission('marketing.manage')
   @Patch(':id/read')
   async markAsRead(@Param('id') id: string) {
-    return this.contactService.markAsRead(BigInt(id));
+    return this.contactService.markAsRead(toPrimaryKey(id));
   }
 
   @Permission('marketing.manage')
   @Patch(':id/close')
   async closeContact(@Param('id') id: string) {
-    return this.contactService.closeContact(BigInt(id));
+    return this.contactService.closeContact(toPrimaryKey(id));
   }
 }

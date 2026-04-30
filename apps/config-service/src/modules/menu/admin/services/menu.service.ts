@@ -9,15 +9,14 @@ import { MenuTreeItem } from '../../interfaces/menu-tree-item.interface';
 import { buildMenuTree, filterPublicMenus } from '../../helpers/menu.helper';
 import { toPrimaryKey } from '../../../../common/core/primary-key.util';
 import { createPaginationMeta } from '../../../../common/core/pagination.helper';
+import { parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class MenuService {
   constructor(private readonly menuRepo: MenuRepository) {}
 
   async getList(query: any = {}) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const filter: MenuFilter = {};
     if (query.search) filter.search = query.search;
@@ -29,11 +28,11 @@ export class MenuService {
 
     const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.menuRepo.findMany(filter, { skip, take: limit }),
+      this.menuRepo.findMany(filter, options),
       skipCount ? Promise.resolve(0) : this.menuRepo.count(filter),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
   async getSimpleList(query: any = {}) {

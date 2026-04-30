@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { FaqRepository } from '../../repositories/faq.repository';
 
 @Injectable()
@@ -7,39 +8,31 @@ export class PublicFaqService {
   constructor(private readonly faqRepo: FaqRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = { status: 'active' };
-    if (query.search) {
-      where.OR = [
-        { question: { contains: query.search } },
-        { answer: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.faqRepo.findMany(where, { skip, take: limit }),
+      this.faqRepo.findMany(where, options),
       this.faqRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const item = await this.faqRepo.findFirst({ id, status: 'active' });
     if (!item) throw new NotFoundException('FAQ not found');
     return item;
   }
 
-  async incrementViewCount(id: bigint) {
+  async incrementViewCount(id: PrimaryKey) {
     const item = await this.getOne(id);
     await this.faqRepo.update(id, { view_count: { increment: 1 } });
     return { success: true, view_count: item.view_count + 1 };
   }
 
-  async incrementHelpfulCount(id: bigint) {
+  async incrementHelpfulCount(id: PrimaryKey) {
     const item = await this.getOne(id);
     await this.faqRepo.update(id, { helpful_count: { increment: 1 } });
     return { success: true, helpful_count: item.helpful_count + 1 };

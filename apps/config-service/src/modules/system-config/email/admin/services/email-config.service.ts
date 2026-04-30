@@ -12,6 +12,10 @@ export class EmailConfigService {
     return this.maskPassword(config);
   }
 
+  async getRawConfig(): Promise<any> {
+    return this.emailConfigRepo.getConfig();
+  }
+
   async updateConfig(dto: UpdateEmailConfigDto, userId?: any): Promise<any> {
     const existing = await this.emailConfigRepo.getConfig();
 

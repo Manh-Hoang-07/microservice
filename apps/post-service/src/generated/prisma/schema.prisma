@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model PostCategory {
+  id              BigInt   @id @default(autoincrement())
+  name            String   @db.VarChar(255)
+  slug            String   @unique @db.VarChar(255)
+  description     String?  @db.Text
+  parent_id       BigInt?
+  is_active       Boolean  @default(true)
+  sort_order      Int      @default(0)
+  seo_title       String?  @db.VarChar(255)
+  seo_description String?  @db.Text
+  seo_keywords    String?  @db.VarChar(500)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+  group_id        BigInt?
+
+  parent   PostCategory?      @relation("CategoryToChildren", fields: [parent_id], references: [id], onDelete: SetNull)
+  children PostCategory[]     @relation("CategoryToChildren")
+  posts    PostPostcategory[]
+
+  @@index([slug], map: "post_categories_idx_slug")
+  @@index([name], map: "post_categories_idx_name")
+  @@index([parent_id], map: "post_categories_idx_parent_id")
+  @@index([is_active], map: "post_categories_idx_is_active")
+  @@index([sort_order], map: "post_categories_idx_sort_order")
+  @@index([created_at], map: "post_categories_idx_created_at")
+  @@index([created_user_id], map: "post_categories_idx_created_user_id")
+  @@index([updated_user_id], map: "post_categories_idx_updated_user_id")
+  @@index([group_id], map: "post_categories_idx_group_id")
+  @@map("post_categories")
+}
+
+model PostTag {
+  id              BigInt   @id @default(autoincrement())
+  name            String   @db.VarChar(255)
+  slug            String   @unique @db.VarChar(255)
+  description     String?  @db.Text
+  is_active       Boolean  @default(true)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+  group_id        BigInt?
+
+  posts PostPosttag[]
+
+  @@index([slug], map: "post_tags_idx_slug")
+  @@index([name], map: "post_tags_idx_name")
+  @@index([is_active], map: "post_tags_idx_is_active")
+  @@index([created_at], map: "post_tags_idx_created_at")
+  @@index([created_user_id], map: "post_tags_idx_created_user_id")
+  @@index([updated_user_id], map: "post_tags_idx_updated_user_id")
+  @@index([group_id], map: "post_tags_idx_group_id")
+  @@map("post_tags")
+}
+
+model Post {
+  id              BigInt    @id @default(autoincrement())
+  name            String    @db.VarChar(255)
+  slug            String    @unique @db.VarChar(255)
+  excerpt         String?   @db.Text
+  content         String?   @db.Text
+  image           String?   @db.VarChar(500)
+  cover_image     String?   @db.VarChar(500)
+  status          String    @default("draft") @db.VarChar(30)
+  post_type       String    @default("text") @db.VarChar(30)
+  video_url       String?   @db.VarChar(500)
+  audio_url       String?   @db.VarChar(500)
+  is_featured     Boolean   @default(false)
+  is_pinned       Boolean   @default(false)
+  published_at    DateTime? @db.Timestamp(0)
+  seo_title       String?   @db.VarChar(255)
+  seo_description String?   @db.Text
+  seo_keywords    String?   @db.VarChar(500)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime  @default(now()) @db.Timestamp(0)
+  updated_at      DateTime  @updatedAt @db.Timestamp(0)
+  group_id        BigInt?
+
+  stats         PostStats?
+  daily_stats   PostDailyStats[]
+  categoryLinks PostPostcategory[]
+  tagLinks      PostPosttag[]
+  comments      PostComment[]
+
+  @@index([slug], map: "posts_idx_slug")
+  @@index([status], map: "posts_idx_status")
+  @@index([post_type], map: "posts_idx_post_type")
+  @@index([is_featured], map: "posts_idx_is_featured")
+  @@index([is_pinned], map: "posts_idx_is_pinned")
+  @@index([published_at], map: "posts_idx_published_at")
+  @@index([created_at], map: "posts_idx_created_at")
+  @@index([created_user_id], map: "posts_idx_created_user_id")
+  @@index([updated_user_id], map: "posts_idx_updated_user_id")
+  @@index([group_id], map: "posts_idx_group_id")
+  @@map("posts")
+}
+
+model PostStats {
+  post_id    BigInt   @id
+  view_count BigInt   @default(0)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@index([view_count], map: "post_stats_idx_view_count")
+  @@index([updated_at], map: "post_stats_idx_updated_at")
+  @@map("post_stats")
+}
+
+model PostDailyStats {
+  post_id    BigInt
+  stat_date  DateTime @db.Date
+  view_count BigInt   @default(0)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@id([post_id, stat_date])
+  @@index([stat_date], map: "post_daily_stats_idx_stat_date")
+  @@index([view_count], map: "post_daily_stats_idx_view_count")
+  @@map("post_daily_stats")
+}
+
+model PostPostcategory {
+  post_id          BigInt
+  post_category_id BigInt
+  post             Post         @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  category         PostCategory @relation(fields: [post_category_id], references: [id], onDelete: Cascade)
+
+  @@id([post_id, post_category_id])
+  @@map("post_postcategory")
+}
+
+model PostPosttag {
+  post_id     BigInt
+  post_tag_id BigInt
+  post        Post    @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  tag         PostTag @relation(fields: [post_tag_id], references: [id], onDelete: Cascade)
+
+  @@id([post_id, post_tag_id])
+  @@map("post_posttag")
+}
+
+model PostComment {
+  id              BigInt   @id @default(autoincrement())
+  user_id         BigInt?
+  post_id         BigInt
+  parent_id       BigInt?
+  guest_name      String?  @db.VarChar(255)
+  guest_email     String?  @db.VarChar(255)
+  content         String   @db.Text
+  status          String   @default("visible") @db.VarChar(30)
+  created_user_id BigInt?
+  updated_user_id BigInt?
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @updatedAt @db.Timestamp(0)
+
+  post    Post          @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  parent  PostComment?  @relation("CommentToReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies PostComment[] @relation("CommentToReplies")
+
+  @@index([user_id], map: "post_comments_idx_user_id")
+  @@index([post_id], map: "post_comments_idx_post_id")
+  @@index([parent_id], map: "post_comments_idx_parent_id")
+  @@index([status], map: "post_comments_idx_status")
+  @@index([created_at], map: "post_comments_idx_created_at")
+  @@index([post_id, created_at], map: "post_comments_idx_post_created")
+  @@index([guest_email], map: "post_comments_idx_guest_email")
+  @@index([created_user_id], map: "post_comments_idx_created_user_id")
+  @@index([updated_user_id], map: "post_comments_idx_updated_user_id")
+  @@map("post_comments")
+}
+
+model PostOutbox {
+  id         BigInt   @id @default(autoincrement())
+  event_type String   @db.VarChar(100)
+  payload    Json
+  published  Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz()
+
+  @@index([published, created_at], map: "post_outbox_idx_unpublished")
+  @@map("post_outbox")
+}

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class ChapterRepository {
@@ -29,7 +30,7 @@ export class ChapterRepository {
     return this.prisma.chapter.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.chapter.findUnique({
       where: { id },
       include: { pages: { orderBy: { page_number: 'asc' } } },
@@ -40,7 +41,7 @@ export class ChapterRepository {
     return this.prisma.chapter.findFirst({ where });
   }
 
-  findPublicOne(id: bigint) {
+  findPublicOne(id: PrimaryKey) {
     return this.prisma.chapter.findFirst({
       where: { id, status: 'published' },
       include: {
@@ -50,14 +51,14 @@ export class ChapterRepository {
     });
   }
 
-  findPages(chapterId: bigint) {
+  findPages(chapterId: PrimaryKey) {
     return this.prisma.chapterPage.findMany({
       where: { chapter_id: chapterId },
       orderBy: { page_number: 'asc' },
     });
   }
 
-  findNextChapter(comicId: bigint, currentIndex: number) {
+  findNextChapter(comicId: PrimaryKey, currentIndex: number) {
     return this.prisma.chapter.findFirst({
       where: { comic_id: comicId, chapter_index: { gt: currentIndex }, status: 'published' },
       orderBy: { chapter_index: 'asc' },
@@ -65,7 +66,7 @@ export class ChapterRepository {
     });
   }
 
-  findPrevChapter(comicId: bigint, currentIndex: number) {
+  findPrevChapter(comicId: PrimaryKey, currentIndex: number) {
     return this.prisma.chapter.findFirst({
       where: { comic_id: comicId, chapter_index: { lt: currentIndex }, status: 'published' },
       orderBy: { chapter_index: 'desc' },
@@ -81,26 +82,26 @@ export class ChapterRepository {
     return this.prisma.chapterPage.createMany({ data: pages });
   }
 
-  deletePages(chapterId: bigint) {
+  deletePages(chapterId: PrimaryKey) {
     return this.prisma.chapterPage.deleteMany({ where: { chapter_id: chapterId } });
   }
 
-  update(id: bigint, data: Prisma.ChapterUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.ChapterUpdateInput) {
     return this.prisma.chapter.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.chapter.delete({ where: { id } });
   }
 
-  updateComicLastChapter(comicId: bigint, chapterId: bigint) {
+  updateComicLastChapter(comicId: PrimaryKey, chapterId: PrimaryKey) {
     return this.prisma.comic.update({
       where: { id: comicId },
       data: { last_chapter_id: chapterId, last_chapter_updated_at: new Date() },
     });
   }
 
-  findComicBasic(comicId: bigint) {
+  findComicBasic(comicId: PrimaryKey) {
     return this.prisma.comic.findUnique({
       where: { id: comicId },
       select: { id: true, title: true, slug: true },

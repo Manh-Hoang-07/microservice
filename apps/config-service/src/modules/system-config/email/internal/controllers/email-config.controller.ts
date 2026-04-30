@@ -12,6 +12,6 @@ export class InternalEmailConfigController {
   @UseGuards(InternalGuard)
   @Get()
   getConfig() {
-    return this.emailConfigService.getConfig();
+    return this.emailConfigService.getRawConfig();
   }
 }

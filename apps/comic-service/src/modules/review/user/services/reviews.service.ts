@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { toPrimaryKey, PrimaryKey } from 'src/types';
 import { CreateReviewDto } from '../dtos/create-review.dto';
 import { ComicReviewRepository } from '../../repositories/comic-review.repository';
 
@@ -6,8 +7,8 @@ import { ComicReviewRepository } from '../../repositories/comic-review.repositor
 export class UserReviewService {
   constructor(private readonly reviewRepo: ComicReviewRepository) {}
 
-  async createOrUpdate(userId: bigint, dto: CreateReviewDto) {
-    const comicId = BigInt(dto.comic_id);
+  async createOrUpdate(userId: PrimaryKey, dto: CreateReviewDto) {
+    const comicId = toPrimaryKey(dto.comic_id);
 
     const review = await this.reviewRepo.upsert(userId, comicId, {
       rating: dto.rating,
@@ -18,7 +19,7 @@ export class UserReviewService {
     return review;
   }
 
-  async delete(userId: bigint, id: bigint) {
+  async delete(userId: PrimaryKey, id: PrimaryKey) {
     const review = await this.reviewRepo.findById(id);
     if (!review) throw new NotFoundException('Review not found');
     if (review.user_id !== userId) throw new ForbiddenException('Not your review');

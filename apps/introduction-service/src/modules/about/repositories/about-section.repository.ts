@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class AboutSectionRepository {
     return this.prisma.aboutSection.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.aboutSection.findUnique({ where: { id } });
   }
 
@@ -31,11 +32,11 @@ export class AboutSectionRepository {
     return this.prisma.aboutSection.create({ data });
   }
 
-  update(id: bigint, data: Prisma.AboutSectionUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.AboutSectionUpdateInput) {
     return this.prisma.aboutSection.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.aboutSection.delete({ where: { id } });
   }
 }

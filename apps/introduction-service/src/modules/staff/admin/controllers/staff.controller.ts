@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminStaffService } from '../services/staff.service';
 import { CreateStaffDto } from '../dtos/create-staff.dto';
 import { UpdateStaffDto } from '../dtos/update-staff.dto';
@@ -28,7 +29,7 @@ export class AdminStaffController {
   @Permission('introduction.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.staffService.getOne(BigInt(id));
+    return this.staffService.getOne(toPrimaryKey(id));
   }
 
   @Permission('introduction.manage')
@@ -40,12 +41,12 @@ export class AdminStaffController {
   @Permission('introduction.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateStaffDto) {
-    return this.staffService.update(BigInt(id), dto);
+    return this.staffService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('introduction.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.staffService.delete(BigInt(id));
+    return this.staffService.delete(toPrimaryKey(id));
   }
 }

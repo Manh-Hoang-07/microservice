@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminProjectService } from '../services/project.service';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
@@ -28,7 +29,7 @@ export class AdminProjectController {
   @Permission('introduction.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.projectService.getOne(BigInt(id));
+    return this.projectService.getOne(toPrimaryKey(id));
   }
 
   @Permission('introduction.manage')
@@ -40,12 +41,12 @@ export class AdminProjectController {
   @Permission('introduction.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
-    return this.projectService.update(BigInt(id), dto);
+    return this.projectService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('introduction.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.projectService.delete(BigInt(id));
+    return this.projectService.delete(toPrimaryKey(id));
   }
 }

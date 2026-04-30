@@ -1,4 +1,5 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { UserRepository } from '../repositories/user.repository';
 import { RedisService } from '../../../security/services/redis.service';
 import { TokenService, PrimaryKey } from './token.service';
@@ -10,6 +11,7 @@ export class SocialAuthService {
     private readonly userRepo: UserRepository,
     private readonly tokenService: TokenService,
     private readonly redis: RedisService,
+    private readonly i18n: I18nService,
   ) {}
 
   async handleGoogleAuth(profile: {
@@ -19,6 +21,7 @@ export class SocialAuthService {
     lastName?: string;
     picture?: string;
   }) {
+    const lang = I18nContext.current()?.lang ?? 'en';
     const email = profile.email.toLowerCase();
     const now = new Date();
 
@@ -41,7 +44,7 @@ export class SocialAuthService {
     }
 
     if (dbUser.status !== 'active') {
-      throw new ForbiddenException('Account is locked or inactive.');
+      throw new ForbiddenException(this.i18n.t('auth.ACCOUNT_LOCKED', { lang }));
     }
 
     const userId = dbUser.id as unknown as PrimaryKey;

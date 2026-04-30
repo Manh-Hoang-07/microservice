@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
-import { toPrimaryKey } from '@package/common';
+import { toPrimaryKey, PrimaryKey } from 'src/types';
 
 const COMIC_WITH_STATS = {
   stats: true,
@@ -70,7 +70,7 @@ export class ComicRepository {
     return this.prisma.comic.count({ where });
   }
 
-  findById(id: bigint) {
+  findById(id: PrimaryKey) {
     return this.prisma.comic.findUnique({ where: { id }, include: COMIC_WITH_STATS });
   }
 
@@ -105,11 +105,11 @@ export class ComicRepository {
     return this.prisma.comic.create({ data });
   }
 
-  createStats(comicId: bigint) {
+  createStats(comicId: PrimaryKey) {
     return this.prisma.comicStats.create({ data: { comic_id: comicId } });
   }
 
-  async syncCategories(comicId: bigint, categoryIds: number[]) {
+  async syncCategories(comicId: PrimaryKey, categoryIds: number[]) {
     await this.prisma.comicCategoryOnComic.deleteMany({ where: { comic_id: comicId } });
     if (categoryIds.length > 0) {
       await this.prisma.comicCategoryOnComic.createMany({
@@ -121,15 +121,15 @@ export class ComicRepository {
     }
   }
 
-  update(id: bigint, data: Prisma.ComicUpdateInput) {
+  update(id: PrimaryKey, data: Prisma.ComicUpdateInput) {
     return this.prisma.comic.update({ where: { id }, data });
   }
 
-  delete(id: bigint) {
+  delete(id: PrimaryKey) {
     return this.prisma.comic.delete({ where: { id } });
   }
 
-  findPublicChapters(comicId: bigint, options: { skip: number; take: number }) {
+  findPublicChapters(comicId: PrimaryKey, options: { skip: number; take: number }) {
     return this.prisma.chapter.findMany({
       where: { comic_id: comicId, status: 'published' },
       select: {
@@ -149,7 +149,7 @@ export class ComicRepository {
     });
   }
 
-  countPublicChapters(comicId: bigint) {
+  countPublicChapters(comicId: PrimaryKey) {
     return this.prisma.chapter.count({ where: { comic_id: comicId, status: 'published' } });
   }
 }

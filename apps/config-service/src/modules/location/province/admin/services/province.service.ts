@@ -3,15 +3,14 @@ import { Prisma } from '@prisma/client';
 import { ProvinceRepository } from '../../repositories/province.repository';
 import { toPrimaryKey } from '../../../../../common/core/primary-key.util';
 import { createPaginationMeta } from '../../../../../common/core/pagination.helper';
+import { parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class ProvinceService {
   constructor(private readonly provinceRepo: ProvinceRepository) {}
 
   async getList(query: any = {}) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: Prisma.ProvinceWhereInput = {};
     if (query.name) where.name = { contains: query.name };
@@ -21,11 +20,11 @@ export class ProvinceService {
 
     const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.provinceRepo.findMany(where, { skip, take: limit }),
+      this.provinceRepo.findMany(where, options),
       skipCount ? Promise.resolve(0) : this.provinceRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
   async getSimpleList(query: any = {}) {

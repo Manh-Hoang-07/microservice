@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  OnModuleInit,
-  OnModuleDestroy,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { RedisService } from './redis.service';
 import { TokenLocalStore } from './token-local-store';
@@ -15,7 +10,6 @@ const LOCAL_SYNC_TTL_SECONDS = 300;
 
 @Injectable()
 export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(TokenBlacklistService.name);
   private readonly localStore = new TokenLocalStore(MAX_ENTRIES);
   private cleanupInterval?: NodeJS.Timeout;
 
@@ -23,13 +17,7 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.cleanupInterval = setInterval(() => {
-      const removed = this.localStore.cleanup();
-      if (removed > 0) {
-        this.logger.log(
-          `Token blacklist cleanup: removed ${removed} expired entries. ` +
-            `Current size: ${this.localStore.size}/${MAX_ENTRIES}`,
-        );
-      }
+      this.localStore.cleanup();
     }, CLEANUP_INTERVAL_MS);
   }
 

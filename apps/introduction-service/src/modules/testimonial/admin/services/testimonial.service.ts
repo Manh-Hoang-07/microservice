@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
-import { createPaginationMeta, toPrimaryKey } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { toPrimaryKey, PrimaryKey } from 'src/types';
 import { TestimonialRepository } from '../../repositories/testimonial.repository';
 
 @Injectable()
@@ -9,9 +10,7 @@ export class AdminTestimonialService {
   constructor(private readonly testimonialRepo: TestimonialRepository) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = {};
     if (query.status) where.status = query.status;
@@ -19,23 +18,16 @@ export class AdminTestimonialService {
       where.featured = query.featured === 'true' || query.featured === true;
     }
     if (query.project_id) where.project_id = toPrimaryKey(query.project_id);
-    if (query.search) {
-      where.OR = [
-        { client_name: { contains: query.search } },
-        { client_company: { contains: query.search } },
-        { content: { contains: query.search } },
-      ];
-    }
 
     const [data, total] = await Promise.all([
-      this.testimonialRepo.findMany(where, { skip, take: limit }),
+      this.testimonialRepo.findMany(where, options),
       this.testimonialRepo.count(where),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: bigint) {
+  async getOne(id: PrimaryKey) {
     const item = await this.testimonialRepo.findById(id);
     if (!item) throw new NotFoundException('Testimonial not found');
     return item;
@@ -56,7 +48,7 @@ export class AdminTestimonialService {
     } as any);
   }
 
-  async update(id: bigint, dto: UpdateTestimonialDto) {
+  async update(id: PrimaryKey, dto: UpdateTestimonialDto) {
     await this.getOne(id);
 
     const data: any = { ...dto };
@@ -67,7 +59,7 @@ export class AdminTestimonialService {
     return this.testimonialRepo.update(id, data);
   }
 
-  async delete(id: bigint) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.testimonialRepo.delete(id);
     return { success: true };

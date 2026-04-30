@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RedisService } from '@package/redis';
 import { PUBLIC_COMIC_STATUSES } from '../../enums/comic-status.enum';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { ComicRepository } from '../../repositories/comic.repository';
 
 @Injectable()
@@ -12,18 +12,9 @@ export class PublicComicService {
   ) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = { status: { in: PUBLIC_COMIC_STATUSES } };
-    if (query.search) {
-      where.OR = [
-        { title: { contains: query.search } },
-        { slug: { contains: query.search } },
-        { author: { contains: query.search } },
-      ];
-    }
     if (query.comic_category_id) {
       where.categoryLinks = {
         some: { comic_category_id: BigInt(query.comic_category_id) },
@@ -44,13 +35,13 @@ export class PublicComicService {
     }
 
     const [data, total] = await Promise.all([
-      this.comicRepo.findManyPublic(where, { skip, take: limit }, orderBy),
+      this.comicRepo.findManyPublic(where, options, orderBy),
       this.comicRepo.count(where),
     ]);
 
     return {
       data: data.map((c) => this.transform(c)),
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta(options, total),
     };
   }
 

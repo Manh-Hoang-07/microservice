@@ -1,20 +1,22 @@
 import { registerAs } from '@nestjs/config';
 
 export default registerAs('googleOAuth', () => {
-  const appUrl = (process.env.APP_URL || 'http://localhost:3002').replace(/\/$/, '');
-  const apiPrefix = process.env.GLOBAL_PREFIX || 'api';
+  const appHost = process.env.APP_HOST;
+  if (!appHost) throw new Error('APP_HOST is required');
 
-  let callbackURL =
-    process.env.GOOGLE_CALLBACK_URL || `/${apiPrefix}/auth/google/callback`;
+  const port = process.env.PORT;
+  const prefix = process.env.PREFIX || 'api';
+  const baseUrl = port ? `${appHost}:${port}` : appHost;
 
+  let callbackURL = process.env.GOOGLE_CALLBACK_URL || `/${prefix}/auth/google/callback`;
   if (callbackURL.startsWith('/')) {
-    callbackURL = `${appUrl}${callbackURL}`;
+    callbackURL = `${baseUrl}${callbackURL}`;
   }
 
   return {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     callbackURL,
-    frontendUrl: process.env.GOOGLE_FRONTEND_URL || 'http://localhost:3000',
+    frontendUrl: process.env.GOOGLE_FRONTEND_URL,
   };
 });

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RedisService } from '@package/redis';
 import { PUBLIC_POST_STATUSES } from '../../enums/post-status.enum';
-import { createPaginationMeta } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
@@ -12,17 +12,9 @@ export class PublicPostService {
   ) {}
 
   async getList(query: any) {
-    const page = Math.max(Number(query.page) || 1, 1);
-    const limit = Math.max(Number(query.limit) || 10, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions(query);
 
     const where: any = { status: { in: PUBLIC_POST_STATUSES } };
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search } },
-        { slug: { contains: query.search } },
-      ];
-    }
     if (query.post_category_id) {
       where.categoryLinks = { some: { post_category_id: BigInt(query.post_category_id) } };
     }
@@ -48,13 +40,13 @@ export class PublicPostService {
     }
 
     const [data, total] = await Promise.all([
-      this.postRepo.findManyPublic(where, { skip, take: limit }, orderBy),
+      this.postRepo.findManyPublic(where, options, orderBy),
       this.postRepo.count(where),
     ]);
 
     return {
       data: data.map((p) => this.transform(p)),
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta(options, total),
     };
   }
 

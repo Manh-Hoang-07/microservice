@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminComicService } from '../services/comic.service';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
@@ -34,7 +35,7 @@ export class AdminComicController {
   @Permission('comic.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.comicService.getOne(BigInt(id));
+    return this.comicService.getOne(toPrimaryKey(id));
   }
 
   @Permission('comic.manage')
@@ -46,12 +47,12 @@ export class AdminComicController {
   @Permission('comic.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateComicDto) {
-    return this.comicService.update(BigInt(id), dto);
+    return this.comicService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('comic.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.comicService.delete(BigInt(id));
+    return this.comicService.delete(toPrimaryKey(id));
   }
 }

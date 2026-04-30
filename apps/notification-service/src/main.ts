@@ -5,11 +5,11 @@ import { AppModule } from './app.module';
 import { createApp } from '@package/bootstrap';
 
 createApp({
-  serviceName: 'Notification Service',
-  defaultPort: 3004,
+  serviceName: process.env.SERVICE_NAME || 'Notification Service',
+  defaultPort: Number(process.env.PORT) || 3004,
   module: AppModule,
   swagger: {
-    title: 'Notification Service',
+    title: process.env.SERVICE_NAME || 'Notification Service',
     description: 'Notification microservice — Comic Platform',
   },
 }).catch((err) => {

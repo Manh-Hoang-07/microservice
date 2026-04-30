@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminTestimonialService } from '../services/testimonial.service';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
@@ -28,7 +29,7 @@ export class AdminTestimonialController {
   @Permission('introduction.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.testimonialService.getOne(BigInt(id));
+    return this.testimonialService.getOne(toPrimaryKey(id));
   }
 
   @Permission('introduction.manage')
@@ -40,12 +41,12 @@ export class AdminTestimonialController {
   @Permission('introduction.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateTestimonialDto) {
-    return this.testimonialService.update(BigInt(id), dto);
+    return this.testimonialService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('introduction.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.testimonialService.delete(BigInt(id));
+    return this.testimonialService.delete(toPrimaryKey(id));
   }
 }
