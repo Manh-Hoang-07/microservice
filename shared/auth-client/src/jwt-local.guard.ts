@@ -13,7 +13,7 @@ export const PUBLIC = 'public';
 export const USER = 'user';
 
 /**
- * JwtLocalGuard — dùng cho microservices (Storage, BFF, v.v.)
+ * JwtLocalGuard — dùng cho microservices (Storage, Gateway, v.v.)
  * Verify JWT bằng JWKS public key từ Auth Service.
  * Khi AUTH_JWKS_URL không được set (local dev), guard bypass authentication.
  */

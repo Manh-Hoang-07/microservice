@@ -32,17 +32,17 @@ type: project
   - `src/common/permission.decorator.ts` — Permission, Public decorators
   - `src/upload/` — toàn bộ upload logic (interface, 3 strategies, 2 services, controller, module, dtos)
   - Endpoints: POST /upload/file, POST /upload/files, GET /upload, GET /upload/allowed-types, GET /upload/meta/:filename, GET /upload/:filename, DELETE /upload/:filename
-- **apps/bff-service** (:3006): **Hoàn toàn standalone**, không import từ `@auth-client` hay `@/`
-  - `src/config/bff.config.ts` — registerAs('bff', ...) với typed config
-  - `src/guards/jwt.guard.ts` — JwtGuard inline, đọc `bff.jwksUrl`
+- **apps/gateway-service** (:3006): **Hoàn toàn standalone**, không import từ `@auth-client` hay `@/`
+  - `src/config/gateway.config.ts` — registerAs('gateway', ...) với typed config
+  - `src/guards/jwt.guard.ts` — JwtGuard inline, đọc `gateway.jwksUrl`
   - `src/common/permission.decorator.ts` — decorators riêng
   - Comics: GET /comics, /comics/top, /comics/:slug, /:slug/chapters, /:slug/chapters/:chapterSlug, /:slug/comments, /:slug/reviews
   - Posts: GET /posts, /posts/categories, /posts/tags, /posts/:slug, /:slug/comments
   - Search: GET /search?q=
   - Homepage: GET /homepage, DELETE /homepage/cache
 - **infrastructure/nginx/nginx.conf**: API Gateway routing
-- **docker-compose.yml** thêm: nginx + storage-service + bff-service containers
-- **Scripts**: `npm run start:storage` (port 3003), `npm run start:bff` (port 3006)
+- **docker-compose.yml** thêm: nginx + storage-service + gateway-service containers
+- **Scripts**: `npm run start:storage` (port 3003), `npm run start:gateway` (port 3006)
 
 ## Nguyên tắc kiến trúc đã áp dụng
 - Mỗi service có `src/config/` riêng với `registerAs` pattern (như `src/core/config/` của monolith)
@@ -90,8 +90,8 @@ npm run start:dev
 # Storage Service
 npm run start:storage
 
-# BFF Service
-npm run start:bff
+# Gateway Service
+npm run start:gateway
 ```
 
 ## Env vars quan trọng
@@ -99,6 +99,6 @@ npm run start:bff
 - `AUTH_MODE=local|distributed` (default: local)
 - `EVENT_DRIVER=local|kafka` (default: local)
 - `AUTH_JWKS_URL` — bắt buộc khi AUTH_MODE=distributed
-- `COMIC_SERVICE_URL` — BFF gọi đến (default: main service)
-- `BFF_REDIS_URL` — Redis cho BFF cache
+- `COMIC_SERVICE_URL` — Gateway gọi đến (default: main service)
+- `Gateway_REDIS_URL` — Redis cho Gateway cache
 - `KAFKA_BROKERS` — bắt buộc khi EVENT_DRIVER=kafka

@@ -1,5 +1,6 @@
 import {
-  Policy,
+  circuitBreaker,
+  handleAll,
   ConsecutiveBreaker,
   CircuitBreakerPolicy,
 } from 'cockatiel';
@@ -17,8 +18,8 @@ export function createCircuitBreaker(
     maxConsecutiveFailures = 5,
   } = options;
 
-  return Policy.handleAll().circuitBreaker(
-    halfOpenAfterMs,
-    new ConsecutiveBreaker(maxConsecutiveFailures),
-  );
+  return circuitBreaker(handleAll, {
+    halfOpenAfter: halfOpenAfterMs,
+    breaker: new ConsecutiveBreaker(maxConsecutiveFailures),
+  });
 }

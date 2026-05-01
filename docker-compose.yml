@@ -90,20 +90,20 @@ services:
       timeout: 5s
       retries: 5
 
-  notif-db:
+  notification-db:
     image: postgres:15-alpine
-    container_name: comic-notif-db
+    container_name: comic-notification-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
-      POSTGRES_DB: notif_db
+      POSTGRES_DB: notification_db
     ports:
       - "5435:5432"
     volumes:
-      - notif_db_data:/var/lib/postgresql/data
+      - notification_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d notif_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d notification_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -180,6 +180,24 @@ services:
       timeout: 5s
       retries: 5
 
+  iam-db:
+    image: postgres:15-alpine
+    container_name: comic-iam-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: iam_db
+    ports:
+      - "5441:5432"
+    volumes:
+      - iam_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d iam_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # ══ Redis — 1 instance per service ════════════════════════════════════════════
   auth-redis:
     image: redis:7-alpine
@@ -201,14 +219,14 @@ services:
       - comic_redis_data:/data
     command: redis-server --appendonly yes
 
-  notif-redis:
+  notification-redis:
     image: redis:7-alpine
-    container_name: comic-notif-redis
+    container_name: comic-notification-redis
     restart: unless-stopped
     ports:
       - "6382:6379"
     volumes:
-      - notif_redis_data:/data
+      - notification_redis_data:/data
     command: redis-server --appendonly yes
 
   post-redis:
@@ -221,14 +239,24 @@ services:
       - post_redis_data:/data
     command: redis-server --appendonly yes
 
-  bff-redis:
+  gateway-redis:
     image: redis:7-alpine
-    container_name: comic-bff-redis
+    container_name: comic-gateway-redis
     restart: unless-stopped
     ports:
       - "6383:6379"
     volumes:
-      - bff_redis_data:/data
+      - gateway_redis_data:/data
+    command: redis-server --appendonly yes
+
+  iam-redis:
+    image: redis:7-alpine
+    container_name: comic-iam-redis
+    restart: unless-stopped
+    ports:
+      - "6385:6379"
+    volumes:
+      - iam_redis_data:/data
     command: redis-server --appendonly yes
 
   # ══ Observability ═════════════════════════════════════════════════════════════
@@ -251,7 +279,7 @@ services:
       - "80:80"
     depends_on:
       - storage-service
-      - bff-service
+      - gateway-service
       - auth-service
       - config-service
       - comic-service
@@ -259,6 +287,7 @@ services:
       - post-service
       - introduction-service
       - marketing-service
+      - iam-service
     volumes:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
@@ -273,9 +302,6 @@ services:
       context: ./apps/storage-service
     container_name: comic-storage-service
     restart: unless-stopped
-    depends_on:
-      main-redis:
-        condition: service_started
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3003
@@ -360,22 +386,22 @@ services:
     ports:
       - "3005:3005"
 
-  # ══ BFF Service (:3006) ═══════════════════════════════════════════════════════
-  bff-service:
+  # ══ Gateway Service (:3006) ═══════════════════════════════════════════════════
+  gateway-service:
     build:
-      context: ./apps/bff-service
-    container_name: comic-bff-service
+      context: ./apps/gateway-service
+    container_name: comic-gateway-service
     restart: unless-stopped
     depends_on:
-      bff-redis:
+      gateway-redis:
         condition: service_started
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3006
       GLOBAL_PREFIX: ${GLOBAL_PREFIX:-api}
       COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://comic-service:3001/api}
-      MAIN_SERVICE_URL: ${MAIN_SERVICE_URL:-http://post-service:3007/api}
-      BFF_REDIS_URL: redis://bff-redis:6379
+      POST_SERVICE_URL: ${POST_SERVICE_URL:-http://post-service:3007/api}
+      GATEWAY_REDIS_URL: redis://gateway-redis:6379
       SERVICE_TIMEOUT_MS: ${SERVICE_TIMEOUT_MS:-5000}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
@@ -415,9 +441,9 @@ services:
     container_name: comic-notification-service
     restart: unless-stopped
     depends_on:
-      notif-db:
+      notification-db:
         condition: service_healthy
-      notif-redis:
+      notification-redis:
         condition: service_started
       kafka:
         condition: service_healthy
@@ -425,8 +451,8 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3004
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@notif-db:5432/notif_db
-      REDIS_URL: redis://notif-redis:6379
+      DATABASE_URL: postgresql://postgres:secret@notification-db:5432/notification_db
+      REDIS_URL: redis://notification-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       KAFKA_GROUP_ID: notification-service
@@ -507,8 +533,29 @@ services:
     ports:
       - "3009:3009"
 
-  # ══ Main Service (monolith) — REMOVED ══════════════════════════════════════
-  # Monolith fully decomposed into microservices. No longer needed.
+  # ══ IAM Service (:3008) ════════════════════════════════════════════════════
+  iam-service:
+    build:
+      context: ./apps/iam-service
+    container_name: comic-iam-service
+    restart: unless-stopped
+    depends_on:
+      iam-db:
+        condition: service_healthy
+      iam-redis:
+        condition: service_started
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3008
+      GLOBAL_PREFIX: api
+      DATABASE_URL: postgresql://postgres:secret@iam-db:5432/iam_db
+      REDIS_URL: redis://iam-redis:6379
+      AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
+      RBAC_CACHE_TTL: ${RBAC_CACHE_TTL:-86400}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    ports:
+      - "3008:3008"
 
 volumes:
   # Storage
@@ -520,14 +567,16 @@ volumes:
   # PostgreSQL
   auth_db_data:
   comic_db_data:
-  notif_db_data:
+  notification_db_data:
   config_db_data:
-  # Redis
-  auth_redis_data:
-  comic_redis_data:
-  notif_redis_data:
   post_db_data:
   introduction_db_data:
   marketing_db_data:
+  iam_db_data:
+  # Redis
+  auth_redis_data:
+  comic_redis_data:
+  notification_redis_data:
   post_redis_data:
-  bff_redis_data:
+  gateway_redis_data:
+  iam_redis_data:

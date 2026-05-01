@@ -35,3 +35,8 @@ export function parseQueryOptions(query: any): QueryOptions {
     query.order === 'asc' || query.order === 'desc' ? query.order : undefined;
   return { page, skip, take, sortBy, order };
 }
+
+export function toPrimaryKey(value: any): bigint {
+  if (typeof value === 'bigint') return value;
+  return BigInt(value);
+}

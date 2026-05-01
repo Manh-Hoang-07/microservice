@@ -22,13 +22,7 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "strictPropertyInitialization": false,
-    "paths": {
-      "@package/common": ["../../shared/common/src"],
-      "@package/config": ["../../shared/config/src"],
-      "@package/bootstrap": ["../../shared/bootstrap/src"],
-      "@package/tracing": ["../../shared/tracing/src"]
-    }
+    "strictPropertyInitialization": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

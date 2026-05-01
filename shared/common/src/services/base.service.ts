@@ -80,9 +80,11 @@ export abstract class BaseService<T, R extends IRepository<T>> {
     const preparedFilters = await this.prepareFilters(filter, normalized);
 
     if (preparedFilters === false) {
+      const page = normalized.page as number;
+      const take = normalized.limit as number;
       return {
         data: [],
-        meta: createPaginationMeta(normalized.page as number, normalized.limit as number, 0),
+        meta: createPaginationMeta({ page, skip: 0, take }, 0),
       };
     }
 

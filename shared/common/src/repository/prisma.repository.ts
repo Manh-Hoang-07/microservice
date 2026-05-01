@@ -125,7 +125,7 @@ export abstract class PrismaRepository<
     ]);
 
     const { createPaginationMeta } = require('../helpers/pagination.helper');
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta({ page, skip: (page - 1) * limit, take: limit }, total) };
   }
 
   async findById(id: any, options: IPaginationOptions = {}): Promise<Model | null> {

@@ -87,7 +87,16 @@
       "Bash(python -c \"import json, sys; data=json.load\\(sys.stdin\\); print\\(data[0]['text']\\)\")",
       "Bash(node -e \"const d=require\\('C:/Users/MANH HOANG/.claude/projects/d--Sources-microservice/e2b77dd1-3a91-48d8-ba68-03beeb6be5f2/tool-results/toolu_01GcHJxh63jcjZmjnePUiDEZ.json'\\); require\\('fs'\\).writeFileSync\\('/tmp/comic_files.txt', d[0].text\\);\")",
       "Bash(node -e \"const fs=require\\('fs'\\); const d=require\\('C:/Users/MANH HOANG/.claude/projects/d--Sources-microservice/e2b77dd1-3a91-48d8-ba68-03beeb6be5f2/tool-results/toolu_01GcHJxh63jcjZmjnePUiDEZ.json'\\); fs.writeFileSync\\('D:/Sources/microservice/.tmp_comic_files.txt', d[0].text\\);\")",
-      "Bash(node -e \"const fs=require\\('fs'\\); const d=require\\('C:/Users/MANH HOANG/.claude/projects/d--Sources-microservice/e2b77dd1-3a91-48d8-ba68-03beeb6be5f2/tool-results/toolu_01BibY9nnThwbtrDwmf6YCYL.json'\\); fs.writeFileSync\\('D:/Sources/microservice/.tmp_intro.txt', d[0].text\\);\")"
+      "Bash(node -e \"const fs=require\\('fs'\\); const d=require\\('C:/Users/MANH HOANG/.claude/projects/d--Sources-microservice/e2b77dd1-3a91-48d8-ba68-03beeb6be5f2/tool-results/toolu_01BibY9nnThwbtrDwmf6YCYL.json'\\); fs.writeFileSync\\('D:/Sources/microservice/.tmp_intro.txt', d[0].text\\);\")",
+      "Bash(git mv *)",
+      "Bash(npm prune *)",
+      "Bash(grep -E \"^[[:space:]]+[a-z-]+:$\" docker-compose.yml)",
+      "Bash(grep -E \"^  [a-z][a-z0-9-]+:$\" docker-compose.yml)",
+      "Bash(docker compose *)",
+      "Bash(find node_modules/prisma/config* node_modules/prisma/dist/config* -maxdepth 2 -name \"*.d.ts\")",
+      "Bash(python -c ' *)",
+      "Bash(taskkill //PID 17396 //F)",
+      "Bash(taskkill //PID 15996 //F)"
     ]
   }
 }
