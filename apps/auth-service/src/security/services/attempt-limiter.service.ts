@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from './redis.service';
+import { RedisService } from '@package/redis';
 
 export interface AttemptLimiterOverrides {
   maxAttempts?: number;

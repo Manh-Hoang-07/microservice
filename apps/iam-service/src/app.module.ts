@@ -4,7 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
-import { createAppConfig } from '@package/config';
+import { createAppConfig, createRedisConfig } from '@package/config';
 import {
   JwtGuard,
   RbacGuard,
@@ -12,9 +12,9 @@ import {
   BigIntSerializationInterceptor,
   HealthModule,
 } from '@package/common';
+import { RedisModule } from '@package/redis';
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
-import { SecurityModule } from './security/security.module';
 import { RbacModule } from './rbac/rbac.module';
 import { InternalModule } from './internal/internal.module';
 import { PermissionModule } from './modules/permission/permission.module';
@@ -32,13 +32,14 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
         createAppConfig(3008, {
           internalApiSecret: process.env.INTERNAL_API_SECRET || '',
         }),
+        createRedisConfig(),
       ],
       validationSchema: envValidationSchema,
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
-    SecurityModule,
+    RedisModule,
     RbacModule,
     HealthModule.register('iam-service'),
     InternalModule,

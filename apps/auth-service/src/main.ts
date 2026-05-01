@@ -13,9 +13,6 @@ createApp({
     description: 'Authentication, Authorization and JWKS — Comic Platform',
   },
   excludePrefixes: ['.well-known/(.*)'],
-}).then((app) => {
-  const port = parseInt(process.env.PORT ?? '3002', 10);
-  console.log(`JWKS endpoint: http://localhost:${port}/.well-known/jwks.json`);
 }).catch((err) => {
   console.error('Auth Service failed to start', err);
   process.exit(1);

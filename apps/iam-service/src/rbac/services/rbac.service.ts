@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RbacCacheService } from './rbac-cache.service';
 import { RbacPermissionIndexService } from './rbac-permission-index.service';
 import { RbacRoleAssignmentService } from './rbac-role-assignment.service';
-import { RbacId, NullableRbacId } from '../constants/rbac.constants';
+import { RbacId, NullableRbacId } from '../types';
 
 function toAssignedSet(codes: Iterable<string>): Set<string> {
   return new Set(

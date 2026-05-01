@@ -1,8 +1,8 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from '../../security/services/redis.service';
+import { RedisService } from '@package/redis';
 import { decodeAssignedCodes, encodeAssignedCodes } from './rbac-assigned-codes.codec';
-import { RbacId, NullableRbacId } from '../constants/rbac.constants';
+import { RbacId, NullableRbacId } from '../types';
 
 const LEGACY_ASSIGNED_BITMAP_PREFIX = 'b64:v1:' as const;
 
@@ -38,6 +38,10 @@ export class RbacCacheService implements OnModuleInit {
         }
       });
     }
+  }
+
+  private trackedKeysSet(userId: RbacId): string {
+    return `rbac:u:${userId}:keys`;
   }
 
   private async ensureVersion(): Promise<number> {
@@ -80,7 +84,7 @@ export class RbacCacheService implements OnModuleInit {
     const key = await this.buildCacheKey(userId, groupId);
     if (!this.redis.isEnabled()) return;
     await this.redis.set(key, encodeAssignedCodes(codes), this.ttlSeconds);
-    await this.redis.trackKey(Number(userId), key);
+    await this.redis.sadd(this.trackedKeysSet(userId), key);
     await this.redis.publish(
       this.invalidationChannel,
       JSON.stringify({ type: 'specific_key', key, version: this.version }),
@@ -94,9 +98,10 @@ export class RbacCacheService implements OnModuleInit {
 
   async clearAllUserCaches(userId: RbacId) {
     if (!this.redis.isEnabled()) return;
-    const keys = await this.redis.getTrackedKeys(Number(userId));
+    const trackedSet = this.trackedKeysSet(userId);
+    const keys = await this.redis.smembers(trackedSet);
     for (const k of keys) await this.redis.del(k);
-    await this.redis.clearTrackedKeys(Number(userId));
+    await this.redis.del(trackedSet);
     await this.redis.publish(
       this.invalidationChannel,
       JSON.stringify({ type: 'user_all', userId }),

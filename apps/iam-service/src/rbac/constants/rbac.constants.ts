@@ -39,6 +39,3 @@ export const PERM = {
     STATUS: 'user.status',
   },
 };
-
-export type RbacId = string | number | bigint;
-export type NullableRbacId = RbacId | null;

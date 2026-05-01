@@ -16,8 +16,7 @@ import { SocialAuthService } from './social-auth.service';
 import { LoginService } from './login.service';
 import { safeUser } from '../utils/user.util';
 import { UserRepository } from '../repositories/user.repository';
-
-type PrimaryKey = string | number | bigint;
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class AuthService {
@@ -35,8 +34,12 @@ export class AuthService {
     return this.loginService.login(dto);
   }
 
-  async logout(userId: PrimaryKey | null, token?: string) {
-    return this.loginService.logout(userId, token);
+  async logout(accessToken?: string, refreshToken?: string) {
+    return this.loginService.logout(accessToken, refreshToken);
+  }
+
+  async logoutAll(userId: PrimaryKey, accessToken?: string) {
+    return this.loginService.logoutAll(userId, accessToken);
   }
 
   async refreshTokenByValue(refreshToken: string) {
@@ -45,7 +48,7 @@ export class AuthService {
 
   async me(userId: PrimaryKey) {
     const lang = I18nContext.current()?.lang ?? 'en';
-    const user = await this.userRepo.findById(BigInt(String(userId)));
+    const user = await this.userRepo.findById(userId);
     if (!user) throw new NotFoundException(this.i18n.t('auth.USER_NOT_FOUND', { lang }));
     return safeUser(user);
   }
@@ -73,8 +76,9 @@ export class AuthService {
   async sendOtpForForgotPassword(dto: SendOtpDto) {
     const lang = I18nContext.current()?.lang ?? 'en';
     const existing = await this.userRepo.findByEmail(dto.email.toLowerCase());
-    if (!existing) throw new NotFoundException(this.i18n.t('auth.EMAIL_NOT_FOUND', { lang }));
-    await this.otpService.sendForgotPasswordOtp(dto.email);
+    if (existing) {
+      await this.otpService.sendForgotPasswordOtp(dto.email);
+    }
     return { message: this.i18n.t('auth.OTP_SENT', { lang }) };
   }
 

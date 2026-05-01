@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { RbacId } from '../constants/rbac.constants';
+import { RbacId } from '../types';
 
 function toPk(id: RbacId): bigint {
   return BigInt(String(id));

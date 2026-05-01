@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import { Response, Request } from 'express';
+import { Response, Request, CookieOptions } from 'express';
 import {
   ApiOperation,
   ApiTags,
@@ -27,19 +27,26 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from '../services/auth.service';
+import { TokenService } from '../services/token.service';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendOtpDto } from '../dto/send-otp.dto';
+import { LogoutDto } from '../dto/logout.dto';
 import { Public } from '@package/common';
+
+const ACCESS_COOKIE = 'auth_token';
+const REFRESH_COOKIE = 'auth_refresh_token';
+const REFRESH_COOKIE_PATH = '/api/auth/refresh';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly tokenService: TokenService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -54,19 +61,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(dto);
-    if (result?.token) {
-      const domain = res.req.hostname === 'localhost' ? 'localhost' : undefined;
-      res.cookie('auth_token', result.token, {
-        maxAge: 60 * 60 * 1000,
-        httpOnly: false,
-        secure: false,
-        domain,
-        path: '/',
-      });
-    }
+    this.setAuthCookies(req, res, result.token, result.refreshToken);
     return result;
   }
 
@@ -83,44 +82,67 @@ export class AuthController {
 
   @Public()
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Logout and blacklist token' })
+  @ApiOperation({ summary: 'Logout current session (revokes the provided refresh token)' })
+  @ApiBody({ type: LogoutDto, required: false })
   @Post('logout')
+  @HttpCode(HttpStatus.OK)
   async logout(
     @Headers('authorization') authHeader: string,
+    @Body() dto: LogoutDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    let token: string | null = null;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-    }
-    await this.authService.logout(null, token || undefined);
-    const domain = res.req.hostname === 'localhost' ? 'localhost' : undefined;
-    res.clearCookie('auth_token', { domain, path: '/' });
-    return null;
+    const accessToken = this.extractBearer(authHeader);
+    const refreshToken = dto?.refreshToken ?? (req.cookies?.[REFRESH_COOKIE] as string | undefined);
+    await this.authService.logout(accessToken, refreshToken);
+    this.clearAuthCookies(req, res);
+    return { success: true };
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout from every active session for the current user' })
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  async logoutAll(
+    @Headers('authorization') authHeader: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const accessToken = this.extractBearer(authHeader);
+    const userId = this.requireUserId(req);
+    await this.authService.logoutAll(BigInt(userId), accessToken);
+    this.clearAuthCookies(req, res);
+    return { success: true };
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiBody({ type: RefreshTokenDto })
   @ApiOkResponse({ description: 'Token refreshed successfully' })
   @ApiBadRequestResponse({ description: 'Invalid or expired refresh token' })
   @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   async refresh(
     @Body() dto: RefreshTokenDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.refreshTokenByValue(dto.refreshToken);
-    if (result?.token) {
-      const domain = res.req.hostname === 'localhost' ? 'localhost' : undefined;
-      res.cookie('auth_token', result.token, {
-        maxAge: 60 * 60 * 1000,
-        httpOnly: false,
-        secure: false,
-        domain,
-        path: '/',
-      });
+    const refreshToken = dto.refreshToken || (req.cookies?.[REFRESH_COOKIE] as string | undefined);
+    if (!refreshToken) {
+      throw new InternalServerErrorException('Refresh token required');
     }
+    const result = await this.authService.refreshTokenByValue(refreshToken);
+    this.setAuthCookies(req, res, result.token, result.refreshToken);
     return result;
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get current authenticated user' })
+  @Get('me')
+  async me(@Req() req: Request) {
+    const userId = this.requireUserId(req);
+    return this.authService.me(BigInt(userId));
   }
 
   @Public()
@@ -128,8 +150,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Request password reset OTP' })
   @ApiBody({ type: ForgotPasswordDto })
   @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto);
+    await this.authService.forgotPassword(dto);
+    return { success: true };
   }
 
   @Public()
@@ -137,8 +161,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Reset password with OTP' })
   @ApiBody({ type: ResetPasswordDto })
   @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto);
+    await this.authService.resetPassword(dto);
+    return { success: true };
   }
 
   @Public()
@@ -175,15 +201,54 @@ export class AuthController {
     const frontendUrl = this.configService.get<string>('googleOAuth.frontendUrl');
     if (!frontendUrl) throw new InternalServerErrorException('GOOGLE_FRONTEND_URL not configured');
 
-    const user = req.user as any;
-    const result = await this.authService.handleGoogleAuth(user);
+    const profile = req.user as any;
+    const result = await this.authService.handleGoogleAuth(profile);
 
-    if (result?.token) {
-      return res.redirect(
-        `${frontendUrl}/auth/google/callback?token=${result.token}&refreshToken=${result.refreshToken}&expiresIn=${result.expiresIn}`,
-      );
+    if (!result?.token) {
+      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
-    return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    this.setAuthCookies(req, res, result.token, result.refreshToken);
+    return res.redirect(`${frontendUrl}/auth/google/success`);
+  }
+
+  private setAuthCookies(req: Request, res: Response, accessToken: string, refreshToken: string): void {
+    const accessTtlMs = this.tokenService.getAccessTtlSec() * 1000;
+    const refreshTtlMs = this.tokenService.getRefreshTtlSec() * 1000;
+    res.cookie(ACCESS_COOKIE, accessToken, this.cookieOptions(req, accessTtlMs));
+    res.cookie(REFRESH_COOKIE, refreshToken, {
+      ...this.cookieOptions(req, refreshTtlMs),
+      path: REFRESH_COOKIE_PATH,
+    });
+  }
+
+  private clearAuthCookies(req: Request, res: Response): void {
+    const opts = this.cookieOptions(req, 0);
+    res.clearCookie(ACCESS_COOKIE, { ...opts, maxAge: undefined });
+    res.clearCookie(REFRESH_COOKIE, { ...opts, maxAge: undefined, path: REFRESH_COOKIE_PATH });
+  }
+
+  private cookieOptions(req: Request, maxAgeMs: number): CookieOptions {
+    const isProd = this.configService.get<string>('app.nodeEnv') === 'production';
+    return {
+      maxAge: maxAgeMs,
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'strict' : 'lax',
+      domain: req.hostname === 'localhost' ? 'localhost' : undefined,
+      path: '/',
+    };
+  }
+
+  private extractBearer(authHeader?: string): string | undefined {
+    if (!authHeader?.startsWith('Bearer ')) return undefined;
+    return authHeader.slice(7);
+  }
+
+  private requireUserId(req: Request): string {
+    const user = (req as any).user;
+    const sub = user?.sub ?? user?.id;
+    if (!sub) throw new InternalServerErrorException('Authenticated user missing from request');
+    return String(sub);
   }
 }

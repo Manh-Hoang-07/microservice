@@ -78,7 +78,9 @@
       "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && grep -A 3 \"@Injectable\" {} | head -5')",
       "Bash(awk '{print $2}')",
       "Bash(xargs -I {} ls -la {}/services)",
-      "Bash(grep \"\\\\.service\\\\.ts$\")"
+      "Bash(grep \"\\\\.service\\\\.ts$\")",
+      "Bash(npm -w apps/iam-service run build)",
+      "Bash(git stash *)"
     ]
   }
 }

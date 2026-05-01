@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { RbacRepository } from '../repositories/rbac.repository';
-import { RedisService } from '../../security/services/redis.service';
 import { PERM } from '../constants/rbac.constants';
 
 type PermissionNode = { code: string; parentCode: string | null };

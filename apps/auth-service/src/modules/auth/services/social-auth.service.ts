@@ -1,16 +1,16 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { UserRepository } from '../repositories/user.repository';
-import { RedisService } from '../../../security/services/redis.service';
-import { TokenService, PrimaryKey } from './token.service';
+import { TokenService } from './token.service';
 import { safeUser } from '../utils/user.util';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class SocialAuthService {
   constructor(
     private readonly userRepo: UserRepository,
     private readonly tokenService: TokenService,
-    private readonly redis: RedisService,
     private readonly i18n: I18nService,
   ) {}
 
@@ -39,7 +39,7 @@ export class SocialAuthService {
     if (dbUser) {
       dbUser = await this.userRepo.update(dbUser.id, userData);
     } else {
-      const username = this.generateUsername(email);
+      const username = await this.generateUniqueUsername(email);
       dbUser = await this.userRepo.create({ ...userData, email, username });
     }
 
@@ -47,16 +47,9 @@ export class SocialAuthService {
       throw new ForbiddenException(this.i18n.t('auth.ACCOUNT_LOCKED', { lang }));
     }
 
-    const userId = dbUser.id as unknown as PrimaryKey;
+    const userId: PrimaryKey = dbUser.id;
     const tokens = await this.tokenService.generateTokens(userId, dbUser.email!);
-
-    await this.redis
-      .set(
-        `auth:refresh:${userId}:${tokens.refreshJti}`,
-        '1',
-        this.tokenService.getRefreshTtlSec(),
-      )
-      .catch(() => undefined);
+    await this.tokenService.storeRefreshJti(userId, tokens.refreshJti, tokens.refreshTtlSec);
 
     return {
       token: tokens.accessToken,
@@ -78,7 +71,13 @@ export class SocialAuthService {
     );
   }
 
-  private generateUsername(email: string): string {
-    return email.split('@')[0] + '_' + Date.now().toString().slice(-6);
+  private async generateUniqueUsername(email: string): Promise<string> {
+    const base = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40) || 'user';
+    for (let i = 0; i < 5; i++) {
+      const candidate = `${base}_${randomBytes(3).toString('hex')}`;
+      const existing = await this.userRepo.findByUsername(candidate);
+      if (!existing) return candidate;
+    }
+    return `${base}_${randomBytes(6).toString('hex')}`;
   }
 }

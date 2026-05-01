@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RbacRepository } from '../repositories/rbac.repository';
-import { RbacId } from '../constants/rbac.constants';
+import { RbacId } from '../types';
 
 @Injectable()
 export class RbacRoleAssignmentService {

@@ -1,56 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '../../../security/services/redis.service';
+import { ConfigService } from '@nestjs/config';
+import { RedisService } from '@package/redis';
 import { MailPublisher } from '../../../kafka/services/mail-publisher.service';
 import { generateOtp, buildOtpKey } from '../utils/otp.helper';
 
-const DEFAULT_OTP_TTL_SEC = 300;
-
 @Injectable()
 export class AuthOtpService {
+  private readonly otpTtlSec: number;
+
   constructor(
     private readonly redis: RedisService,
     private readonly mailPublisher: MailPublisher,
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    this.otpTtlSec = Number(this.config.get('OTP_TTL_SECONDS') ?? 300);
+  }
 
   async sendRegisterOtp(email: string): Promise<void> {
-    const otp = generateOtp();
-    await this.redis.set(buildOtpKey('register', email), otp, DEFAULT_OTP_TTL_SEC);
-    await this.emitMail(email, 'send_otp_register', { otp });
+    await this.sendOtp('register', email, 'send_otp_register');
   }
 
   async sendForgotPasswordOtp(email: string): Promise<void> {
-    const otp = generateOtp();
-    await this.redis.set(buildOtpKey('forgot-password', email), otp, DEFAULT_OTP_TTL_SEC);
-    await this.emitMail(email, 'send_otp_forgot_password', { otp });
+    await this.sendOtp('forgot-password', email, 'send_otp_forgot_password');
   }
 
   async verifyAndDelete(type: string, email: string, providedOtp: string): Promise<boolean> {
     const key = buildOtpKey(type, email);
     const cached = await this.redis.get(key);
-    if (!cached) return false;
-
-    const isValid =
-      providedOtp === cached ||
-      (process.env.NODE_ENV === 'development' && providedOtp === '123456');
-
-    if (isValid) {
-      await this.redis.del(key);
-      return true;
-    }
-    return false;
+    if (!cached || cached !== providedOtp) return false;
+    await this.redis.del(key);
+    return true;
   }
 
-  private async emitMail(
-    to: string,
-    templateCode: string,
-    variables: Record<string, unknown>,
-  ): Promise<void> {
-    if (!this.mailPublisher.isEnabled()) {
-      console.log(`[AuthOTP] templateCode=${templateCode} → ${to}`, variables);
-      return;
-    }
-    await this.mailPublisher.publish({ to, templateCode, variables }).catch(() => {
-      console.log(`[AuthOTP] templateCode=${templateCode} → ${to}`, variables);
+  private async sendOtp(type: string, email: string, templateCode: string): Promise<void> {
+    const otp = generateOtp();
+    await this.redis.set(buildOtpKey(type, email), otp, this.otpTtlSec);
+    await this.mailPublisher.publish({
+      to: email,
+      templateCode,
+      variables: { otp },
     });
   }
 }

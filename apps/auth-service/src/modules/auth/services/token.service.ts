@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { parseDurationToSeconds } from '@package/common';
-import { RedisService } from '../../../security/services/redis.service';
+import { RedisService } from '@package/redis';
 import { JwksService } from '../../../jwks/services/jwks.service';
-
-export type PrimaryKey = string | number | bigint;
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class TokenService {
@@ -28,6 +27,10 @@ export class TokenService {
 
   buildRefreshKey(userId: PrimaryKey, jti: string): string {
     return `auth:refresh:${userId}:${jti}`;
+  }
+
+  private userJtisKey(userId: PrimaryKey): string {
+    return `auth:user:${userId}:refresh-jtis`;
   }
 
   async generateTokens(userId: PrimaryKey, email?: string) {
@@ -71,17 +74,30 @@ export class TokenService {
     }
   }
 
-  async issueAndStoreNewTokens(userId: PrimaryKey, email?: string) {
-    const { accessToken, refreshToken, refreshJti, accessTtlSec } =
-      await this.generateTokens(userId, email);
-    try {
-      if (this.redis && this.redis.isEnabled()) {
-        const key = this.buildRefreshKey(userId, refreshJti);
-        await this.redis.set(key, '1', this.getRefreshTtlSec());
-      }
-    } catch {
-      // intentionally empty
+  async storeRefreshJti(userId: PrimaryKey, jti: string, ttlSec: number): Promise<void> {
+    if (!this.redis.isEnabled()) return;
+    await this.redis.set(this.buildRefreshKey(userId, jti), '1', ttlSec);
+    await this.redis.sadd(this.userJtisKey(userId), jti);
+    await this.redis.expire(this.userJtisKey(userId), ttlSec);
+  }
+
+  async isRefreshActive(userId: PrimaryKey, jti: string): Promise<boolean> {
+    if (!this.redis.isEnabled()) return false;
+    return (await this.redis.get(this.buildRefreshKey(userId, jti))) !== null;
+  }
+
+  async revokeRefreshJti(userId: PrimaryKey, jti: string): Promise<void> {
+    if (!this.redis.isEnabled()) return;
+    await this.redis.del(this.buildRefreshKey(userId, jti));
+  }
+
+  async revokeAllUserSessions(userId: PrimaryKey): Promise<void> {
+    if (!this.redis.isEnabled()) return;
+    const setKey = this.userJtisKey(userId);
+    const jtis = await this.redis.smembers(setKey);
+    for (const jti of jtis) {
+      await this.redis.del(this.buildRefreshKey(userId, jti));
     }
-    return { accessToken, refreshToken, accessTtlSec } as const;
+    await this.redis.del(setKey);
   }
 }

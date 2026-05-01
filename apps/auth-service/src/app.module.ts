@@ -1,12 +1,14 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as path from 'path';
+import cookieParser = require('cookie-parser');
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
-import { createAppConfig, createKafkaConfig } from '@package/config';
+import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
+import { RedisModule } from '@package/redis';
 import { envValidationSchema } from './config/env.validation';
 import jwtConfig from './config/jwt.config';
 
@@ -31,6 +33,7 @@ import { KafkaModule } from './kafka/kafka.module';
         }),
         jwtConfig,
         createKafkaConfig(),
+        createRedisConfig(),
       ],
       validationSchema: envValidationSchema,
     }),
@@ -48,6 +51,7 @@ import { KafkaModule } from './kafka/kafka.module';
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
+    RedisModule,
     SecurityModule,
     JwksModule,
     AuthModule,
@@ -68,4 +72,8 @@ import { KafkaModule } from './kafka/kafka.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(cookieParser()).forRoutes('*');
+  }
+}

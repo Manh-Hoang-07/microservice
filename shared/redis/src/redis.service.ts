@@ -1,30 +1,52 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
-export class RedisService implements OnModuleDestroy {
+export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis | null = null;
+  private subscriberClient: Redis | null = null;
+  private readonly channelCallbacks = new Map<string, Array<(message: string) => void>>();
+  private enabled = false;
 
-  constructor(private readonly config: ConfigService) {
-    const url = config.get<string>('redis.url') || config.get<string>('REDIS_URL');
-    if (url) {
-      this.client = new Redis(url);
+  constructor(private readonly config: ConfigService) {}
+
+  private getRedisUrl(): string | undefined {
+    return this.config.get<string>('redis.url') || this.config.get<string>('REDIS_URL');
+  }
+
+  async onModuleInit(): Promise<void> {
+    const url = this.getRedisUrl();
+    if (!url) {
+      this.logger.warn('REDIS_URL not set — Redis disabled');
+      return;
+    }
+    try {
+      this.client = new Redis(url, { lazyConnect: true, enableOfflineQueue: false });
       this.client.on('error', (err) => {
         this.logger.error('Redis connection error', err);
-        this.client = null;
       });
       this.client.on('connect', () => {
         this.logger.log('Redis connected');
       });
-    } else {
-      this.logger.warn('REDIS_URL not set — Redis disabled');
+      await this.client.connect();
+      this.enabled = true;
+    } catch (err) {
+      this.logger.error('Redis connect failed', err as Error);
+      this.client = null;
     }
   }
 
+  async onModuleDestroy(): Promise<void> {
+    await this.client?.quit().catch(() => undefined);
+    await this.subscriberClient?.quit().catch(() => undefined);
+    this.client = null;
+    this.subscriberClient = null;
+  }
+
   isEnabled(): boolean {
-    return this.client !== null;
+    return this.enabled && this.client !== null;
   }
 
   async get(key: string): Promise<string | null> {
@@ -48,7 +70,7 @@ export class RedisService implements OnModuleDestroy {
 
   async exists(key: string): Promise<boolean> {
     if (!this.client) return false;
-    return (await this.client.exists(key)) === 1;
+    return (await this.client.exists(key)) > 0;
   }
 
   async hincrby(key: string, field: string, increment: number): Promise<number> {
@@ -58,7 +80,7 @@ export class RedisService implements OnModuleDestroy {
 
   async hgetall(key: string): Promise<Record<string, string>> {
     if (!this.client) return {};
-    return this.client.hgetall(key);
+    return (await this.client.hgetall(key)) || {};
   }
 
   async hdel(key: string, ...fields: string[]): Promise<void> {
@@ -115,10 +137,27 @@ export class RedisService implements OnModuleDestroy {
     return this.client.smembers(key);
   }
 
-  async onModuleDestroy() {
-    if (this.client) {
-      await this.client.quit();
-      this.logger.log('Redis disconnected');
+  async publish(channel: string, message: string): Promise<void> {
+    if (!this.client) return;
+    await this.client.publish(channel, message);
+  }
+
+  async subscribe(channel: string, callback: (message: string) => void): Promise<void> {
+    const url = this.getRedisUrl();
+    if (!url) return;
+    const callbacks = this.channelCallbacks.get(channel) || [];
+    callbacks.push(callback);
+    this.channelCallbacks.set(channel, callbacks);
+    try {
+      if (!this.subscriberClient) {
+        this.subscriberClient = new Redis(url);
+        this.subscriberClient.on('message', (ch: string, msg: string) => {
+          (this.channelCallbacks.get(ch) || []).forEach((cb) => cb(msg));
+        });
+      }
+      await this.subscriberClient.subscribe(channel);
+    } catch {
+      // ignore subscriber failure
     }
   }
 }

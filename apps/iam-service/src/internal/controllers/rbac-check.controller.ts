@@ -1,21 +1,8 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional } from 'class-validator';
 import { RbacService } from '../../rbac/services/rbac.service';
+import { RbacCheckDto } from '../dtos/rbac-check.dto';
 import { Internal } from '@package/common';
-
-class RbacCheckDto {
-  @IsString()
-  userId: string;
-
-  @IsOptional()
-  @IsString()
-  groupId?: string;
-
-  @IsArray()
-  @IsString({ each: true })
-  permissions: string[];
-}
 
 @ApiTags('Internal')
 @Internal()

@@ -5,18 +5,17 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import { RedisService } from '../../../security/services/redis.service';
 import { TokenBlacklistService } from '../../../security/services/token-blacklist.service';
 import { AttemptLimiterService } from '../../../security/services/attempt-limiter.service';
-import { TokenService, PrimaryKey } from './token.service';
+import { TokenService } from './token.service';
 import { LoginDto } from '../dto/login.dto';
 import { UserRepository } from '../repositories/user.repository';
+import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class LoginService {
   constructor(
     private readonly userRepo: UserRepository,
-    private readonly redis: RedisService,
     private readonly tokenBlacklistService: TokenBlacklistService,
     private readonly tokenService: TokenService,
     private readonly accountLockoutService: AttemptLimiterService,
@@ -55,26 +54,37 @@ export class LoginService {
     await this.accountLockoutService.reset(scope, identifier);
     this.userRepo.updateLastLogin(user.id);
 
-    const userPk = user.id as unknown as PrimaryKey;
-    const { accessToken, refreshToken, refreshJti, accessTtlSec } =
-      await this.tokenService.generateTokens(userPk, user.email!);
+    const userPk: PrimaryKey = user.id;
+    const tokens = await this.tokenService.generateTokens(userPk, user.email!);
+    await this.tokenService.storeRefreshJti(userPk, tokens.refreshJti, tokens.refreshTtlSec);
 
-    await this.redis
-      .set(
-        `auth:refresh:${userPk}:${refreshJti}`,
-        '1',
-        this.tokenService.getRefreshTtlSec(),
-      )
-      .catch(() => undefined);
-
-    return { token: accessToken, refreshToken, expiresIn: accessTtlSec };
+    return {
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.accessTtlSec,
+    };
   }
 
-  async logout(_userId: PrimaryKey | null, token?: string) {
-    if (token) {
-      const ttlSeconds = this.tokenService.getAccessTtlSec();
-      await this.tokenBlacklistService.add(token, ttlSeconds);
+  async logout(accessToken?: string, refreshToken?: string) {
+    if (accessToken) {
+      await this.tokenBlacklistService.add(accessToken, this.tokenService.getAccessTtlSec());
     }
+    if (refreshToken) {
+      const decoded = await this.tokenService.decodeRefresh(refreshToken);
+      const sub = decoded?.sub as string | undefined;
+      const jti = (decoded as any)?.jti as string | undefined;
+      if (sub && jti) {
+        await this.tokenService.revokeRefreshJti(BigInt(sub), jti);
+      }
+    }
+    return null;
+  }
+
+  async logoutAll(userId: PrimaryKey, accessToken?: string) {
+    if (accessToken) {
+      await this.tokenBlacklistService.add(accessToken, this.tokenService.getAccessTtlSec());
+    }
+    await this.tokenService.revokeAllUserSessions(userId);
     return null;
   }
 
@@ -83,23 +93,26 @@ export class LoginService {
     const decoded = await this.tokenService.decodeRefresh(refreshToken);
     if (!decoded) throw new UnauthorizedException(this.i18n.t('auth.INVALID_TOKEN', { lang }));
 
-    const userId = decoded.sub as PrimaryKey;
+    const sub = decoded.sub as string | undefined;
     const jti = (decoded as any).jti as string | undefined;
 
-    if (!userId || !jti) {
+    if (!sub || !jti) {
       throw new UnauthorizedException(this.i18n.t('auth.INVALID_REFRESH_TOKEN', { lang }));
     }
 
-    const refreshKey = `auth:refresh:${userId}:${jti}`;
-    const isActive = await this.redis.get(refreshKey);
-    if (!isActive) throw new UnauthorizedException(this.i18n.t('auth.REFRESH_TOKEN_REVOKED', { lang }));
+    const userId: PrimaryKey = BigInt(sub);
+    const isActive = await this.tokenService.isRefreshActive(userId, jti);
+    if (!isActive) {
+      throw new UnauthorizedException(this.i18n.t('auth.REFRESH_TOKEN_REVOKED', { lang }));
+    }
 
-    await this.redis.del(refreshKey);
+    await this.tokenService.revokeRefreshJti(userId, jti);
 
-    const tokens = await this.tokenService.issueAndStoreNewTokens(
+    const tokens = await this.tokenService.generateTokens(
       userId,
       (decoded as any).email,
     );
+    await this.tokenService.storeRefreshJti(userId, tokens.refreshJti, tokens.refreshTtlSec);
 
     return {
       token: tokens.accessToken,

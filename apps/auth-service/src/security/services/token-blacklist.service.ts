@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { RedisService } from './redis.service';
+import { RedisService } from '@package/redis';
 import { TokenLocalStore } from './token-local-store';
 
 const MAX_ENTRIES = 10_000;

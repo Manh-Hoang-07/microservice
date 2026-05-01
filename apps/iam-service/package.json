@@ -16,6 +16,7 @@
     "@package/bootstrap": "*",
     "@package/common": "*",
     "@package/config": "*",
+    "@package/redis": "*",
     "@package/tracing": "*",
     "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",
