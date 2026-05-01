@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { UserBookmarkService } from '../services/bookmarks.service';
 import { CreateBookmarkDto } from '../dtos/create-bookmark.dto';
 
@@ -13,21 +12,18 @@ export class UserBookmarkController {
   @Permission('user')
   @Get()
   async getList(@Req() req: any, @Query() query: any) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.bookmarkService.getList(userId, query);
+    return this.bookmarkService.getList(req.user.sub, query);
   }
 
   @Permission('user')
   @Post()
   async create(@Req() req: any, @Body() dto: CreateBookmarkDto) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.bookmarkService.create(userId, dto);
+    return this.bookmarkService.create(req.user.sub, dto);
   }
 
   @Permission('user')
   @Delete(':id')
   async delete(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.bookmarkService.delete(userId, toPrimaryKey(id));
+    return this.bookmarkService.delete(req.user.sub, id);
   }
 }

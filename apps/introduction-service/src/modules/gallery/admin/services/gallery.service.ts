@@ -2,31 +2,32 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { GalleryRepository } from '../../repositories/gallery.repository';
+import { GalleryFilter, GalleryRepository } from '../../repositories/gallery.repository';
 
 @Injectable()
 export class AdminGalleryService {
   constructor(private readonly galleryRepo: GalleryRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.status) where.status = query.status;
+    const filter: GalleryFilter = {};
+    if (query.search) filter.search = query.search;
+    if (query.status) filter.status = query.status;
     if (query.featured !== undefined) {
-      where.featured = query.featured === 'true' || query.featured === true;
+      filter.featured = query.featured === 'true' || query.featured === true;
     }
 
+    const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.galleryRepo.findMany(where, options),
-      this.galleryRepo.count(where),
+      this.galleryRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.galleryRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: PrimaryKey) {
+  async getOne(id: any) {
     const item = await this.galleryRepo.findById(id);
     if (!item) throw new NotFoundException('Gallery not found');
     return item;
@@ -34,36 +35,28 @@ export class AdminGalleryService {
 
   async create(dto: CreateGalleryDto) {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.title, {
-      findOne: (filter: any) => this.galleryRepo.findFirst(filter),
+      findOne: (filter: any) => this.galleryRepo.findBySlug(filter.slug),
     });
 
-    return this.galleryRepo.create({
-      title: dto.title,
-      slug,
-      description: dto.description,
-      cover_image: dto.cover_image,
-      images: dto.images ?? [],
-      featured: dto.featured ?? false,
-      status: dto.status || 'active',
-      sort_order: dto.sort_order ?? 0,
-    });
+    return this.galleryRepo.create({ ...dto, slug, images: dto.images ?? [] });
   }
 
-  async update(id: PrimaryKey, dto: UpdateGalleryDto) {
+  async update(id: any, dto: UpdateGalleryDto) {
     await this.getOne(id);
 
-    const data: any = { ...dto };
-
+    const data: Record<string, any> = { ...dto };
     if (dto.title || dto.slug) {
-      data.slug = await SlugHelper.uniqueSlug(dto.slug || dto.title || '', {
-        findOne: (filter: any) => this.galleryRepo.findFirst(filter),
-      }, id);
+      data.slug = await SlugHelper.uniqueSlug(
+        dto.slug || dto.title || '',
+        { findOne: (filter: any) => this.galleryRepo.findBySlug(filter.slug) },
+        id,
+      );
     }
 
     return this.galleryRepo.update(id, data);
   }
 
-  async delete(id: PrimaryKey) {
+  async delete(id: any) {
     await this.getOne(id);
     await this.galleryRepo.delete(id);
     return { success: true };

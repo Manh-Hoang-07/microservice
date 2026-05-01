@@ -120,7 +120,7 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
-exports.Prisma.PostCategoryScalarFieldEnum = {
+exports.Prisma.CategoryScalarFieldEnum = {
   id: 'id',
   name: 'name',
   slug: 'slug',
@@ -138,7 +138,7 @@ exports.Prisma.PostCategoryScalarFieldEnum = {
   group_id: 'group_id'
 };
 
-exports.Prisma.PostTagScalarFieldEnum = {
+exports.Prisma.TagScalarFieldEnum = {
   id: 'id',
   name: 'name',
   slug: 'slug',
@@ -176,30 +176,30 @@ exports.Prisma.PostScalarFieldEnum = {
   group_id: 'group_id'
 };
 
-exports.Prisma.PostStatsScalarFieldEnum = {
+exports.Prisma.StatsScalarFieldEnum = {
   post_id: 'post_id',
   view_count: 'view_count',
   updated_at: 'updated_at'
 };
 
-exports.Prisma.PostDailyStatsScalarFieldEnum = {
+exports.Prisma.DailyStatsScalarFieldEnum = {
   post_id: 'post_id',
   stat_date: 'stat_date',
   view_count: 'view_count',
   updated_at: 'updated_at'
 };
 
-exports.Prisma.PostPostcategoryScalarFieldEnum = {
+exports.Prisma.PostCategoryScalarFieldEnum = {
   post_id: 'post_id',
-  post_category_id: 'post_category_id'
+  category_id: 'category_id'
 };
 
-exports.Prisma.PostPosttagScalarFieldEnum = {
+exports.Prisma.PostTagScalarFieldEnum = {
   post_id: 'post_id',
-  post_tag_id: 'post_tag_id'
+  tag_id: 'tag_id'
 };
 
-exports.Prisma.PostCommentScalarFieldEnum = {
+exports.Prisma.CommentScalarFieldEnum = {
   id: 'id',
   user_id: 'user_id',
   post_id: 'post_id',
@@ -214,7 +214,7 @@ exports.Prisma.PostCommentScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
-exports.Prisma.PostOutboxScalarFieldEnum = {
+exports.Prisma.OutboxScalarFieldEnum = {
   id: 'id',
   event_type: 'event_type',
   payload: 'payload',
@@ -249,15 +249,15 @@ exports.Prisma.JsonNullValueFilter = {
 
 
 exports.Prisma.ModelName = {
+  Category: 'Category',
+  Tag: 'Tag',
+  Post: 'Post',
+  Stats: 'Stats',
+  DailyStats: 'DailyStats',
   PostCategory: 'PostCategory',
   PostTag: 'PostTag',
-  Post: 'Post',
-  PostStats: 'PostStats',
-  PostDailyStats: 'PostDailyStats',
-  PostPostcategory: 'PostPostcategory',
-  PostPosttag: 'PostPosttag',
-  PostComment: 'PostComment',
-  PostOutbox: 'PostOutbox'
+  Comment: 'Comment',
+  Outbox: 'Outbox'
 };
 
 /**

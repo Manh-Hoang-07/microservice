@@ -7,7 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-model PostCategory {
+model Category {
   id              BigInt   @id @default(autoincrement())
   name            String   @db.VarChar(255)
   slug            String   @unique @db.VarChar(255)
@@ -24,23 +24,23 @@ model PostCategory {
   updated_at      DateTime @updatedAt @db.Timestamp(0)
   group_id        BigInt?
 
-  parent   PostCategory?  @relation("CategoryToChildren", fields: [parent_id], references: [id], onDelete: SetNull)
-  children PostCategory[] @relation("CategoryToChildren")
-  posts    PostPostcategory[]
+  parent   Category?      @relation("CategoryToChildren", fields: [parent_id], references: [id], onDelete: SetNull)
+  children Category[]     @relation("CategoryToChildren")
+  posts    PostCategory[]
 
-  @@index([slug], map: "post_categories_idx_slug")
-  @@index([name], map: "post_categories_idx_name")
-  @@index([parent_id], map: "post_categories_idx_parent_id")
-  @@index([is_active], map: "post_categories_idx_is_active")
-  @@index([sort_order], map: "post_categories_idx_sort_order")
-  @@index([created_at], map: "post_categories_idx_created_at")
-  @@index([created_user_id], map: "post_categories_idx_created_user_id")
-  @@index([updated_user_id], map: "post_categories_idx_updated_user_id")
-  @@index([group_id], map: "post_categories_idx_group_id")
-  @@map("post_categories")
+  @@index([slug], map: "categories_idx_slug")
+  @@index([name], map: "categories_idx_name")
+  @@index([parent_id], map: "categories_idx_parent_id")
+  @@index([is_active], map: "categories_idx_is_active")
+  @@index([sort_order], map: "categories_idx_sort_order")
+  @@index([created_at], map: "categories_idx_created_at")
+  @@index([created_user_id], map: "categories_idx_created_user_id")
+  @@index([updated_user_id], map: "categories_idx_updated_user_id")
+  @@index([group_id], map: "categories_idx_group_id")
+  @@map("categories")
 }
 
-model PostTag {
+model Tag {
   id              BigInt   @id @default(autoincrement())
   name            String   @db.VarChar(255)
   slug            String   @unique @db.VarChar(255)
@@ -52,16 +52,16 @@ model PostTag {
   updated_at      DateTime @updatedAt @db.Timestamp(0)
   group_id        BigInt?
 
-  posts PostPosttag[]
+  posts PostTag[]
 
-  @@index([slug], map: "post_tags_idx_slug")
-  @@index([name], map: "post_tags_idx_name")
-  @@index([is_active], map: "post_tags_idx_is_active")
-  @@index([created_at], map: "post_tags_idx_created_at")
-  @@index([created_user_id], map: "post_tags_idx_created_user_id")
-  @@index([updated_user_id], map: "post_tags_idx_updated_user_id")
-  @@index([group_id], map: "post_tags_idx_group_id")
-  @@map("post_tags")
+  @@index([slug], map: "tags_idx_slug")
+  @@index([name], map: "tags_idx_name")
+  @@index([is_active], map: "tags_idx_is_active")
+  @@index([created_at], map: "tags_idx_created_at")
+  @@index([created_user_id], map: "tags_idx_created_user_id")
+  @@index([updated_user_id], map: "tags_idx_updated_user_id")
+  @@index([group_id], map: "tags_idx_group_id")
+  @@map("tags")
 }
 
 model Post {
@@ -88,11 +88,11 @@ model Post {
   updated_at      DateTime  @updatedAt @db.Timestamp(0)
   group_id        BigInt?
 
-  stats          PostStats?
-  daily_stats    PostDailyStats[]
-  categoryLinks  PostPostcategory[]
-  tagLinks       PostPosttag[]
-  comments       PostComment[]
+  stats         Stats?
+  daily_stats   DailyStats[]
+  categoryLinks PostCategory[]
+  tagLinks      PostTag[]
+  comments      Comment[]
 
   @@index([slug], map: "posts_idx_slug")
   @@index([status], map: "posts_idx_status")
@@ -107,19 +107,19 @@ model Post {
   @@map("posts")
 }
 
-model PostStats {
+model Stats {
   post_id    BigInt   @id
   view_count BigInt   @default(0)
   updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
 
   post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
 
-  @@index([view_count], map: "post_stats_idx_view_count")
-  @@index([updated_at], map: "post_stats_idx_updated_at")
-  @@map("post_stats")
+  @@index([view_count], map: "stats_idx_view_count")
+  @@index([updated_at], map: "stats_idx_updated_at")
+  @@map("stats")
 }
 
-model PostDailyStats {
+model DailyStats {
   post_id    BigInt
   stat_date  DateTime @db.Date
   view_count BigInt   @default(0)
@@ -128,32 +128,34 @@ model PostDailyStats {
   post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
 
   @@id([post_id, stat_date])
-  @@index([stat_date], map: "post_daily_stats_idx_stat_date")
-  @@index([view_count], map: "post_daily_stats_idx_view_count")
-  @@map("post_daily_stats")
+  @@index([stat_date], map: "daily_stats_idx_stat_date")
+  @@index([view_count], map: "daily_stats_idx_view_count")
+  @@map("daily_stats")
 }
 
-model PostPostcategory {
-  post_id          BigInt
-  post_category_id BigInt
-  post             Post         @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  category         PostCategory @relation(fields: [post_category_id], references: [id], onDelete: Cascade)
-
-  @@id([post_id, post_category_id])
-  @@map("post_postcategory")
-}
-
-model PostPosttag {
+model PostCategory {
   post_id     BigInt
-  post_tag_id BigInt
-  post        Post    @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  tag         PostTag @relation(fields: [post_tag_id], references: [id], onDelete: Cascade)
+  category_id BigInt
 
-  @@id([post_id, post_tag_id])
-  @@map("post_posttag")
+  post     Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@id([post_id, category_id])
+  @@map("post_categories")
 }
 
-model PostComment {
+model PostTag {
+  post_id BigInt
+  tag_id  BigInt
+
+  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@id([post_id, tag_id])
+  @@map("post_tags")
+}
+
+model Comment {
   id              BigInt   @id @default(autoincrement())
   user_id         BigInt?
   post_id         BigInt
@@ -167,29 +169,29 @@ model PostComment {
   created_at      DateTime @default(now()) @db.Timestamp(0)
   updated_at      DateTime @updatedAt @db.Timestamp(0)
 
-  post    Post          @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  parent  PostComment?  @relation("CommentToReplies", fields: [parent_id], references: [id], onDelete: Cascade)
-  replies PostComment[] @relation("CommentToReplies")
+  post    Post      @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentToReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentToReplies")
 
-  @@index([user_id], map: "post_comments_idx_user_id")
-  @@index([post_id], map: "post_comments_idx_post_id")
-  @@index([parent_id], map: "post_comments_idx_parent_id")
-  @@index([status], map: "post_comments_idx_status")
-  @@index([created_at], map: "post_comments_idx_created_at")
-  @@index([post_id, created_at], map: "post_comments_idx_post_created")
-  @@index([guest_email], map: "post_comments_idx_guest_email")
-  @@index([created_user_id], map: "post_comments_idx_created_user_id")
-  @@index([updated_user_id], map: "post_comments_idx_updated_user_id")
-  @@map("post_comments")
+  @@index([user_id], map: "comments_idx_user_id")
+  @@index([post_id], map: "comments_idx_post_id")
+  @@index([parent_id], map: "comments_idx_parent_id")
+  @@index([status], map: "comments_idx_status")
+  @@index([created_at], map: "comments_idx_created_at")
+  @@index([post_id, created_at], map: "comments_idx_post_created")
+  @@index([guest_email], map: "comments_idx_guest_email")
+  @@index([created_user_id], map: "comments_idx_created_user_id")
+  @@index([updated_user_id], map: "comments_idx_updated_user_id")
+  @@map("comments")
 }
 
-model PostOutbox {
+model Outbox {
   id         BigInt   @id @default(autoincrement())
   event_type String   @db.VarChar(100)
   payload    Json
   published  Boolean  @default(false)
   created_at DateTime @default(now()) @db.Timestamptz()
 
-  @@index([published, created_at], map: "post_outbox_idx_unpublished")
-  @@map("post_outbox")
+  @@index([published, created_at], map: "outbox_idx_unpublished")
+  @@map("outbox")
 }

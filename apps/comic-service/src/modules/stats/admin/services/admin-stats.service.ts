@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ComicStatsRepository } from '../../repositories/comic-stats.repository';
+import { Prisma } from 'src/generated/prisma';
+import { StatsRepository } from '../../repositories/stats.repository';
 
 @Injectable()
 export class AdminStatsService {
-  constructor(private readonly statsRepo: ComicStatsRepository) {}
+  constructor(private readonly statsRepo: StatsRepository) {}
 
   async getDashboard() {
     const [totalComics, totalViews, totalFollows] = await Promise.all([
@@ -26,7 +27,7 @@ export class AdminStatsService {
     const limit = Math.max(Number(query.limit) || 10, 1);
     const sortBy = query.sort_by || 'views';
 
-    const orderBy: any =
+    const orderBy: Prisma.ComicOrderByWithRelationInput =
       sortBy === 'follows'
         ? { stats: { follow_count: 'desc' } }
         : sortBy === 'rating'

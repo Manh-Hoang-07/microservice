@@ -1,42 +1,70 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrimaryKey } from 'src/types';
+import { Prisma } from 'src/generated/prisma';
+import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
+
+export interface GalleryFilter {
+  search?: string;
+  status?: string;
+  featured?: boolean;
+}
 
 @Injectable()
 export class GalleryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findMany(where: Prisma.GalleryWhereInput, options: { skip: number; take: number }) {
+  private buildWhere(filter: GalleryFilter): Prisma.GalleryWhereInput {
+    const where: Prisma.GalleryWhereInput = {};
+    if (filter.search) {
+      where.OR = [
+        { title: { contains: filter.search } },
+        { slug: { contains: filter.search } },
+      ];
+    }
+    if (filter.status) where.status = filter.status;
+    if (filter.featured !== undefined) where.featured = filter.featured;
+    return where;
+  }
+
+  findMany(filter: GalleryFilter, options: { skip: number; take: number }) {
     return this.prisma.gallery.findMany({
-      where,
+      where: this.buildWhere(filter),
       orderBy: { sort_order: 'asc' },
       skip: options.skip,
       take: options.take,
     });
   }
 
-  count(where: Prisma.GalleryWhereInput) {
-    return this.prisma.gallery.count({ where });
+  count(filter: GalleryFilter) {
+    return this.prisma.gallery.count({ where: this.buildWhere(filter) });
   }
 
-  findById(id: PrimaryKey) {
-    return this.prisma.gallery.findUnique({ where: { id } });
+  findById(id: any) {
+    return this.prisma.gallery.findUnique({ where: { id: toPrimaryKey(id) } });
   }
 
-  findFirst(where: Prisma.GalleryWhereInput) {
-    return this.prisma.gallery.findFirst({ where });
+  findBySlug(slug: string) {
+    return this.prisma.gallery.findUnique({ where: { slug } });
   }
 
-  create(data: Prisma.GalleryCreateInput) {
-    return this.prisma.gallery.create({ data });
+  findActiveBySlug(slug: string) {
+    return this.prisma.gallery.findFirst({ where: { slug, status: 'active' } });
   }
 
-  update(id: PrimaryKey, data: Prisma.GalleryUpdateInput) {
-    return this.prisma.gallery.update({ where: { id }, data });
+  create(data: Record<string, any>) {
+    return this.prisma.gallery.create({
+      data: data as Prisma.GalleryUncheckedCreateInput,
+    });
   }
 
-  delete(id: PrimaryKey) {
-    return this.prisma.gallery.delete({ where: { id } });
+  update(id: any, data: Record<string, any>) {
+    return this.prisma.gallery.update({
+      where: { id: toPrimaryKey(id) },
+      data: data as Prisma.GalleryUncheckedUpdateInput,
+    });
+  }
+
+  delete(id: any) {
+    return this.prisma.gallery.delete({ where: { id: toPrimaryKey(id) } });
   }
 }

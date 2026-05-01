@@ -1,7 +1,6 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { PublicChapterService } from '../services/chapter.service';
 
 @ApiTags('Public Chapters')
@@ -12,24 +11,24 @@ export class PublicChapterController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.chapterService.getOne(toPrimaryKey(id));
+    return this.chapterService.getOne(id);
   }
 
   @Public()
   @Get(':id/pages')
   async getPages(@Param('id') id: string) {
-    return this.chapterService.getPages(toPrimaryKey(id));
+    return this.chapterService.getPages(id);
   }
 
   @Public()
   @Get(':id/next')
   async getNext(@Param('id') id: string) {
-    return this.chapterService.getNext(toPrimaryKey(id));
+    return this.chapterService.getNext(id);
   }
 
   @Public()
   @Get(':id/prev')
   async getPrev(@Param('id') id: string) {
-    return this.chapterService.getPrev(toPrimaryKey(id));
+    return this.chapterService.getPrev(id);
   }
 }

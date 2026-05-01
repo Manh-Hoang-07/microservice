@@ -34,12 +34,12 @@ export class UserRepository {
     return this.prisma.user.findUnique({ where: { phone } });
   }
 
-  create(data: Prisma.UserCreateInput) {
-    return this.prisma.user.create({ data });
+  create(data: Record<string, any>) {
+    return this.prisma.user.create({ data: data as Prisma.UserCreateInput });
   }
 
-  update(id: PrimaryKey, data: Prisma.UserUpdateInput) {
-    return this.prisma.user.update({ where: { id }, data });
+  update(id: PrimaryKey, data: Record<string, any>) {
+    return this.prisma.user.update({ where: { id }, data: data as Prisma.UserUpdateInput });
   }
 
   updateLastLogin(id: PrimaryKey) {

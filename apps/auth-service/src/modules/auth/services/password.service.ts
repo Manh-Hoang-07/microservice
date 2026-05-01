@@ -21,6 +21,11 @@ export class PasswordService {
     private readonly i18n: I18nService,
   ) {}
 
+  private t(key: string): string {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang }) as string;
+  }
+
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
     const email = dto.email.toLowerCase();
     const user = await this.userRepo.findByEmail(email);
@@ -30,21 +35,20 @@ export class PasswordService {
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
-    const lang = I18nContext.current()?.lang ?? 'en';
     const email = dto.email.toLowerCase();
 
     if (dto.password !== dto.confirmPassword) {
-      throw new BadRequestException(this.i18n.t('auth.PASSWORDS_NOT_MATCH', { lang }));
+      throw new BadRequestException(this.t('auth.PASSWORDS_NOT_MATCH'));
     }
 
     const isValid = await this.otpService.verifyAndDelete('forgot-password', email, dto.otp);
     if (!isValid) {
-      throw new BadRequestException(this.i18n.t('auth.INVALID_OTP', { lang }));
+      throw new BadRequestException(this.t('auth.INVALID_OTP'));
     }
 
     const user = await this.userRepo.findByEmail(email);
     if (!user) {
-      throw new BadRequestException(this.i18n.t('auth.INVALID_OTP', { lang }));
+      throw new BadRequestException(this.t('auth.INVALID_OTP'));
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);

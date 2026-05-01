@@ -80,7 +80,14 @@
       "Bash(xargs -I {} ls -la {}/services)",
       "Bash(grep \"\\\\.service\\\\.ts$\")",
       "Bash(npm -w apps/iam-service run build)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(npx --yes -p typescript@6 tsc --noEmit --skipLibCheck --target ES2021 --module commonjs --moduleResolution node --esModuleInterop --experimentalDecorators --emitDecoratorMetadata --strictNullChecks --noImplicitAny --strictBindCallApply --baseUrl . --resolveJsonModule --rootDir src src/modules/role/admin/services/role.service.ts src/modules/permission/admin/services/permission.service.ts src/modules/group/admin/services/group.service.ts src/modules/context/admin/services/context.service.ts src/rbac/repositories/rbac.repository.ts src/app.module.ts)",
+      "Bash(npx --yes -p typescript@6 tsc --noEmit --skipLibCheck --target ES2021 --module commonjs --moduleResolution node --esModuleInterop --experimentalDecorators --emitDecoratorMetadata --strictNullChecks --noImplicitAny --strictBindCallApply --baseUrl . --resolveJsonModule --ignoreConfig --rootDir src src/modules/role/admin/services/role.service.ts)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; head -10 {}')",
+      "Bash(python -c \"import json, sys; data=json.load\\(sys.stdin\\); print\\(data[0]['text']\\)\")",
+      "Bash(node -e \"const d=require\\('C:/Users/MANH HOANG/.claude/projects/d--Sources-microservice/e2b77dd1-3a91-48d8-ba68-03beeb6be5f2/tool-results/toolu_01GcHJxh63jcjZmjnePUiDEZ.json'\\); require\\('fs'\\).writeFileSync\\('/tmp/comic_files.txt', d[0].text\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const d=require\\('C:/Users/MANH HOANG/.claude/projects/d--Sources-microservice/e2b77dd1-3a91-48d8-ba68-03beeb6be5f2/tool-results/toolu_01GcHJxh63jcjZmjnePUiDEZ.json'\\); fs.writeFileSync\\('D:/Sources/microservice/.tmp_comic_files.txt', d[0].text\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const d=require\\('C:/Users/MANH HOANG/.claude/projects/d--Sources-microservice/e2b77dd1-3a91-48d8-ba68-03beeb6be5f2/tool-results/toolu_01BibY9nnThwbtrDwmf6YCYL.json'\\); fs.writeFileSync\\('D:/Sources/microservice/.tmp_intro.txt', d[0].text\\);\")"
     ]
   }
 }

@@ -6,7 +6,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as path from 'path';
 import cookieParser = require('cookie-parser');
-import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
+import { I18nModule, AcceptLanguageResolver, QueryResolver, I18nService } from 'nestjs-i18n';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { RedisModule } from '@package/redis';
 import { envValidationSchema } from './config/env.validation';
@@ -66,9 +66,13 @@ import { KafkaModule } from './kafka/kafka.module';
     },
     {
       provide: APP_GUARD,
-      useFactory: (reflector: Reflector, config: ConfigService, jwksService: JwksService) =>
-        new AuthJwtGuard(reflector, config, jwksService),
-      inject: [Reflector, ConfigService, JwksService],
+      useFactory: (
+        reflector: Reflector,
+        config: ConfigService,
+        jwksService: JwksService,
+        i18n: I18nService,
+      ) => new AuthJwtGuard(reflector, config, jwksService, i18n),
+      inject: [Reflector, ConfigService, JwksService, I18nService],
     },
   ],
 })

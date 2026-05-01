@@ -1,16 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { AdminPostService } from '../services/post.service';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
@@ -35,7 +25,7 @@ export class AdminPostController {
   @Permission('post.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.postService.getOne(toPrimaryKey(id));
+    return this.postService.getOne(id);
   }
 
   @Permission('post.manage')
@@ -47,12 +37,12 @@ export class AdminPostController {
   @Permission('post.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdatePostDto) {
-    return this.postService.update(toPrimaryKey(id), dto);
+    return this.postService.update(id, dto);
   }
 
   @Permission('post.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.postService.delete(toPrimaryKey(id));
+    return this.postService.delete(id);
   }
 }

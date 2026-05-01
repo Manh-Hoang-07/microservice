@@ -1,4 +1,5 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import {
   FileMetadata,
   IUploadStrategy,
@@ -9,11 +10,13 @@ import {
 export class UploadService {
   constructor(
     @Inject('UPLOAD_STRATEGY') private readonly strategy: IUploadStrategy,
+    private readonly i18n: I18nService,
   ) {}
 
   async uploadFile(file: any): Promise<UploadResult> {
     if (!file) {
-      throw new Error('File is required');
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new BadRequestException(this.i18n.t('upload.FILE_REQUIRED', { lang }));
     }
 
     return this.strategy.upload(file);
@@ -21,7 +24,8 @@ export class UploadService {
 
   async uploadFiles(files: any[]): Promise<UploadResult[]> {
     if (!files || files.length === 0) {
-      throw new Error('Files are required');
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new BadRequestException(this.i18n.t('upload.FILES_REQUIRED', { lang }));
     }
 
     return Promise.all(files.map((file) => this.strategy.upload(file)));

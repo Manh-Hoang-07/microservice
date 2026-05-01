@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { ChapterRepository } from '../../repositories/chapter.repository';
+import { toPrimaryKey } from 'src/types';
+import { ChapterFilter, ChapterRepository } from '../../repositories/chapter.repository';
 
 @Injectable()
 export class AdminChapterService {
@@ -13,45 +13,44 @@ export class AdminChapterService {
     private readonly config: ConfigService,
   ) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.comic_id) where.comic_id = BigInt(query.comic_id);
-    if (query.status) where.status = query.status;
+    const filter: ChapterFilter = {};
+    if (query.comic_id) filter.comic_id = query.comic_id;
+    if (query.status) filter.status = query.status;
+    if (query.team_id) filter.team_id = query.team_id;
 
+    const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.chapterRepo.findMany(where, options),
-      this.chapterRepo.count(where),
+      this.chapterRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.chapterRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getSimpleList(query: any) {
-    const where: any = {};
-    if (query.comic_id) where.comic_id = BigInt(query.comic_id);
+  async getSimpleList(query: any = {}) {
+    const filter: ChapterFilter = {};
+    if (query.comic_id) filter.comic_id = query.comic_id;
 
-    const data = await this.chapterRepo.findSimpleMany(where, 100);
+    const data = await this.chapterRepo.findSimpleMany(filter, 100);
     return { data };
   }
 
-  async getOne(id: PrimaryKey) {
+  async getOne(id: any) {
     const chapter = await this.chapterRepo.findById(id);
     if (!chapter) throw new NotFoundException('Chapter not found');
     return chapter;
   }
 
   async create(dto: CreateChapterDto) {
-    const existing = await this.chapterRepo.findFirst({
-      comic_id: BigInt(dto.comic_id),
-      chapter_index: dto.chapter_index,
-    });
+    const existing = await this.chapterRepo.findByIndex(dto.comic_id, dto.chapter_index);
     if (existing) throw new BadRequestException('Chapter index already exists for this comic');
 
     const chapter = await this.chapterRepo.create({
-      comic_id: BigInt(dto.comic_id),
-      team_id: dto.team_id ? BigInt(dto.team_id) : null,
+      comic_id: dto.comic_id,
+      team_id: dto.team_id ?? null,
       title: dto.title,
       chapter_index: dto.chapter_index,
       chapter_label: dto.chapter_label,
@@ -78,10 +77,10 @@ export class AdminChapterService {
     return this.getOne(chapter.id);
   }
 
-  async update(id: PrimaryKey, dto: UpdateChapterDto) {
+  async update(id: any, dto: UpdateChapterDto) {
     const existing = await this.getOne(id);
 
-    const data: any = {};
+    const data: Record<string, any> = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.chapter_index !== undefined) data.chapter_index = dto.chapter_index;
     if (dto.chapter_label !== undefined) data.chapter_label = dto.chapter_label;
@@ -94,7 +93,7 @@ export class AdminChapterService {
       if (dto.pages.length) {
         await this.chapterRepo.createPages(
           dto.pages.map((p, i) => ({
-            chapter_id: id,
+            chapter_id: toPrimaryKey(id),
             page_number: i + 1,
             image_url: p.image_url,
             width: p.width,
@@ -112,7 +111,7 @@ export class AdminChapterService {
     return this.getOne(id);
   }
 
-  async delete(id: PrimaryKey) {
+  async delete(id: any) {
     await this.getOne(id);
     await this.chapterRepo.delete(id);
     return { success: true };
@@ -121,23 +120,19 @@ export class AdminChapterService {
   private async handlePublish(chapter: any) {
     await this.chapterRepo.updateComicLastChapter(chapter.comic_id, chapter.id);
 
-    const kafkaEnabled = this.config.get<boolean>('kafka.enabled');
-    if (kafkaEnabled) {
-      const comic = await this.chapterRepo.findComicBasic(chapter.comic_id);
-      if (comic) {
-        await this.chapterRepo.createOutbox({
-          event_type: 'comic.chapter.published',
-          payload: {
-            comic_id: Number(comic.id),
-            comic_title: comic.title,
-            comic_slug: comic.slug,
-            chapter_id: Number(chapter.id),
-            chapter_index: chapter.chapter_index,
-            chapter_label: chapter.chapter_label || `Chapter ${chapter.chapter_index}`,
-            published_at: new Date().toISOString(),
-          },
-        });
-      }
-    }
+    if (!this.config.get<boolean>('kafka.enabled')) return;
+
+    const comic = await this.chapterRepo.findComicBasic(chapter.comic_id);
+    if (!comic) return;
+
+    await this.chapterRepo.createOutbox('comic.chapter.published', {
+      comic_id: Number(comic.id),
+      comic_title: comic.title,
+      comic_slug: comic.slug,
+      chapter_id: Number(chapter.id),
+      chapter_index: chapter.chapter_index,
+      chapter_label: chapter.chapter_label || `Chapter ${chapter.chapter_index}`,
+      published_at: new Date().toISOString(),
+    });
   }
 }

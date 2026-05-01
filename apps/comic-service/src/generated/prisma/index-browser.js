@@ -138,7 +138,7 @@ exports.Prisma.ComicScalarFieldEnum = {
   group_id: 'group_id'
 };
 
-exports.Prisma.ComicStatsScalarFieldEnum = {
+exports.Prisma.StatsScalarFieldEnum = {
   comic_id: 'comic_id',
   view_count: 'view_count',
   follow_count: 'follow_count',
@@ -147,7 +147,7 @@ exports.Prisma.ComicStatsScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
-exports.Prisma.ComicDailyStatsScalarFieldEnum = {
+exports.Prisma.DailyStatsScalarFieldEnum = {
   comic_id: 'comic_id',
   stat_date: 'stat_date',
   view_count: 'view_count',
@@ -170,7 +170,7 @@ exports.Prisma.ChapterScalarFieldEnum = {
   group_id: 'group_id'
 };
 
-exports.Prisma.ComicCategoryScalarFieldEnum = {
+exports.Prisma.CategoryScalarFieldEnum = {
   id: 'id',
   name: 'name',
   slug: 'slug',
@@ -182,12 +182,12 @@ exports.Prisma.ComicCategoryScalarFieldEnum = {
   group_id: 'group_id'
 };
 
-exports.Prisma.ComicCategoryOnComicScalarFieldEnum = {
+exports.Prisma.ComicCategoryScalarFieldEnum = {
   comic_id: 'comic_id',
-  comic_category_id: 'comic_category_id'
+  category_id: 'category_id'
 };
 
-exports.Prisma.ComicCommentScalarFieldEnum = {
+exports.Prisma.CommentScalarFieldEnum = {
   id: 'id',
   user_id: 'user_id',
   comic_id: 'comic_id',
@@ -201,7 +201,7 @@ exports.Prisma.ComicCommentScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
-exports.Prisma.ComicReviewScalarFieldEnum = {
+exports.Prisma.ReviewScalarFieldEnum = {
   id: 'id',
   user_id: 'user_id',
   comic_id: 'comic_id',
@@ -213,7 +213,7 @@ exports.Prisma.ComicReviewScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
-exports.Prisma.ChapterPageScalarFieldEnum = {
+exports.Prisma.PageScalarFieldEnum = {
   id: 'id',
   chapter_id: 'chapter_id',
   page_number: 'page_number',
@@ -224,7 +224,7 @@ exports.Prisma.ChapterPageScalarFieldEnum = {
   created_at: 'created_at'
 };
 
-exports.Prisma.ComicViewScalarFieldEnum = {
+exports.Prisma.ViewScalarFieldEnum = {
   id: 'id',
   comic_id: 'comic_id',
   chapter_id: 'chapter_id',
@@ -234,7 +234,7 @@ exports.Prisma.ComicViewScalarFieldEnum = {
   created_at: 'created_at'
 };
 
-exports.Prisma.ComicFollowScalarFieldEnum = {
+exports.Prisma.FollowScalarFieldEnum = {
   id: 'id',
   user_id: 'user_id',
   comic_id: 'comic_id',
@@ -258,7 +258,7 @@ exports.Prisma.BookmarkScalarFieldEnum = {
   created_at: 'created_at'
 };
 
-exports.Prisma.ComicOutboxScalarFieldEnum = {
+exports.Prisma.OutboxScalarFieldEnum = {
   id: 'id',
   event_type: 'event_type',
   payload: 'payload',
@@ -294,19 +294,19 @@ exports.Prisma.JsonNullValueFilter = {
 
 exports.Prisma.ModelName = {
   Comic: 'Comic',
-  ComicStats: 'ComicStats',
-  ComicDailyStats: 'ComicDailyStats',
+  Stats: 'Stats',
+  DailyStats: 'DailyStats',
   Chapter: 'Chapter',
+  Category: 'Category',
   ComicCategory: 'ComicCategory',
-  ComicCategoryOnComic: 'ComicCategoryOnComic',
-  ComicComment: 'ComicComment',
-  ComicReview: 'ComicReview',
-  ChapterPage: 'ChapterPage',
-  ComicView: 'ComicView',
-  ComicFollow: 'ComicFollow',
+  Comment: 'Comment',
+  Review: 'Review',
+  Page: 'Page',
+  View: 'View',
+  Follow: 'Follow',
   ReadingHistory: 'ReadingHistory',
   Bookmark: 'Bookmark',
-  ComicOutbox: 'ComicOutbox'
+  Outbox: 'Outbox'
 };
 
 /**

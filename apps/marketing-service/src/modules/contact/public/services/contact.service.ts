@@ -20,19 +20,15 @@ export class PublicContactService {
       message: dto.message,
     });
 
-    const kafkaEnabled = this.config.get<boolean>('kafka.enabled');
-    if (kafkaEnabled) {
+    if (this.config.get<boolean>('kafka.enabled')) {
       try {
-        await this.contactRepo.createOutbox({
-          event_type: 'contact.submitted',
-          payload: {
-            contact_id: Number(contact.id),
-            name: contact.name,
-            email: contact.email,
-            phone: contact.phone,
-            message: contact.message,
-            created_at: contact.created_at.toISOString(),
-          },
+        await this.contactRepo.createOutbox('contact.submitted', {
+          contact_id: Number(contact.id),
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
+          message: contact.message,
+          created_at: contact.created_at.toISOString(),
         });
       } catch (err) {
         this.logger.error('Failed to write contact.submitted to outbox', err);

@@ -27,6 +27,7 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
     bufferLogs: true,
   });
 
+  const serviceName = process.env.SERVICE_NAME ?? options.serviceName;
   const port = parseInt(process.env.PORT ?? String(options.defaultPort), 10);
   const prefix = process.env.GLOBAL_PREFIX ?? 'api';
 
@@ -65,7 +66,7 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
   }
 
   await app.listen(port);
-  console.log(`${options.serviceName} running on http://localhost:${port}/${prefix}`);
+  console.log(`${serviceName} running on http://localhost:${port}/${prefix}`);
 
   return app;
 }

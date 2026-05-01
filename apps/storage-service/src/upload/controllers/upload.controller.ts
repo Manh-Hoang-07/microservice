@@ -16,6 +16,7 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { UploadService } from '../services/upload.service';
 import { FileValidationService } from '../services/file-validation.service';
 import { Permission } from '@package/common';
@@ -29,6 +30,7 @@ export class UploadController {
     private readonly uploadService: UploadService,
     private readonly fileValidationService: FileValidationService,
     private readonly configService: ConfigService,
+    private readonly i18n: I18nService,
   ) {}
 
   @Permission('public')
@@ -45,7 +47,8 @@ export class UploadController {
   )
   async uploadFile(@UploadedFile() file: any): Promise<UploadResponseDto> {
     if (!file) {
-      throw new BadRequestException('File is required');
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new BadRequestException(this.i18n.t('upload.FILE_REQUIRED', { lang }));
     }
 
     // Validate type + content + size, and sanitize name
@@ -72,7 +75,8 @@ export class UploadController {
     @UploadedFiles() files: any[],
   ): Promise<UploadResponseDto[]> {
     if (!files || files.length === 0) {
-      throw new BadRequestException('Files are required');
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new BadRequestException(this.i18n.t('upload.FILES_REQUIRED', { lang }));
     }
 
     // Validate each file (type + content + size) and sanitize names

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -13,10 +14,20 @@ export class LocalStorageStrategy implements IUploadStrategy {
   private readonly destination: string;
   private readonly baseUrl: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly i18n: I18nService,
+  ) {
     const storageConfig = this.configService.get('storage.local');
     this.destination = storageConfig.destination;
     this.baseUrl = storageConfig.baseUrl;
+  }
+
+  private fileNotFound(filename: string): NotFoundException {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return new NotFoundException(
+      this.i18n.t('storage.FILE_NOT_FOUND', { lang, args: { filename } }),
+    );
   }
 
   private ensureDirectoryExists(): void {
@@ -75,7 +86,7 @@ export class LocalStorageStrategy implements IUploadStrategy {
   ): Promise<{ stream: NodeJS.ReadableStream; metadata: FileMetadata }> {
     const filePath = path.join(this.destination, filename);
     if (!fs.existsSync(filePath)) {
-      throw new NotFoundException(`File not found: ${filename}`);
+      throw this.fileNotFound(filename);
     }
     const stat = await fs.promises.stat(filePath);
     const metadata: FileMetadata = {
@@ -92,7 +103,7 @@ export class LocalStorageStrategy implements IUploadStrategy {
   async delete(filename: string): Promise<void> {
     const filePath = path.join(this.destination, filename);
     if (!fs.existsSync(filePath)) {
-      throw new NotFoundException(`File not found: ${filename}`);
+      throw this.fileNotFound(filename);
     }
     await fs.promises.unlink(filePath);
   }
@@ -139,7 +150,7 @@ export class LocalStorageStrategy implements IUploadStrategy {
   async getMetadata(filename: string): Promise<FileMetadata> {
     const filePath = path.join(this.destination, filename);
     if (!fs.existsSync(filePath)) {
-      throw new NotFoundException(`File not found: ${filename}`);
+      throw this.fileNotFound(filename);
     }
     const stat = await fs.promises.stat(filePath);
     return {

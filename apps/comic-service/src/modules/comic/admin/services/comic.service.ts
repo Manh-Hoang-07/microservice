@@ -2,25 +2,21 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { ComicRepository } from '../../repositories/comic.repository';
+import { ComicFilter, ComicRepository } from '../../repositories/comic.repository';
 
 @Injectable()
 export class AdminComicService {
   constructor(private readonly comicRepo: ComicRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.status) where.status = query.status;
-    if (query.is_featured !== undefined) {
-      where.is_featured = query.is_featured === 'true' || query.is_featured === true;
-    }
+    const filter = this.buildFilter(query);
 
+    const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.comicRepo.findMany(where, options),
-      this.comicRepo.count(where),
+      this.comicRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.comicRepo.count(filter),
     ]);
 
     return {
@@ -29,15 +25,14 @@ export class AdminComicService {
     };
   }
 
-  async getSimpleList(query: any) {
+  async getSimpleList(query: any = {}) {
     const limit = Math.max(Number(query.limit) || 50, 1);
-    const where: any = {};
-
-    const data = await this.comicRepo.findSimpleMany(where, limit);
+    const filter = this.buildFilter(query);
+    const data = await this.comicRepo.findSimpleMany(filter, limit);
     return { data };
   }
 
-  async getOne(id: PrimaryKey) {
+  async getOne(id: any) {
     const comic = await this.comicRepo.findById(id);
     if (!comic) throw new NotFoundException('Comic not found');
     return this.transform(comic);
@@ -45,19 +40,10 @@ export class AdminComicService {
 
   async create(dto: CreateComicDto) {
     const slug = await SlugHelper.uniqueSlug(dto.title, {
-      findOne: (filter: any) => this.comicRepo.findFirst(filter),
+      findOne: (filter: any) => this.comicRepo.findBySlugSimple(filter.slug),
     });
 
-    const comic = await this.comicRepo.create({
-      title: dto.title,
-      slug,
-      description: dto.description,
-      cover_image: dto.cover_image,
-      author: dto.author,
-      status: dto.status || 'draft',
-      is_featured: dto.is_featured || false,
-    });
-
+    const comic = await this.comicRepo.create({ ...dto, slug });
     await this.comicRepo.createStats(comic.id);
 
     if (dto.category_ids?.length) {
@@ -67,16 +53,14 @@ export class AdminComicService {
     return this.getOne(comic.id);
   }
 
-  async update(id: PrimaryKey, dto: UpdateComicDto) {
+  async update(id: any, dto: UpdateComicDto) {
     await this.getOne(id);
 
-    const data: any = { ...dto };
-    delete data.category_ids;
-
+    const data: Record<string, any> = { ...dto };
     if (dto.title || dto.slug) {
       data.slug = await SlugHelper.uniqueSlug(
         dto.slug || dto.title || '',
-        { findOne: (filter: any) => this.comicRepo.findFirst(filter) },
+        { findOne: (filter: any) => this.comicRepo.findBySlugSimple(filter.slug) },
         id,
       );
     }
@@ -90,16 +74,28 @@ export class AdminComicService {
     return this.getOne(id);
   }
 
-  async delete(id: PrimaryKey) {
+  async delete(id: any) {
     await this.getOne(id);
     await this.comicRepo.delete(id);
     return { success: true };
   }
 
+  private buildFilter(query: any): ComicFilter {
+    const filter: ComicFilter = {};
+    if (query.search) filter.search = query.search;
+    if (query.status) filter.status = query.status;
+    if (query.author) filter.author = query.author;
+    if (query.is_featured !== undefined) {
+      filter.is_featured = query.is_featured === 'true' || query.is_featured === true;
+    }
+    if (query.category_id) filter.category_id = query.category_id;
+    return filter;
+  }
+
   private transform(entity: any) {
     if (!entity) return null;
     const item = { ...entity };
-    if (item.categoryLinks && Array.isArray(item.categoryLinks)) {
+    if (Array.isArray(item.categoryLinks)) {
       item.categories = item.categoryLinks.map((l: any) => l?.category).filter(Boolean);
       item.category_ids = item.categories.map((c: any) => c.id);
       delete item.categoryLinks;

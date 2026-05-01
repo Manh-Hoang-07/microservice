@@ -1,15 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from 'src/generated/prisma';
+import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
-import { PrimaryKey } from 'src/types';
+
+export interface BookmarkFilter {
+  user_id?: any;
+  chapter_id?: any;
+}
 
 @Injectable()
 export class BookmarkRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findMany(where: Prisma.BookmarkWhereInput, options: { skip: number; take: number }) {
+  private buildWhere(filter: BookmarkFilter): Prisma.BookmarkWhereInput {
+    const where: Prisma.BookmarkWhereInput = {};
+    if (filter.user_id !== undefined) where.user_id = toPrimaryKey(filter.user_id);
+    if (filter.chapter_id !== undefined) where.chapter_id = toPrimaryKey(filter.chapter_id);
+    return where;
+  }
+
+  findMany(filter: BookmarkFilter, options: { skip: number; take: number }) {
     return this.prisma.bookmark.findMany({
-      where,
+      where: this.buildWhere(filter),
       include: {
         chapter: {
           select: {
@@ -26,19 +38,25 @@ export class BookmarkRepository {
     });
   }
 
-  count(where: Prisma.BookmarkWhereInput) {
-    return this.prisma.bookmark.count({ where });
+  count(filter: BookmarkFilter) {
+    return this.prisma.bookmark.count({ where: this.buildWhere(filter) });
   }
 
-  findById(id: PrimaryKey) {
-    return this.prisma.bookmark.findUnique({ where: { id } });
+  findById(id: any) {
+    return this.prisma.bookmark.findUnique({ where: { id: toPrimaryKey(id) } });
   }
 
-  create(data: { user_id: PrimaryKey; chapter_id: PrimaryKey; page_number?: number | null }) {
-    return this.prisma.bookmark.create({ data });
+  create(data: { user_id: any; chapter_id: any; page_number: number }) {
+    return this.prisma.bookmark.create({
+      data: {
+        user_id: toPrimaryKey(data.user_id),
+        chapter_id: toPrimaryKey(data.chapter_id),
+        page_number: data.page_number,
+      },
+    });
   }
 
-  delete(id: PrimaryKey) {
-    return this.prisma.bookmark.delete({ where: { id } });
+  delete(id: any) {
+    return this.prisma.bookmark.delete({ where: { id: toPrimaryKey(id) } });
   }
 }

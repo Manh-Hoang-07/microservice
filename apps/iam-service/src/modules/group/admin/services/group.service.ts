@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { GroupRepository } from '../../repositories/group.repository';
@@ -8,7 +9,10 @@ import { AddMemberDto } from '../dtos/add-member.dto';
 
 @Injectable()
 export class GroupService {
-  constructor(private readonly repo: GroupRepository) {}
+  constructor(
+    private readonly repo: GroupRepository,
+    private readonly i18n: I18nService,
+  ) {}
 
   async getList(query: any) {
     const options = parseQueryOptions(query);
@@ -25,13 +29,19 @@ export class GroupService {
 
   async getOne(id: PrimaryKey) {
     const item = await this.repo.findById(id);
-    if (!item) throw new NotFoundException('Group not found');
+    if (!item) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new NotFoundException(this.i18n.t('group.NOT_FOUND', { lang }));
+    }
     return item;
   }
 
   async create(dto: CreateGroupDto, actorId: PrimaryKey) {
     const existing = await this.repo.findByCode(dto.code);
-    if (existing) throw new ConflictException('Group code already exists');
+    if (existing) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new ConflictException(this.i18n.t('group.CODE_EXISTS', { lang }));
+    }
     const data: any = {
       type: dto.type,
       code: dto.code,

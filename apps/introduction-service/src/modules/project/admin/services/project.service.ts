@@ -2,31 +2,32 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { ProjectRepository } from '../../repositories/project.repository';
+import { ProjectFilter, ProjectRepository } from '../../repositories/project.repository';
 
 @Injectable()
 export class AdminProjectService {
   constructor(private readonly projectRepo: ProjectRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.status) where.status = query.status;
+    const filter: ProjectFilter = {};
+    if (query.search) filter.search = query.search;
+    if (query.status) filter.status = query.status;
     if (query.featured !== undefined) {
-      where.featured = query.featured === 'true' || query.featured === true;
+      filter.featured = query.featured === 'true' || query.featured === true;
     }
 
+    const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.projectRepo.findMany(where, options),
-      this.projectRepo.count(where),
+      this.projectRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.projectRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: PrimaryKey) {
+  async getOne(id: any) {
     const item = await this.projectRepo.findById(id);
     if (!item) throw new NotFoundException('Project not found');
     return item;
@@ -34,49 +35,28 @@ export class AdminProjectService {
 
   async create(dto: CreateProjectDto) {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.name, {
-      findOne: (filter: any) => this.projectRepo.findFirst(filter),
+      findOne: (filter: any) => this.projectRepo.findBySlug(filter.slug),
     });
 
-    return this.projectRepo.create({
-      name: dto.name,
-      slug,
-      description: dto.description,
-      short_description: dto.short_description,
-      cover_image: dto.cover_image,
-      location: dto.location,
-      area: dto.area,
-      start_date: dto.start_date ? new Date(dto.start_date) : undefined,
-      end_date: dto.end_date ? new Date(dto.end_date) : undefined,
-      status: dto.status || 'planning',
-      client_name: dto.client_name,
-      budget: dto.budget,
-      images: dto.images ?? [],
-      featured: dto.featured ?? false,
-      sort_order: dto.sort_order ?? 0,
-      seo_title: dto.seo_title,
-      seo_description: dto.seo_description,
-      seo_keywords: dto.seo_keywords,
-    });
+    return this.projectRepo.create({ ...dto, slug, images: dto.images ?? [] });
   }
 
-  async update(id: PrimaryKey, dto: UpdateProjectDto) {
+  async update(id: any, dto: UpdateProjectDto) {
     await this.getOne(id);
 
-    const data: any = { ...dto };
-
+    const data: Record<string, any> = { ...dto };
     if (dto.name || dto.slug) {
-      data.slug = await SlugHelper.uniqueSlug(dto.slug || dto.name || '', {
-        findOne: (filter: any) => this.projectRepo.findFirst(filter),
-      }, id);
+      data.slug = await SlugHelper.uniqueSlug(
+        dto.slug || dto.name || '',
+        { findOne: (filter: any) => this.projectRepo.findBySlug(filter.slug) },
+        id,
+      );
     }
-
-    if (dto.start_date) data.start_date = new Date(dto.start_date);
-    if (dto.end_date) data.end_date = new Date(dto.end_date);
 
     return this.projectRepo.update(id, data);
   }
 
-  async delete(id: PrimaryKey) {
+  async delete(id: any) {
     await this.getOne(id);
     await this.projectRepo.delete(id);
     return { success: true };

@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { ContextRepository } from '../../repositories/context.repository';
@@ -8,7 +9,10 @@ import { SyncRolesDto } from '../dtos/sync-roles.dto';
 
 @Injectable()
 export class ContextService {
-  constructor(private readonly repo: ContextRepository) {}
+  constructor(
+    private readonly repo: ContextRepository,
+    private readonly i18n: I18nService,
+  ) {}
 
   async getList(query: any) {
     const options = parseQueryOptions(query);
@@ -24,13 +28,19 @@ export class ContextService {
 
   async getOne(id: PrimaryKey) {
     const item = await this.repo.findById(id);
-    if (!item) throw new NotFoundException('Context not found');
+    if (!item) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new NotFoundException(this.i18n.t('context.NOT_FOUND', { lang }));
+    }
     return item;
   }
 
   async create(dto: CreateContextDto, actorId: PrimaryKey) {
     const existing = await this.repo.findByCode(dto.code);
-    if (existing) throw new ConflictException('Context code already exists');
+    if (existing) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new ConflictException(this.i18n.t('context.CODE_EXISTS', { lang }));
+    }
     const data: any = {
       type: dto.type,
       code: dto.code,

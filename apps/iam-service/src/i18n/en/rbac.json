@@ -1,0 +1,4 @@
+{
+  "GROUP_NOT_FOUND": "Group not found.",
+  "ROLE_NOT_ALLOWED_IN_CONTEXT": "Role ID {id} is not allowed or not active in this context."
+}

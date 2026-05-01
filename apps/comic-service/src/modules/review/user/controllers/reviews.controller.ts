@@ -1,7 +1,6 @@
 import { Controller, Post, Delete, Body, Param, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { UserReviewService } from '../services/reviews.service';
 import { CreateReviewDto } from '../dtos/create-review.dto';
 
@@ -13,14 +12,12 @@ export class UserReviewController {
   @Permission('user')
   @Post()
   async createOrUpdate(@Req() req: any, @Body() dto: CreateReviewDto) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.reviewService.createOrUpdate(userId, dto);
+    return this.reviewService.createOrUpdate(req.user.sub, dto);
   }
 
   @Permission('user')
   @Delete(':id')
   async delete(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.reviewService.delete(userId, toPrimaryKey(id));
+    return this.reviewService.delete(req.user.sub, id);
   }
 }

@@ -3,17 +3,23 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { MenuRepository, MenuFilter } from '../../repositories/menu.repository';
 import { MenuTreeItem } from '../../interfaces/menu-tree-item.interface';
 import { buildMenuTree, filterPublicMenus } from '../../helpers/menu.helper';
-import { toPrimaryKey } from '../../../../common/core/primary-key.util';
-import { createPaginationMeta } from '../../../../common/core/pagination.helper';
-import { parseQueryOptions } from '@package/common';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class MenuService {
-  constructor(private readonly menuRepo: MenuRepository) {}
+  constructor(
+    private readonly menuRepo: MenuRepository,
+    private readonly i18n: I18nService,
+  ) {}
+
+  private t(key: string): string {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang }) as string;
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -45,43 +51,41 @@ export class MenuService {
   }
 
   async getOne(id: any) {
-    const item = await this.menuRepo.findById(toPrimaryKey(id));
-    if (!item) throw new NotFoundException('Menu not found');
+    const item = await this.menuRepo.findById(id);
+    if (!item) throw new NotFoundException(this.t('menu.NOT_FOUND'));
     return item;
   }
 
   async create(dto: any) {
-    const payload = this.preparePayload(dto);
-    if (payload.code && (await this.menuRepo.findByCode(payload.code))) {
-      throw new BadRequestException('Menu code already exists');
+    if (dto.code && (await this.menuRepo.findByCode(dto.code))) {
+      throw new BadRequestException(this.t('menu.CODE_EXISTS'));
     }
-    return this.menuRepo.create(payload as Prisma.MenuCreateInput);
+    return this.menuRepo.create(dto);
   }
 
   async createWithUser(dto: any, userId?: any) {
-    if (userId) dto.created_user_id = toPrimaryKey(userId);
+    if (userId) dto.created_user_id = userId;
     return this.create(dto);
   }
 
   async update(id: any, dto: any) {
     const current = await this.getOne(id);
-    const payload = this.preparePayload(dto);
-    if (payload.code && payload.code !== (current as any).code) {
-      if (await this.menuRepo.findByCode(payload.code)) {
-        throw new BadRequestException('Menu code already exists');
+    if (dto.code && dto.code !== (current as any).code) {
+      if (await this.menuRepo.findByCode(dto.code)) {
+        throw new BadRequestException(this.t('menu.CODE_EXISTS'));
       }
     }
-    return this.menuRepo.update(toPrimaryKey(id), payload as Prisma.MenuUpdateInput);
+    return this.menuRepo.update(id, dto);
   }
 
   async updateById(id: any, dto: any, userId?: any) {
-    if (userId) dto.updated_user_id = toPrimaryKey(userId);
+    if (userId) dto.updated_user_id = userId;
     return this.update(id, dto);
   }
 
   async delete(id: any) {
     await this.getOne(id);
-    await this.menuRepo.delete(toPrimaryKey(id));
+    await this.menuRepo.delete(id);
     return true;
   }
 
@@ -96,18 +100,5 @@ export class MenuService {
     const menus = allMenus.filter((m: any) => m.show_in_menu);
     const filtered = filterPublicMenus(menus, userId);
     return buildMenuTree(filtered);
-  }
-
-  private preparePayload(data: any): any {
-    const payload = { ...data };
-    const bigIntFields = ['parent_id', 'created_user_id', 'updated_user_id'];
-    bigIntFields.forEach((field) => {
-      if (payload[field] !== undefined && payload[field] !== null && payload[field] !== '') {
-        payload[field] = toPrimaryKey(payload[field]);
-      } else if (payload[field] === '' || payload[field] === null) {
-        payload[field] = null;
-      }
-    });
-    return payload;
   }
 }

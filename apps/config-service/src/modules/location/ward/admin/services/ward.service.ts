@@ -1,27 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { WardRepository } from '../../repositories/ward.repository';
-import { toPrimaryKey } from '../../../../../common/core/primary-key.util';
-import { createPaginationMeta } from '../../../../../common/core/pagination.helper';
-import { parseQueryOptions } from '@package/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
+import { WardRepository, WardFilter } from '../../repositories/ward.repository';
+import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class WardService {
-  constructor(private readonly wardRepo: WardRepository) {}
+  constructor(
+    private readonly wardRepo: WardRepository,
+    private readonly i18n: I18nService,
+  ) {}
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: Prisma.WardWhereInput = {};
-    if (query.name) where.name = { contains: query.name };
-    if (query.status) where.status = query.status;
-    if (query.code) where.code = query.code;
-    if (query.province_id) where.province_id = toPrimaryKey(query.province_id);
+    const filter: WardFilter = {};
+    if (query.name) filter.name = query.name;
+    if (query.status) filter.status = query.status;
+    if (query.code) filter.code = query.code;
+    if (query.province_id) filter.province_id = query.province_id;
 
     const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.wardRepo.findMany(where, options),
-      skipCount ? Promise.resolve(0) : this.wardRepo.count(where),
+      this.wardRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.wardRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
@@ -32,27 +33,28 @@ export class WardService {
   }
 
   async getOne(id: any) {
-    const item = await this.wardRepo.findById(toPrimaryKey(id));
-    if (!item) throw new NotFoundException(`Resource with ID ${id} not found`);
+    const item = await this.wardRepo.findById(id);
+    if (!item) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new NotFoundException(
+        this.i18n.t('location.WARD_NOT_FOUND', { lang, args: { id: String(id) } }),
+      );
+    }
     return item;
   }
 
   async create(dto: any) {
-    const data: any = { ...dto };
-    if (data.province_id) data.province_id = toPrimaryKey(data.province_id);
-    return this.wardRepo.create(data);
+    return this.wardRepo.create(dto);
   }
 
   async update(id: any, dto: any) {
     await this.getOne(id);
-    const data: any = { ...dto };
-    if (data.province_id) data.province_id = toPrimaryKey(data.province_id);
-    return this.wardRepo.update(toPrimaryKey(id), data);
+    return this.wardRepo.update(id, dto);
   }
 
   async delete(id: any) {
     await this.getOne(id);
-    await this.wardRepo.delete(toPrimaryKey(id));
+    await this.wardRepo.delete(id);
     return true;
   }
 }

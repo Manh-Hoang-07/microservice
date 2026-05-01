@@ -5,10 +5,10 @@ import { PublicReviewController } from './public/controllers/reviews.controller'
 import { PublicReviewService } from './public/services/reviews.service';
 import { UserReviewController } from './user/controllers/reviews.controller';
 import { UserReviewService } from './user/services/reviews.service';
-import { ComicReviewRepository } from './repositories/comic-review.repository';
+import { ReviewRepository } from './repositories/review.repository';
 
 @Module({
   controllers: [AdminReviewController, PublicReviewController, UserReviewController],
-  providers: [ComicReviewRepository, AdminReviewService, PublicReviewService, UserReviewService],
+  providers: [ReviewRepository, AdminReviewService, PublicReviewService, UserReviewService],
 })
 export class ReviewModule {}

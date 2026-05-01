@@ -1,7 +1,6 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { PublicFaqService } from '../services/faq.service';
 
 @ApiTags('Public FAQs')
@@ -18,18 +17,18 @@ export class PublicFaqController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.faqService.getOne(toPrimaryKey(id));
+    return this.faqService.getOne(id);
   }
 
   @Public()
   @Post(':id/view')
   async incrementViewCount(@Param('id') id: string) {
-    return this.faqService.incrementViewCount(toPrimaryKey(id));
+    return this.faqService.incrementViewCount(id);
   }
 
   @Public()
   @Post(':id/helpful')
   async incrementHelpfulCount(@Param('id') id: string) {
-    return this.faqService.incrementHelpfulCount(toPrimaryKey(id));
+    return this.faqService.incrementHelpfulCount(id);
   }
 }

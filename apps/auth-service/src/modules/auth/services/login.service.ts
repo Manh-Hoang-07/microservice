@@ -22,15 +22,19 @@ export class LoginService {
     private readonly i18n: I18nService,
   ) {}
 
-  async login(dto: LoginDto) {
+  private t(key: string, args?: Record<string, unknown>): string {
     const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang, args }) as string;
+  }
+
+  async login(dto: LoginDto) {
     const identifier = dto.email.toLowerCase();
     const scope = 'auth:login';
 
     const lockout = await this.accountLockoutService.check(scope, identifier);
     if (lockout.isLocked) {
       throw new ForbiddenException(
-        this.i18n.t('auth.ACCOUNT_TEMPORARILY_LOCKED', { lang, args: { minutes: lockout.remainingMinutes } }),
+        this.t('auth.ACCOUNT_TEMPORARILY_LOCKED', { minutes: lockout.remainingMinutes }),
       );
     }
 
@@ -38,17 +42,17 @@ export class LoginService {
 
     if (!user || !user.password) {
       await this.accountLockoutService.add(scope, identifier);
-      throw new UnauthorizedException(this.i18n.t('auth.INVALID_CREDENTIALS', { lang }));
+      throw new UnauthorizedException(this.t('auth.INVALID_CREDENTIALS'));
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
       await this.accountLockoutService.add(scope, identifier);
-      throw new UnauthorizedException(this.i18n.t('auth.INVALID_CREDENTIALS', { lang }));
+      throw new UnauthorizedException(this.t('auth.INVALID_CREDENTIALS'));
     }
 
     if (user.status !== 'active') {
-      throw new ForbiddenException(this.i18n.t('auth.ACCOUNT_LOCKED', { lang }));
+      throw new ForbiddenException(this.t('auth.ACCOUNT_LOCKED'));
     }
 
     await this.accountLockoutService.reset(scope, identifier);
@@ -89,21 +93,20 @@ export class LoginService {
   }
 
   async refreshTokenByValue(refreshToken: string) {
-    const lang = I18nContext.current()?.lang ?? 'en';
     const decoded = await this.tokenService.decodeRefresh(refreshToken);
-    if (!decoded) throw new UnauthorizedException(this.i18n.t('auth.INVALID_TOKEN', { lang }));
+    if (!decoded) throw new UnauthorizedException(this.t('auth.INVALID_TOKEN'));
 
     const sub = decoded.sub as string | undefined;
     const jti = (decoded as any).jti as string | undefined;
 
     if (!sub || !jti) {
-      throw new UnauthorizedException(this.i18n.t('auth.INVALID_REFRESH_TOKEN', { lang }));
+      throw new UnauthorizedException(this.t('auth.INVALID_REFRESH_TOKEN'));
     }
 
     const userId: PrimaryKey = BigInt(sub);
     const isActive = await this.tokenService.isRefreshActive(userId, jti);
     if (!isActive) {
-      throw new UnauthorizedException(this.i18n.t('auth.REFRESH_TOKEN_REVOKED', { lang }));
+      throw new UnauthorizedException(this.t('auth.REFRESH_TOKEN_REVOKED'));
     }
 
     await this.tokenService.revokeRefreshJti(userId, jti);

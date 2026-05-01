@@ -1,28 +1,30 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { ComicCommentRepository } from '../../repositories/comic-comment.repository';
+import { CommentFilter, CommentRepository } from '../../repositories/comment.repository';
 
 @Injectable()
 export class AdminCommentService {
-  constructor(private readonly commentRepo: ComicCommentRepository) {}
+  constructor(private readonly commentRepo: CommentRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.comic_id) where.comic_id = BigInt(query.comic_id);
-    if (query.status) where.status = query.status;
+    const filter: CommentFilter = {};
+    if (query.comic_id) filter.comic_id = query.comic_id;
+    if (query.chapter_id) filter.chapter_id = query.chapter_id;
+    if (query.user_id) filter.user_id = query.user_id;
+    if (query.status) filter.status = query.status;
 
+    const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.commentRepo.findMany(where, options),
-      this.commentRepo.count(where),
+      this.commentRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.commentRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async updateStatus(id: PrimaryKey, status: string) {
+  async updateStatus(id: any, status: string) {
     const comment = await this.commentRepo.findById(id);
     if (!comment) throw new NotFoundException('Comment not found');
     return this.commentRepo.update(id, { status });

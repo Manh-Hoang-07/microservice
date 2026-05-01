@@ -1,28 +1,27 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { CertificateRepository } from '../../repositories/certificate.repository';
+import { CertificateFilter, CertificateRepository } from '../../repositories/certificate.repository';
 
 @Injectable()
 export class PublicCertificateService {
   constructor(private readonly certificateRepo: CertificateRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = { status: 'active' };
-    if (query.type) where.type = query.type;
+    const filter: CertificateFilter = { status: 'active' };
+    if (query.type) filter.type = query.type;
 
     const [data, total] = await Promise.all([
-      this.certificateRepo.findMany(where, options),
-      this.certificateRepo.count(where),
+      this.certificateRepo.findMany(filter, options),
+      this.certificateRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: PrimaryKey) {
-    const item = await this.certificateRepo.findFirst({ id, status: 'active' });
+  async getOne(id: any) {
+    const item = await this.certificateRepo.findActiveById(id);
     if (!item) throw new NotFoundException('Certificate not found');
     return item;
   }

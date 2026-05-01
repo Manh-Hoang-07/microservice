@@ -1,14 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from 'src/generated/prisma';
+import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
-import { toPrimaryKey, PrimaryKey } from 'src/types';
 
-const COMIC_WITH_STATS = {
+export interface ComicFilter {
+  search?: string;
+  status?: string | string[];
+  is_featured?: boolean;
+  category_id?: any;
+  author?: string;
+  slug?: string;
+}
+
+const WITH_RELATIONS = {
   stats: true,
   categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
 } as const;
 
-const PUBLIC_COMIC_SELECT = {
+const PUBLIC_SELECT = {
   id: true,
   slug: true,
   title: true,
@@ -39,99 +48,144 @@ const PUBLIC_COMIC_SELECT = {
   },
 } as const;
 
+const SIMPLE_SELECT = {
+  id: true,
+  title: true,
+  slug: true,
+  status: true,
+} as const;
+
 @Injectable()
 export class ComicRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findMany(where: Prisma.ComicWhereInput, options: { skip: number; take: number }) {
+  private buildWhere(filter: ComicFilter): Prisma.ComicWhereInput {
+    const where: Prisma.ComicWhereInput = {};
+    if (filter.search) {
+      where.OR = [
+        { title: { contains: filter.search } },
+        { slug: { contains: filter.search } },
+        { author: { contains: filter.search } },
+      ];
+    }
+    if (filter.status !== undefined) {
+      where.status = Array.isArray(filter.status) ? { in: filter.status } : filter.status;
+    }
+    if (filter.is_featured !== undefined) where.is_featured = filter.is_featured;
+    if (filter.author) where.author = filter.author;
+    if (filter.slug) where.slug = filter.slug;
+    if (filter.category_id !== undefined) {
+      where.categoryLinks = { some: { category_id: toPrimaryKey(filter.category_id) } };
+    }
+    return where;
+  }
+
+  private buildOrderBy(sort?: string): Prisma.ComicOrderByWithRelationInput {
+    if (!sort) return { updated_at: 'desc' };
+    const [field, dirRaw] = sort.split(':');
+    const dir: 'asc' | 'desc' = dirRaw?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+    if (['view_count', 'follow_count', 'rating_count', 'rating_sum'].includes(field)) {
+      return { stats: { [field]: dir } } as Prisma.ComicOrderByWithRelationInput;
+    }
+    return { [field]: dir } as Prisma.ComicOrderByWithRelationInput;
+  }
+
+  findMany(filter: ComicFilter, options: { skip: number; take: number }) {
     return this.prisma.comic.findMany({
-      where,
-      include: COMIC_WITH_STATS,
+      where: this.buildWhere(filter),
+      include: WITH_RELATIONS,
       orderBy: { updated_at: 'desc' },
       skip: options.skip,
       take: options.take,
     });
   }
 
-  findManyPublic(where: Prisma.ComicWhereInput, options: { skip: number; take: number }, orderBy: any) {
-    return this.prisma.comic.findMany({ where, select: PUBLIC_COMIC_SELECT, orderBy, skip: options.skip, take: options.take });
+  findManyPublic(filter: ComicFilter, options: { skip: number; take: number; sort?: string }) {
+    return this.prisma.comic.findMany({
+      where: this.buildWhere(filter),
+      select: PUBLIC_SELECT,
+      orderBy: this.buildOrderBy(options.sort),
+      skip: options.skip,
+      take: options.take,
+    });
   }
 
-  findSimpleMany(where: Prisma.ComicWhereInput, take: number) {
+  findSimpleMany(filter: ComicFilter, take: number) {
     return this.prisma.comic.findMany({
-      where,
-      select: { id: true, title: true, slug: true, status: true },
+      where: this.buildWhere(filter),
+      select: SIMPLE_SELECT,
       orderBy: { title: 'asc' },
       take,
     });
   }
 
-  count(where: Prisma.ComicWhereInput) {
-    return this.prisma.comic.count({ where });
+  count(filter: ComicFilter) {
+    return this.prisma.comic.count({ where: this.buildWhere(filter) });
   }
 
-  findById(id: PrimaryKey) {
-    return this.prisma.comic.findUnique({ where: { id }, include: COMIC_WITH_STATS });
-  }
-
-  findBySlug(slug: string, statuses: string[]) {
-    return this.prisma.comic.findFirst({
-      where: { slug, status: { in: statuses } },
-      include: {
-        stats: true,
-        categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
-        chapters: {
-          where: { status: 'published' },
-          orderBy: { chapter_index: 'desc' },
-          take: 1,
-          select: { id: true, title: true, chapter_index: true, chapter_label: true, created_at: true },
-        },
-      },
+  findById(id: any) {
+    return this.prisma.comic.findUnique({
+      where: { id: toPrimaryKey(id) },
+      include: WITH_RELATIONS,
     });
   }
 
-  findIdBySlug(slug: string, statuses: string[]) {
+  findBySlug(slug: string, statuses?: string[]) {
+    const where: Prisma.ComicWhereInput = { slug };
+    if (statuses?.length) where.status = { in: statuses };
     return this.prisma.comic.findFirst({
-      where: { slug, status: { in: statuses } },
-      select: { id: true },
+      where,
+      select: PUBLIC_SELECT,
     });
   }
 
-  findFirst(where: Prisma.ComicWhereInput) {
-    return this.prisma.comic.findFirst({ where });
+  findIdBySlug(slug: string, statuses?: string[]) {
+    const where: Prisma.ComicWhereInput = { slug };
+    if (statuses?.length) where.status = { in: statuses };
+    return this.prisma.comic.findFirst({ where, select: { id: true } });
   }
 
-  create(data: Prisma.ComicCreateInput) {
-    return this.prisma.comic.create({ data });
+  findBySlugSimple(slug: string) {
+    return this.prisma.comic.findUnique({ where: { slug } });
   }
 
-  createStats(comicId: PrimaryKey) {
-    return this.prisma.comicStats.create({ data: { comic_id: comicId } });
+  create(data: Record<string, any>) {
+    return this.prisma.comic.create({
+      data: this.normalizePayload(data) as Prisma.ComicUncheckedCreateInput,
+    });
   }
 
-  async syncCategories(comicId: PrimaryKey, categoryIds: number[]) {
-    await this.prisma.comicCategoryOnComic.deleteMany({ where: { comic_id: comicId } });
+  update(id: any, data: Record<string, any>) {
+    return this.prisma.comic.update({
+      where: { id: toPrimaryKey(id) },
+      data: this.normalizePayload(data) as Prisma.ComicUncheckedUpdateInput,
+    });
+  }
+
+  delete(id: any) {
+    return this.prisma.comic.delete({ where: { id: toPrimaryKey(id) } });
+  }
+
+  createStats(comicId: any) {
+    return this.prisma.stats.create({ data: { comic_id: toPrimaryKey(comicId) } });
+  }
+
+  async syncCategories(comicId: any, categoryIds: any[]) {
+    const cid = toPrimaryKey(comicId);
+    await this.prisma.comicCategory.deleteMany({ where: { comic_id: cid } });
     if (categoryIds.length > 0) {
-      await this.prisma.comicCategoryOnComic.createMany({
+      await this.prisma.comicCategory.createMany({
         data: categoryIds.map((catId) => ({
-          comic_id: comicId,
-          comic_category_id: toPrimaryKey(catId),
+          comic_id: cid,
+          category_id: toPrimaryKey(catId),
         })),
       });
     }
   }
 
-  update(id: PrimaryKey, data: Prisma.ComicUpdateInput) {
-    return this.prisma.comic.update({ where: { id }, data });
-  }
-
-  delete(id: PrimaryKey) {
-    return this.prisma.comic.delete({ where: { id } });
-  }
-
-  findPublicChapters(comicId: PrimaryKey, options: { skip: number; take: number }) {
+  findPublicChapters(comicId: any, options: { skip: number; take: number }) {
     return this.prisma.chapter.findMany({
-      where: { comic_id: comicId, status: 'published' },
+      where: { comic_id: toPrimaryKey(comicId), status: 'published' },
       select: {
         id: true,
         comic_id: true,
@@ -149,7 +203,21 @@ export class ComicRepository {
     });
   }
 
-  countPublicChapters(comicId: PrimaryKey) {
-    return this.prisma.chapter.count({ where: { comic_id: comicId, status: 'published' } });
+  countPublicChapters(comicId: any) {
+    return this.prisma.chapter.count({
+      where: { comic_id: toPrimaryKey(comicId), status: 'published' },
+    });
+  }
+
+  private normalizePayload(data: Record<string, any>): Record<string, any> {
+    const payload = { ...data };
+    delete payload.category_ids;
+    const bigIntFields = ['created_user_id', 'updated_user_id', 'group_id', 'last_chapter_id'];
+    for (const field of bigIntFields) {
+      const value = payload[field];
+      if (value === undefined) continue;
+      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
+    }
+    return payload;
   }
 }

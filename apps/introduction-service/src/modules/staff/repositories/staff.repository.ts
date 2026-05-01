@@ -1,42 +1,69 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrimaryKey } from 'src/types';
+import { Prisma } from 'src/generated/prisma';
+import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
+
+export interface StaffFilter {
+  search?: string;
+  status?: string;
+  department?: string;
+}
 
 @Injectable()
 export class StaffRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findMany(where: Prisma.StaffWhereInput, options: { skip: number; take: number }) {
+  private buildWhere(filter: StaffFilter): Prisma.StaffWhereInput {
+    const where: Prisma.StaffWhereInput = {};
+    if (filter.search) {
+      where.OR = [
+        { name: { contains: filter.search } },
+        { position: { contains: filter.search } },
+        { department: { contains: filter.search } },
+      ];
+    }
+    if (filter.status) where.status = filter.status;
+    if (filter.department) where.department = filter.department;
+    return where;
+  }
+
+  findMany(filter: StaffFilter, options: { skip: number; take: number }) {
     return this.prisma.staff.findMany({
-      where,
+      where: this.buildWhere(filter),
       orderBy: { sort_order: 'asc' },
       skip: options.skip,
       take: options.take,
     });
   }
 
-  count(where: Prisma.StaffWhereInput) {
-    return this.prisma.staff.count({ where });
+  count(filter: StaffFilter) {
+    return this.prisma.staff.count({ where: this.buildWhere(filter) });
   }
 
-  findById(id: PrimaryKey) {
-    return this.prisma.staff.findUnique({ where: { id } });
+  findById(id: any) {
+    return this.prisma.staff.findUnique({ where: { id: toPrimaryKey(id) } });
   }
 
-  findFirst(where: Prisma.StaffWhereInput) {
-    return this.prisma.staff.findFirst({ where });
+  findActiveById(id: any) {
+    return this.prisma.staff.findFirst({
+      where: { id: toPrimaryKey(id), status: 'active' },
+    });
   }
 
-  create(data: Prisma.StaffCreateInput) {
-    return this.prisma.staff.create({ data });
+  create(data: Record<string, any>) {
+    return this.prisma.staff.create({
+      data: data as Prisma.StaffUncheckedCreateInput,
+    });
   }
 
-  update(id: PrimaryKey, data: Prisma.StaffUpdateInput) {
-    return this.prisma.staff.update({ where: { id }, data });
+  update(id: any, data: Record<string, any>) {
+    return this.prisma.staff.update({
+      where: { id: toPrimaryKey(id) },
+      data: data as Prisma.StaffUncheckedUpdateInput,
+    });
   }
 
-  delete(id: PrimaryKey) {
-    return this.prisma.staff.delete({ where: { id } });
+  delete(id: any) {
+    return this.prisma.staff.delete({ where: { id: toPrimaryKey(id) } });
   }
 }

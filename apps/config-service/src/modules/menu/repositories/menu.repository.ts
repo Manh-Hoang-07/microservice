@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Menu, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
-import { toPrimaryKey } from '../../../common/core/primary-key.util';
+import { toPrimaryKey } from '../../../types';
 
 export interface MenuFilter {
   search?: string;
@@ -90,19 +90,33 @@ export class MenuRepository {
     }) as any;
   }
 
-  create(data: Prisma.MenuCreateInput): Promise<Menu> {
-    return this.prisma.menu.create({ data, select: DEFAULT_SELECT }) as any;
+  create(data: Record<string, any>): Promise<Menu> {
+    return this.prisma.menu.create({
+      data: this.normalizePayload(data) as Prisma.MenuCreateInput,
+      select: DEFAULT_SELECT,
+    }) as any;
   }
 
-  update(id: any, data: Prisma.MenuUpdateInput): Promise<Menu> {
+  update(id: any, data: Record<string, any>): Promise<Menu> {
     return this.prisma.menu.update({
       where: { id: toPrimaryKey(id) },
-      data,
+      data: this.normalizePayload(data) as Prisma.MenuUpdateInput,
       select: DEFAULT_SELECT,
     }) as any;
   }
 
   delete(id: any) {
     return this.prisma.menu.delete({ where: { id: toPrimaryKey(id) } });
+  }
+
+  private normalizePayload(data: Record<string, any>): Record<string, any> {
+    const payload = { ...data };
+    const bigIntFields = ['parent_id', 'created_user_id', 'updated_user_id'];
+    for (const field of bigIntFields) {
+      const value = payload[field];
+      if (value === undefined) continue;
+      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
+    }
+    return payload;
   }
 }

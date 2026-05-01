@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import * as path from 'path';
 import {
@@ -10,7 +11,10 @@ import {
 
 @Injectable()
 export class CloudinaryStorageStrategy implements IUploadStrategy {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly i18n: I18nService,
+  ) {
     const config = this.configService.get('storage.cloudinary');
 
     cloudinary.config({
@@ -18,6 +22,18 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
       api_key: config?.apiKey,
       api_secret: config?.apiSecret,
     });
+  }
+
+  private fileNotFound(filename: string): NotFoundException {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return new NotFoundException(
+      this.i18n.t('storage.FILE_NOT_FOUND', { lang, args: { filename } }),
+    );
+  }
+
+  private translate(key: string, args: Record<string, unknown>): string {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang, args }) as string;
   }
 
   async upload(file: any): Promise<UploadResult> {
@@ -42,7 +58,7 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
       stream.end(file.buffer);
     }).catch((error) => {
       throw new BadRequestException(
-        `Cloudinary upload failed: ${error.message}`,
+        this.translate('storage.CLOUDINARY_UPLOAD_FAILED', { message: error.message }),
       );
     });
 
@@ -68,7 +84,7 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
         resource_type: 'auto',
       });
     } catch (error: any) {
-      throw new NotFoundException(`File not found: ${filename}`);
+      throw this.fileNotFound(filename);
     }
 
     const url: string = resource.secure_url;
@@ -86,7 +102,9 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
     // Fetch the CDN URL and return the response body as a readable stream
     const response = await fetch(url);
     if (!response.ok) {
-      throw new NotFoundException(`Could not fetch file from Cloudinary: ${filename}`);
+      throw new NotFoundException(
+        this.translate('storage.CLOUDINARY_FETCH_FAILED', { filename }),
+      );
     }
     const stream = response.body as unknown as NodeJS.ReadableStream;
     return { stream, metadata };
@@ -102,12 +120,12 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
       });
       // If the public_id was not found, Cloudinary returns it under 'not_found'
       if (result?.not_found && result.not_found.includes(publicId)) {
-        throw new NotFoundException(`File not found: ${filename}`);
+        throw this.fileNotFound(filename);
       }
     } catch (error: any) {
       if (error instanceof NotFoundException) throw error;
       throw new BadRequestException(
-        `Cloudinary delete failed: ${error.message}`,
+        this.translate('storage.CLOUDINARY_DELETE_FAILED', { message: error.message }),
       );
     }
   }
@@ -137,7 +155,7 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
       }));
     } catch (error: any) {
       throw new BadRequestException(
-        `Cloudinary list failed: ${error.message}`,
+        this.translate('storage.CLOUDINARY_LIST_FAILED', { message: error.message }),
       );
     }
   }
@@ -163,7 +181,7 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
         resource_type: 'auto',
       });
     } catch (error: any) {
-      throw new NotFoundException(`File not found: ${filename}`);
+      throw this.fileNotFound(filename);
     }
 
     return {

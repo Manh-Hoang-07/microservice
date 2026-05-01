@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import {
   S3Client,
   PutObjectCommand,
@@ -24,7 +25,10 @@ export class S3StorageStrategy implements IUploadStrategy {
   private readonly baseUrl: string;
   private readonly forcePathStyle: boolean;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly i18n: I18nService,
+  ) {
     const s3Config = this.configService.get('storage.s3');
     const endpoint = (s3Config?.endpoint || '').replace(/\/$/, '');
     this.bucket = s3Config?.bucket;
@@ -53,9 +57,19 @@ export class S3StorageStrategy implements IUploadStrategy {
     return `${baseUrl}/${filename}`;
   }
 
+  private fileNotFound(filename: string): NotFoundException {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return new NotFoundException(
+      this.i18n.t('storage.FILE_NOT_FOUND', { lang, args: { filename } }),
+    );
+  }
+
   async upload(file: any): Promise<UploadResult> {
     if (!this.bucket) {
-      throw new Error('S3 bucket is not configured');
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new BadRequestException(
+        this.i18n.t('storage.BUCKET_NOT_CONFIGURED', { lang }),
+      );
     }
 
     // Tạo tên file unique
@@ -81,12 +95,13 @@ export class S3StorageStrategy implements IUploadStrategy {
         error.message?.includes('Deserialization error')
       ) {
         const response = (error as any).$response;
-        let details = '';
-        if (response) {
-          details = ` (Status: ${response.statusCode})`;
-        }
+        const details = response ? ` (Status: ${response.statusCode})` : '';
+        const lang = I18nContext.current()?.lang ?? 'en';
         throw new BadRequestException(
-          `S3 Storage Error: Failed to parse response from storage provider${details}. Please check your S3/MinIO endpoint and credentials. Original error: ${error.message}`,
+          this.i18n.t('storage.S3_DESERIALIZATION_ERROR', {
+            lang,
+            args: { details, message: error.message },
+          }),
         );
       }
       throw error;
@@ -117,7 +132,7 @@ export class S3StorageStrategy implements IUploadStrategy {
       result = await this.s3Client.send(command);
     } catch (error: any) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
-        throw new NotFoundException(`File not found: ${filename}`);
+        throw this.fileNotFound(filename);
       }
       throw error;
     }
@@ -138,7 +153,7 @@ export class S3StorageStrategy implements IUploadStrategy {
     // Check existence first so we can throw a proper NotFoundException
     const fileExists = await this.exists(filename);
     if (!fileExists) {
-      throw new NotFoundException(`File not found: ${filename}`);
+      throw this.fileNotFound(filename);
     }
 
     const command = new DeleteObjectCommand({
@@ -194,7 +209,7 @@ export class S3StorageStrategy implements IUploadStrategy {
       result = await this.s3Client.send(command);
     } catch (error: any) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
-        throw new NotFoundException(`File not found: ${filename}`);
+        throw this.fileNotFound(filename);
       }
       throw error;
     }

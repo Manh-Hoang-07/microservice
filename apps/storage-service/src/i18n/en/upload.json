@@ -1,0 +1,9 @@
+{
+  "FILE_REQUIRED": "File is required.",
+  "FILES_REQUIRED": "Files are required.",
+  "FILE_EMPTY": "File cannot be empty.",
+  "FILE_TOO_LARGE": "File size exceeds maximum allowed size of {maxSizeMB}MB.",
+  "FILE_TYPE_NOT_ALLOWED": "File type not allowed. Allowed types: {types}.",
+  "MIME_NOT_ALLOWED": "MIME type '{mimeType}' is not allowed for this file type.",
+  "CONTENT_MISMATCH": "File content does not match the declared file type. Possible file type mismatch or corrupted file."
+}

@@ -1,52 +1,47 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { ComicFollowRepository } from '../../repositories/comic-follow.repository';
+import { FollowFilter, FollowRepository } from '../../repositories/follow.repository';
 
 @Injectable()
 export class UserFollowService {
   constructor(
-    private readonly followRepo: ComicFollowRepository,
+    private readonly followRepo: FollowRepository,
     private readonly config: ConfigService,
   ) {}
 
-  async getList(userId: PrimaryKey, query: any) {
+  async getList(userId: any, query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where = { user_id: userId };
+    const filter: FollowFilter = { user_id: userId };
 
     const [data, total] = await Promise.all([
-      this.followRepo.findMany(where, options),
-      this.followRepo.count(where),
+      this.followRepo.findMany(filter, options),
+      this.followRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async follow(userId: PrimaryKey, comicId: PrimaryKey) {
+  async follow(userId: any, comicId: any) {
     const existing = await this.followRepo.findUnique(userId, comicId);
     if (existing) throw new ConflictException('Already following');
 
     const follow = await this.followRepo.create(userId, comicId);
-
     await this.followRepo.syncFollowCount(comicId);
 
     if (this.config.get<boolean>('kafka.enabled')) {
-      await this.followRepo.createOutbox({
-        event_type: 'user.followed.comic',
-        payload: {
-          user_id: Number(userId),
-          comic_id: Number(comicId),
-          followed_at: new Date().toISOString(),
-        },
+      await this.followRepo.createOutbox('user.followed.comic', {
+        user_id: Number(userId),
+        comic_id: Number(comicId),
+        followed_at: new Date().toISOString(),
       });
     }
 
     return follow;
   }
 
-  async unfollow(userId: PrimaryKey, comicId: PrimaryKey) {
+  async unfollow(userId: any, comicId: any) {
     const existing = await this.followRepo.findUnique(userId, comicId);
     if (!existing) throw new NotFoundException('Not following');
 
@@ -54,12 +49,9 @@ export class UserFollowService {
     await this.followRepo.syncFollowCount(comicId);
 
     if (this.config.get<boolean>('kafka.enabled')) {
-      await this.followRepo.createOutbox({
-        event_type: 'user.unfollowed.comic',
-        payload: {
-          user_id: Number(userId),
-          comic_id: Number(comicId),
-        },
+      await this.followRepo.createOutbox('user.unfollowed.comic', {
+        user_id: Number(userId),
+        comic_id: Number(comicId),
       });
     }
 

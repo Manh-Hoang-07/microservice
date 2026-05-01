@@ -21,7 +21,6 @@ export class SocialAuthService {
     lastName?: string;
     picture?: string;
   }) {
-    const lang = I18nContext.current()?.lang ?? 'en';
     const email = profile.email.toLowerCase();
     const now = new Date();
 
@@ -44,6 +43,7 @@ export class SocialAuthService {
     }
 
     if (dbUser.status !== 'active') {
+      const lang = I18nContext.current()?.lang ?? 'en';
       throw new ForbiddenException(this.i18n.t('auth.ACCOUNT_LOCKED', { lang }));
     }
 

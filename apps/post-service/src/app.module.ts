@@ -12,10 +12,10 @@ import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, Health
 import { KafkaModule } from './kafka/kafka.module';
 
 import { PostModule } from './modules/post/post.module';
-import { PostCategoryModule } from './modules/post-category/post-category.module';
-import { PostTagModule } from './modules/post-tag/post-tag.module';
-import { PostCommentModule } from './modules/post-comment/post-comment.module';
-import { PostStatsModule } from './modules/post-stats/post-stats.module';
+import { CategoryModule } from './modules/category/category.module';
+import { TagModule } from './modules/tag/tag.module';
+import { CommentModule } from './modules/comment/comment.module';
+import { StatsModule } from './modules/stats/stats.module';
 
 @Module({
   imports: [
@@ -32,10 +32,10 @@ import { PostStatsModule } from './modules/post-stats/post-stats.module';
     HealthModule.register('post-service'),
     KafkaModule,
     PostModule,
-    PostCategoryModule,
-    PostTagModule,
-    PostCommentModule,
-    PostStatsModule,
+    CategoryModule,
+    TagModule,
+    CommentModule,
+    StatsModule,
   ],
   providers: [
     {

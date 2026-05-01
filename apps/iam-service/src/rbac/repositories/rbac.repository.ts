@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { PrismaService } from '../../database/prisma.service';
 import { RbacId } from '../types';
 
@@ -8,7 +9,10 @@ function toPk(id: RbacId): bigint {
 
 @Injectable()
 export class RbacRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly i18n: I18nService,
+  ) {}
 
   findPermissions() {
     return this.prisma.permission.findMany({
@@ -33,7 +37,10 @@ export class RbacRepository {
     const group = await this.prisma.group.findFirst({
       where: { id: toPk(groupId), status: 'active' },
     });
-    if (!group) throw new NotFoundException('Group not found');
+    if (!group) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new NotFoundException(this.i18n.t('rbac.GROUP_NOT_FOUND', { lang }));
+    }
 
     const normalizedRoleIds = this.normalizeRoleIds(roleIds);
 
@@ -104,8 +111,12 @@ export class RbacRepository {
     const validIds = new Set((links as any[]).map((l) => String(l.role_id)));
     for (const id of normalizedRoleIds) {
       if (!validIds.has(String(id))) {
+        const lang = I18nContext.current()?.lang ?? 'en';
         throw new BadRequestException(
-          `Role ID ${id} is not allowed or not active in this context`,
+          this.i18n.t('rbac.ROLE_NOT_ALLOWED_IN_CONTEXT', {
+            lang,
+            args: { id: String(id) },
+          }),
         );
       }
     }

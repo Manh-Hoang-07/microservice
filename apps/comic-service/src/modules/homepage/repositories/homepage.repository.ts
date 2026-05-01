@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../database/prisma.service';
 
 const HOMEPAGE_COMIC_SELECT = {
@@ -26,7 +27,7 @@ const HOMEPAGE_COMIC_SELECT = {
 export class HomepageRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findComics(statuses: string[], orderBy: any, limit: number) {
+  findComics(statuses: string[], orderBy: Prisma.ComicOrderByWithRelationInput, limit: number) {
     return this.prisma.comic.findMany({
       where: { status: { in: statuses } },
       select: HOMEPAGE_COMIC_SELECT,
@@ -36,7 +37,7 @@ export class HomepageRepository {
   }
 
   findCategories() {
-    return this.prisma.comicCategory.findMany({
+    return this.prisma.category.findMany({
       select: { id: true, name: true, slug: true },
       orderBy: { name: 'asc' },
     });

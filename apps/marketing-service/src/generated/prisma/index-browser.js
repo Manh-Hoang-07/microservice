@@ -165,7 +165,7 @@ exports.Prisma.ContactScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
-exports.Prisma.MarketingOutboxScalarFieldEnum = {
+exports.Prisma.OutboxScalarFieldEnum = {
   id: 'id',
   event_type: 'event_type',
   payload: 'payload',
@@ -213,7 +213,7 @@ exports.Prisma.ModelName = {
   BannerLocation: 'BannerLocation',
   Banner: 'Banner',
   Contact: 'Contact',
-  MarketingOutbox: 'MarketingOutbox'
+  Outbox: 'Outbox'
 };
 
 /**

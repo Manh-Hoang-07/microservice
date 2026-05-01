@@ -1,23 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { ComicReviewRepository } from '../../repositories/comic-review.repository';
+import { ReviewFilter, ReviewRepository } from '../../repositories/review.repository';
 
 @Injectable()
 export class PublicReviewService {
-  constructor(private readonly reviewRepo: ComicReviewRepository) {}
+  constructor(private readonly reviewRepo: ReviewRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.comic_id) where.comic_id = BigInt(query.comic_id);
+    const filter: ReviewFilter = {};
+    if (query.comic_id) filter.comic_id = query.comic_id;
 
-    const [data, total] = await Promise.all([
-      this.reviewRepo.findMany(where, options),
-      this.reviewRepo.count(where),
+    const [data, total, agg] = await Promise.all([
+      this.reviewRepo.findMany(filter, options),
+      this.reviewRepo.count(filter),
+      this.reviewRepo.aggregateRatingForFilter(filter),
     ]);
-
-    const agg = await this.reviewRepo.aggregateRatingWithAvg(where);
 
     return {
       data,

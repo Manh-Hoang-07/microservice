@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { JwksService } from '../jwks/services/jwks.service';
 
 const PERMS_KEY = 'perms_required';
@@ -16,7 +17,13 @@ export class AuthJwtGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly config: ConfigService,
     private readonly jwksService: JwksService,
+    private readonly i18n: I18nService,
   ) {}
+
+  private t(key: string): string {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang }) as string;
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const permissions = this.reflector.getAllAndOverride<string[]>(PERMS_KEY, [
@@ -36,14 +43,14 @@ export class AuthJwtGuard implements CanActivate {
     }
 
     const token = this.extractToken(context);
-    if (!token) throw new UnauthorizedException('Token required');
+    if (!token) throw new UnauthorizedException(this.t('auth.TOKEN_REQUIRED'));
 
     try {
       const payload = await this.jwksService.verifyToken(token);
       context.switchToHttp().getRequest().user = payload;
       return true;
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException(this.t('auth.INVALID_TOKEN'));
     }
   }
 
@@ -63,7 +70,7 @@ export class AuthJwtGuard implements CanActivate {
     const secret = request.headers['x-internal-secret'];
     const expected = this.config.get<string>('INTERNAL_API_SECRET') || this.config.get<string>('app.internalApiSecret');
     if (!expected || secret !== expected) {
-      throw new UnauthorizedException('Invalid internal secret');
+      throw new UnauthorizedException(this.t('auth.INVALID_INTERNAL_SECRET'));
     }
     return true;
   }

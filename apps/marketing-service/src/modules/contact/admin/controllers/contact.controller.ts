@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  Patch,
-  Body,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, Patch, Body, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { AdminContactService } from '../services/contact.service';
 
 @ApiTags('Admin Contacts')
@@ -26,7 +17,7 @@ export class AdminContactController {
   @Permission('marketing.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.contactService.getOne(toPrimaryKey(id));
+    return this.contactService.getOne(id);
   }
 
   @Permission('marketing.manage')
@@ -36,19 +27,18 @@ export class AdminContactController {
     @Body('reply') reply: string,
     @Req() req: any,
   ) {
-    const userId = BigInt(req.user?.sub || req.user?.id || 0);
-    return this.contactService.reply(toPrimaryKey(id), reply, userId);
+    return this.contactService.reply(id, reply, req.user?.sub ?? req.user?.id ?? 0);
   }
 
   @Permission('marketing.manage')
   @Patch(':id/read')
   async markAsRead(@Param('id') id: string) {
-    return this.contactService.markAsRead(toPrimaryKey(id));
+    return this.contactService.markAsRead(id);
   }
 
   @Permission('marketing.manage')
   @Patch(':id/close')
   async closeContact(@Param('id') id: string) {
-    return this.contactService.closeContact(toPrimaryKey(id));
+    return this.contactService.closeContact(id);
   }
 }

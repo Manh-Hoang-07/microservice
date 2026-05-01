@@ -1,16 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { AdminChapterService } from '../services/chapter.service';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
@@ -35,7 +25,7 @@ export class AdminChapterController {
   @Permission('comic.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.chapterService.getOne(toPrimaryKey(id));
+    return this.chapterService.getOne(id);
   }
 
   @Permission('comic.manage')
@@ -47,12 +37,12 @@ export class AdminChapterController {
   @Permission('comic.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateChapterDto) {
-    return this.chapterService.update(toPrimaryKey(id), dto);
+    return this.chapterService.update(id, dto);
   }
 
   @Permission('comic.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.chapterService.delete(toPrimaryKey(id));
+    return this.chapterService.delete(id);
   }
 }

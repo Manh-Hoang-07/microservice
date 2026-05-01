@@ -1,33 +1,35 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { ContactRepository } from '../../repositories/contact.repository';
+import { ContactFilter, ContactRepository } from '../../repositories/contact.repository';
 
 @Injectable()
 export class AdminContactService {
   constructor(private readonly contactRepo: ContactRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.status) where.status = query.status;
+    const filter: ContactFilter = {};
+    if (query.search) filter.search = query.search;
+    if (query.status) filter.status = query.status;
+    if (query.email) filter.email = query.email;
 
+    const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.contactRepo.findMany(where, options),
-      this.contactRepo.count(where),
+      this.contactRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.contactRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: PrimaryKey) {
+  async getOne(id: any) {
     const contact = await this.contactRepo.findById(id);
     if (!contact) throw new NotFoundException('Contact not found');
     return contact;
   }
 
-  async reply(id: PrimaryKey, replyText: string, userId: PrimaryKey) {
+  async reply(id: any, replyText: string, userId: any) {
     await this.getOne(id);
     return this.contactRepo.update(id, {
       reply: replyText,
@@ -37,12 +39,12 @@ export class AdminContactService {
     });
   }
 
-  async markAsRead(id: PrimaryKey) {
+  async markAsRead(id: any) {
     await this.getOne(id);
     return this.contactRepo.update(id, { status: 'Read' });
   }
 
-  async closeContact(id: PrimaryKey) {
+  async closeContact(id: any) {
     await this.getOne(id);
     return this.contactRepo.update(id, { status: 'Closed' });
   }

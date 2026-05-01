@@ -1,0 +1,5 @@
+{
+  "COUNTRY_NOT_FOUND": "Country with ID {id} not found.",
+  "PROVINCE_NOT_FOUND": "Province with ID {id} not found.",
+  "WARD_NOT_FOUND": "Ward with ID {id} not found."
+}

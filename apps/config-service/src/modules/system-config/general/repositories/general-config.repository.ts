@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { GeneralConfig, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../database/prisma.service';
-import { toPrimaryKey } from '../../../../common/core/primary-key.util';
+import { toPrimaryKey } from '../../../../types';
 
 @Injectable()
 export class GeneralConfigRepository {

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { ProjectRepository } from '../../repositories/project.repository';
+import { ProjectFilter, ProjectRepository } from '../../repositories/project.repository';
 
 const PUBLIC_PROJECT_STATUSES = ['planning', 'in_progress', 'completed'];
 
@@ -8,30 +8,28 @@ const PUBLIC_PROJECT_STATUSES = ['planning', 'in_progress', 'completed'];
 export class PublicProjectService {
   constructor(private readonly projectRepo: ProjectRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = { status: { in: PUBLIC_PROJECT_STATUSES } };
+    const filter: ProjectFilter = { status: PUBLIC_PROJECT_STATUSES };
+    if (query.search) filter.search = query.search;
     if (query.featured !== undefined) {
-      where.featured = query.featured === 'true' || query.featured === true;
+      filter.featured = query.featured === 'true' || query.featured === true;
     }
 
     const [data, total] = await Promise.all([
-      this.projectRepo.findManyPublic(where, options),
-      this.projectRepo.count(where),
+      this.projectRepo.findManyPublic(filter, options),
+      this.projectRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
   async getBySlug(slug: string) {
-    const item = await this.projectRepo.findFirstPublic({
-      slug,
-      status: { in: PUBLIC_PROJECT_STATUSES },
-    });
+    const item = await this.projectRepo.findPublicBySlug(slug, PUBLIC_PROJECT_STATUSES);
     if (!item) throw new NotFoundException('Project not found');
 
-    await this.projectRepo.increment(item.id, 'view_count');
+    await this.projectRepo.incrementViewCount(item.id);
 
     return { ...item, view_count: item.view_count + 1 };
   }

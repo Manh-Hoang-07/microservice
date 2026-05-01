@@ -14,16 +14,20 @@ export class RegistrationService {
     private readonly i18n: I18nService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  private t(key: string): string {
     const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang }) as string;
+  }
+
+  async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase();
 
     const isOtpValid = await this.otpService.verifyAndDelete('register', email, dto.otp);
     if (!isOtpValid) {
-      throw new BadRequestException(this.i18n.t('auth.INVALID_OTP', { lang }));
+      throw new BadRequestException(this.t('auth.INVALID_OTP'));
     }
 
-    await this.validateUniqueness(dto, lang);
+    await this.validateUniqueness(dto);
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = await this.userRepo.create({
@@ -38,17 +42,17 @@ export class RegistrationService {
     return { user: safeUser(user) };
   }
 
-  private async validateUniqueness(dto: RegisterDto, lang: string): Promise<void> {
+  private async validateUniqueness(dto: RegisterDto): Promise<void> {
     const email = dto.email.toLowerCase();
 
     if (await this.userRepo.findByEmail(email)) {
-      throw new BadRequestException(this.i18n.t('auth.EMAIL_IN_USE', { lang }));
+      throw new BadRequestException(this.t('auth.EMAIL_IN_USE'));
     }
     if (dto.username && await this.userRepo.findByUsername(dto.username)) {
-      throw new BadRequestException(this.i18n.t('auth.USERNAME_IN_USE', { lang }));
+      throw new BadRequestException(this.t('auth.USERNAME_IN_USE'));
     }
     if (dto.phone && await this.userRepo.findByPhone(dto.phone)) {
-      throw new BadRequestException(this.i18n.t('auth.PHONE_IN_USE', { lang }));
+      throw new BadRequestException(this.t('auth.PHONE_IN_USE'));
     }
   }
 }

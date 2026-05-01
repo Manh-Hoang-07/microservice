@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { PermissionRepository } from '../../repositories/permission.repository';
@@ -11,6 +12,7 @@ export class PermissionService {
   constructor(
     private readonly repo: PermissionRepository,
     private readonly rbacCache: RbacCacheService,
+    private readonly i18n: I18nService,
   ) {}
 
   async getList(query: any) {
@@ -27,13 +29,19 @@ export class PermissionService {
 
   async getOne(id: PrimaryKey) {
     const item = await this.repo.findById(id);
-    if (!item) throw new NotFoundException('Permission not found');
+    if (!item) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new NotFoundException(this.i18n.t('permission.NOT_FOUND', { lang }));
+    }
     return item;
   }
 
   async create(dto: CreatePermissionDto, actorId: PrimaryKey) {
     const existing = await this.repo.findByCode(dto.code);
-    if (existing) throw new ConflictException('Permission code already exists');
+    if (existing) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new ConflictException(this.i18n.t('permission.CODE_EXISTS', { lang }));
+    }
     const data: any = {
       code: dto.code,
       name: dto.name,

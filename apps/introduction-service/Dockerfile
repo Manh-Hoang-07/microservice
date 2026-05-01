@@ -5,5 +5,5 @@ RUN npm ci
 COPY . .
 RUN npx prisma generate
 ENV NODE_ENV=production
-EXPOSE 3008
+EXPOSE 3010
 CMD ["node_modules/.bin/ts-node", "-r", "tsconfig-paths/register", "src/main.ts"]

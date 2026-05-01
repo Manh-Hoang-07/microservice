@@ -1,11 +1,15 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { EmailConfigRepository } from '../../repositories/email-config.repository';
 import { UpdateEmailConfigDto } from '../dtos/update-email-config.dto';
 import { buildConfigPayload } from '../../../helpers/config-payload.helper';
 
 @Injectable()
 export class EmailConfigService {
-  constructor(private readonly emailConfigRepo: EmailConfigRepository) {}
+  constructor(
+    private readonly emailConfigRepo: EmailConfigRepository,
+    private readonly i18n: I18nService,
+  ) {}
 
   async getConfig(): Promise<any> {
     const config = await this.emailConfigRepo.getConfig();
@@ -42,7 +46,10 @@ export class EmailConfigService {
     }
 
     if (!result) {
-      throw new InternalServerErrorException('Failed to update email config');
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new InternalServerErrorException(
+        this.i18n.t('system-config.EMAIL_UPDATE_FAILED', { lang }),
+      );
     }
 
     return this.maskPassword(result);

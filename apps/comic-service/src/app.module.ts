@@ -13,7 +13,7 @@ import { KafkaModule } from './kafka/kafka.module';
 
 import { ComicModule } from './modules/comic/comic.module';
 import { ChapterModule } from './modules/chapter/chapter.module';
-import { ComicCategoryModule } from './modules/comic-category/comic-category.module';
+import { CategoryModule } from './modules/category/category.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { ReviewModule } from './modules/review/review.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
@@ -39,7 +39,7 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
     KafkaModule,
     ComicModule,
     ChapterModule,
-    ComicCategoryModule,
+    CategoryModule,
     CommentModule,
     ReviewModule,
     BookmarkModule,

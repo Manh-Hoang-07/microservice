@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Delete, Param, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { UserFollowService } from '../services/follows.service';
 
 @ApiTags('User Follows')
@@ -12,21 +11,18 @@ export class UserFollowController {
   @Permission('user')
   @Get('follows')
   async getList(@Req() req: any, @Query() query: any) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.followService.getList(userId, query);
+    return this.followService.getList(req.user.sub, query);
   }
 
   @Permission('user')
   @Post('comics/:id/follow')
   async follow(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.followService.follow(userId, toPrimaryKey(id));
+    return this.followService.follow(req.user.sub, id);
   }
 
   @Permission('user')
   @Delete('comics/:id/follow')
   async unfollow(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
-    return this.followService.unfollow(userId, toPrimaryKey(id));
+    return this.followService.unfollow(req.user.sub, id);
   }
 }

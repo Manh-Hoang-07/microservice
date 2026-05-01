@@ -1,38 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ChapterRepository } from '../../repositories/chapter.repository';
-import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class PublicChapterService {
   constructor(private readonly chapterRepo: ChapterRepository) {}
 
-  async getOne(id: PrimaryKey) {
+  async getOne(id: any) {
     const chapter = await this.chapterRepo.findPublicOne(id);
     if (!chapter) throw new NotFoundException('Chapter not found');
     return chapter;
   }
 
-  async getPages(id: PrimaryKey) {
-    const chapter = await this.chapterRepo.findFirst({ id, status: 'published' });
+  async getPages(id: any) {
+    const chapter = await this.chapterRepo.findPublicOne(id);
     if (!chapter) throw new NotFoundException('Chapter not found');
 
     const pages = await this.chapterRepo.findPages(id);
     return { data: pages };
   }
 
-  async getNext(id: PrimaryKey) {
+  async getNext(id: any) {
     const current = await this.chapterRepo.findById(id);
     if (!current) throw new NotFoundException('Chapter not found');
-
-    const next = await this.chapterRepo.findNextChapter(current.comic_id, current.chapter_index);
-    return next || null;
+    return (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'next')) || null;
   }
 
-  async getPrev(id: PrimaryKey) {
+  async getPrev(id: any) {
     const current = await this.chapterRepo.findById(id);
     if (!current) throw new NotFoundException('Chapter not found');
-
-    const prev = await this.chapterRepo.findPrevChapter(current.comic_id, current.chapter_index);
-    return prev || null;
+    return (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'prev')) || null;
   }
 }

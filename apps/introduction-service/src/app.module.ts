@@ -24,7 +24,7 @@ import { FaqModule } from './modules/faq/faq.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [createAppConfig(3008)],
+      load: [createAppConfig(3010)],
       validationSchema: envValidationSchema,
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),

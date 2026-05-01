@@ -1,16 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { AdminPartnerService } from '../services/partner.service';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
@@ -29,7 +19,7 @@ export class AdminPartnerController {
   @Permission('introduction.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.partnerService.getOne(toPrimaryKey(id));
+    return this.partnerService.getOne(id);
   }
 
   @Permission('introduction.manage')
@@ -41,12 +31,12 @@ export class AdminPartnerController {
   @Permission('introduction.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdatePartnerDto) {
-    return this.partnerService.update(toPrimaryKey(id), dto);
+    return this.partnerService.update(id, dto);
   }
 
   @Permission('introduction.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.partnerService.delete(toPrimaryKey(id));
+    return this.partnerService.delete(id);
   }
 }

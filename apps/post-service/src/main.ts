@@ -1,18 +1,22 @@
+import 'dotenv/config';
 import { initTracing } from '@package/tracing';
-initTracing('post-service');
+
+initTracing(process.env.SERVICE_NAME ?? 'post-service');
 
 import { AppModule } from './app.module';
 import { createApp } from '@package/bootstrap';
 
+const SERVICE_NAME = process.env.SERVICE_NAME ?? 'Post Service';
+
 createApp({
-  serviceName: 'Post Service',
-  defaultPort: 3007,
+  serviceName: SERVICE_NAME,
+  defaultPort: parseInt(process.env.PORT ?? '3007', 10),
   module: AppModule,
   swagger: {
-    title: 'Post Service',
-    description: 'Post domain microservice — Blog Platform',
+    title: SERVICE_NAME,
+    description: 'Post domain microservice',
   },
 }).catch((err) => {
-  console.error('Post Service failed to start', err);
+  console.error(`${SERVICE_NAME} failed to start`, err);
   process.exit(1);
 });

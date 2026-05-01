@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { RoleRepository } from '../../repositories/role.repository';
@@ -12,6 +13,7 @@ export class RoleService {
   constructor(
     private readonly repo: RoleRepository,
     private readonly rbacCache: RbacCacheService,
+    private readonly i18n: I18nService,
   ) {}
 
   async getList(query: any) {
@@ -27,13 +29,19 @@ export class RoleService {
 
   async getOne(id: PrimaryKey) {
     const item = await this.repo.findById(id);
-    if (!item) throw new NotFoundException('Role not found');
+    if (!item) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new NotFoundException(this.i18n.t('role.NOT_FOUND', { lang }));
+    }
     return item;
   }
 
   async create(dto: CreateRoleDto, actorId: PrimaryKey) {
     const existing = await this.repo.findByCode(dto.code);
-    if (existing) throw new ConflictException('Role code already exists');
+    if (existing) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new ConflictException(this.i18n.t('role.CODE_EXISTS', { lang }));
+    }
     const data: any = { code: dto.code, name: dto.name, created_user_id: actorId };
     if (dto.parent_id) data.parent = { connect: { id: BigInt(dto.parent_id) } };
     return this.repo.create(data);

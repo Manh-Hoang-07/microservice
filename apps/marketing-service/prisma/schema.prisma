@@ -84,13 +84,13 @@ model Contact {
   @@map("contacts")
 }
 
-model MarketingOutbox {
+model Outbox {
   id         BigInt   @id @default(autoincrement())
   event_type String   @db.VarChar(100)
   payload    Json
   published  Boolean  @default(false)
   created_at DateTime @default(now()) @db.Timestamp(0)
 
-  @@index([published, created_at], map: "marketing_outbox_idx_published")
-  @@map("marketing_outbox")
+  @@index([published, created_at], map: "outbox_idx_published")
+  @@map("outbox")
 }

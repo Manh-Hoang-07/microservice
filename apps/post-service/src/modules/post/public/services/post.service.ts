@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { PUBLIC_POST_STATUSES } from '../../enums/post-status.enum';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PostRepository } from '../../repositories/post.repository';
+import { PUBLIC_POST_STATUSES } from '../../enums/post-status.enum';
+import { PostFilter, PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
 export class PublicPostService {
@@ -11,37 +11,28 @@ export class PublicPostService {
     private readonly redis: RedisService,
   ) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = { status: { in: PUBLIC_POST_STATUSES } };
-    if (query.post_category_id) {
-      where.categoryLinks = { some: { post_category_id: BigInt(query.post_category_id) } };
-    }
-    if (query.post_tag_id) {
-      where.tagLinks = { some: { post_tag_id: BigInt(query.post_tag_id) } };
-    }
-    if (query.post_type) where.post_type = query.post_type;
+    const filter: PostFilter = { status: PUBLIC_POST_STATUSES };
+    if (query.search) filter.search = query.search;
+    if (query.post_type) filter.post_type = query.post_type;
     if (query.is_featured !== undefined) {
-      where.is_featured = query.is_featured === 'true' || query.is_featured === true;
+      filter.is_featured = query.is_featured === 'true' || query.is_featured === true;
     }
     if (query.is_pinned !== undefined) {
-      where.is_pinned = query.is_pinned === 'true' || query.is_pinned === true;
+      filter.is_pinned = query.is_pinned === 'true' || query.is_pinned === true;
     }
-
-    let orderBy: any = { published_at: 'desc' };
-    if (query.sort) {
-      const [field, dir] = query.sort.split(':');
-      if (['view_count'].includes(field)) {
-        orderBy = { stats: { [field]: dir || 'desc' } };
-      } else {
-        orderBy = { [field]: dir || 'desc' };
-      }
+    if (query.post_category_id || query.category_id) {
+      filter.category_id = query.post_category_id ?? query.category_id;
+    }
+    if (query.post_tag_id || query.tag_id) {
+      filter.tag_id = query.post_tag_id ?? query.tag_id;
     }
 
     const [data, total] = await Promise.all([
-      this.postRepo.findManyPublic(where, options, orderBy),
-      this.postRepo.count(where),
+      this.postRepo.findManyPublic(filter, { ...options, sort: query.sort }),
+      this.postRepo.count(filter),
     ]);
 
     return {
@@ -64,17 +55,14 @@ export class PublicPostService {
   private transform(entity: any) {
     if (!entity) return null;
     const item = { ...entity };
-
-    if (item.categoryLinks && Array.isArray(item.categoryLinks)) {
+    if (Array.isArray(item.categoryLinks)) {
       item.categories = item.categoryLinks.map((l: any) => l?.category).filter(Boolean);
       delete item.categoryLinks;
     }
-
-    if (item.tagLinks && Array.isArray(item.tagLinks)) {
+    if (Array.isArray(item.tagLinks)) {
       item.tags = item.tagLinks.map((l: any) => l?.tag).filter(Boolean);
       delete item.tagLinks;
     }
-
     return item;
   }
 }

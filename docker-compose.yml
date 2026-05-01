@@ -465,7 +465,7 @@ services:
     ports:
       - "3007:3007"
 
-  # ══ Introduction Service (:3008) ═══════════════════════════════════════════
+  # ══ Introduction Service (:3010) ═══════════════════════════════════════════
   introduction-service:
     build:
       context: ./apps/introduction-service
@@ -476,13 +476,13 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3008
+      PORT: 3010
       GLOBAL_PREFIX: api
       DATABASE_URL: postgresql://postgres:secret@introduction-db:5432/introduction_db
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3008:3008"
+      - "3010:3010"
 
   # ══ Marketing Service (:3009) ══════════════════════════════════════════════
   marketing-service:

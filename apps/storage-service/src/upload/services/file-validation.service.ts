@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 
 /**
  * File type definitions with MIME types and magic bytes
@@ -15,7 +16,10 @@ export class FileValidationService {
   private readonly allowedFileTypes: Map<string, FileTypeConfig>;
   private readonly maxFileSize: number;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly i18n: I18nService,
+  ) {
     this.maxFileSize = this.configService.get<number>(
       'storage.maxFileSize',
       10485760,
@@ -180,12 +184,12 @@ export class FileValidationService {
       }
     }
 
+    const lang = I18nContext.current()?.lang ?? 'en';
+    const types = Array.from(this.allowedFileTypes.values())
+      .flatMap((c) => c.extensions)
+      .join(', ');
     throw new BadRequestException(
-      `File type not allowed. Allowed types: ${Array.from(
-        this.allowedFileTypes.values(),
-      )
-        .flatMap((c) => c.extensions)
-        .join(', ')}`,
+      this.i18n.t('upload.FILE_TYPE_NOT_ALLOWED', { lang, args: { types } }),
     );
   }
 
@@ -198,8 +202,9 @@ export class FileValidationService {
       return;
     }
     if (!allowedMimeTypes.includes(mimeType)) {
+      const lang = I18nContext.current()?.lang ?? 'en';
       throw new BadRequestException(
-        `MIME type '${mimeType}' is not allowed for this file type`,
+        this.i18n.t('upload.MIME_NOT_ALLOWED', { lang, args: { mimeType } }),
       );
     }
   }
@@ -280,21 +285,23 @@ export class FileValidationService {
    * Main validation method
    */
   validateFile(file: any): { sanitizedOriginalName: string } {
+    const lang = I18nContext.current()?.lang ?? 'en';
+
     if (!file) {
-      throw new BadRequestException('File is required');
+      throw new BadRequestException(this.i18n.t('upload.FILE_REQUIRED', { lang }));
     }
 
     // 1. Validate file size
     if (file.size > this.maxFileSize) {
       const maxSizeMB = (this.maxFileSize / 1024 / 1024).toFixed(2);
       throw new BadRequestException(
-        `File size exceeds maximum allowed size of ${maxSizeMB}MB`,
+        this.i18n.t('upload.FILE_TOO_LARGE', { lang, args: { maxSizeMB } }),
       );
     }
 
     // 2. Validate file is not empty
     if (file.size === 0) {
-      throw new BadRequestException('File cannot be empty');
+      throw new BadRequestException(this.i18n.t('upload.FILE_EMPTY', { lang }));
     }
 
     // 3. Sanitize filename
@@ -317,7 +324,7 @@ export class FileValidationService {
       );
       if (!isValidContent) {
         throw new BadRequestException(
-          `File content does not match the declared file type. Possible file type mismatch or corrupted file.`,
+          this.i18n.t('upload.CONTENT_MISMATCH', { lang }),
         );
       }
     }

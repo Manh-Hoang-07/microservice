@@ -1,21 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { ComicCommentRepository } from '../../repositories/comic-comment.repository';
+import { CommentFilter, CommentRepository } from '../../repositories/comment.repository';
 
 @Injectable()
 export class PublicCommentService {
-  constructor(private readonly commentRepo: ComicCommentRepository) {}
+  constructor(private readonly commentRepo: CommentRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = { status: 'visible', parent_id: null };
-    if (query.comic_id) where.comic_id = BigInt(query.comic_id);
-    if (query.chapter_id) where.chapter_id = BigInt(query.chapter_id);
+    const filter: CommentFilter = {
+      status: 'visible',
+      parent_id: null,
+    };
+    if (query.comic_id) filter.comic_id = query.comic_id;
+    if (query.chapter_id) filter.chapter_id = query.chapter_id;
 
     const [data, total] = await Promise.all([
-      this.commentRepo.findManyPublic(where, options),
-      this.commentRepo.count(where),
+      this.commentRepo.findManyWithReplies(filter, options),
+      this.commentRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };

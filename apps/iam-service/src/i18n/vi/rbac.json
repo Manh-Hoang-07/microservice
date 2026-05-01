@@ -1,0 +1,4 @@
+{
+  "GROUP_NOT_FOUND": "Không tìm thấy nhóm.",
+  "ROLE_NOT_ALLOWED_IN_CONTEXT": "Vai trò có ID {id} không được phép hoặc không hoạt động trong phạm vi này."
+}

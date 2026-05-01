@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { PUBLIC_COMIC_STATUSES } from '../../enums/comic-status.enum';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { ComicRepository } from '../../repositories/comic.repository';
+import { PUBLIC_COMIC_STATUSES } from '../../enums/comic-status.enum';
+import { ComicFilter, ComicRepository } from '../../repositories/comic.repository';
 
 @Injectable()
 export class PublicComicService {
@@ -11,32 +11,21 @@ export class PublicComicService {
     private readonly redis: RedisService,
   ) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = { status: { in: PUBLIC_COMIC_STATUSES } };
-    if (query.comic_category_id) {
-      where.categoryLinks = {
-        some: { comic_category_id: BigInt(query.comic_category_id) },
-      };
-    }
+    const filter: ComicFilter = { status: PUBLIC_COMIC_STATUSES };
+    if (query.search) filter.search = query.search;
     if (query.is_featured !== undefined) {
-      where.is_featured = query.is_featured === 'true' || query.is_featured === true;
+      filter.is_featured = query.is_featured === 'true' || query.is_featured === true;
     }
-
-    let orderBy: any = { updated_at: 'desc' };
-    if (query.sort) {
-      const [field, dir] = query.sort.split(':');
-      if (['view_count', 'follow_count', 'rating_count'].includes(field)) {
-        orderBy = { stats: { [field]: dir || 'desc' } };
-      } else {
-        orderBy = { [field]: dir || 'desc' };
-      }
+    if (query.comic_category_id || query.category_id) {
+      filter.category_id = query.comic_category_id ?? query.category_id;
     }
 
     const [data, total] = await Promise.all([
-      this.comicRepo.findManyPublic(where, options, orderBy),
-      this.comicRepo.count(where),
+      this.comicRepo.findManyPublic(filter, { ...options, sort: query.sort }),
+      this.comicRepo.count(filter),
     ]);
 
     return {
@@ -51,7 +40,7 @@ export class PublicComicService {
     return this.transform(comic);
   }
 
-  async getChaptersBySlug(slug: string, options: any = {}) {
+  async getChaptersBySlug(slug: string, query: any = {}) {
     const comic = await this.comicRepo.findIdBySlug(slug, PUBLIC_COMIC_STATUSES);
     if (!comic) throw new NotFoundException('Comic not found');
 
@@ -59,28 +48,26 @@ export class PublicComicService {
       await this.redis.hincrby('comic:views:buffer', comic.id.toString(), 1);
     }
 
-    const page = Math.max(Number(options.page) || 1, 1);
-    const limit = Math.max(Number(options.limit) || 10000, 1);
-    const skip = (page - 1) * limit;
+    const options = parseQueryOptions({ ...query, limit: query.limit ?? 10000 });
 
     const [data, total] = await Promise.all([
-      this.comicRepo.findPublicChapters(comic.id, { skip, take: limit }),
+      this.comicRepo.findPublicChapters(comic.id, options),
       this.comicRepo.countPublicChapters(comic.id),
     ]);
 
-    return { data, meta: createPaginationMeta(page, limit, total) };
+    return { data, meta: createPaginationMeta(options, total) };
   }
 
   private transform(entity: any) {
     if (!entity) return null;
     const item = { ...entity };
 
-    if (item.categoryLinks && Array.isArray(item.categoryLinks)) {
+    if (Array.isArray(item.categoryLinks)) {
       item.categories = item.categoryLinks.map((l: any) => l?.category).filter(Boolean);
       delete item.categoryLinks;
     }
 
-    if (item.chapters && Array.isArray(item.chapters)) {
+    if (Array.isArray(item.chapters)) {
       const last = item.chapters[0];
       if (last) {
         item.last_chapter = {

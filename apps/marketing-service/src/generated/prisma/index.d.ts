@@ -29,10 +29,10 @@ export type Banner = $Result.DefaultSelection<Prisma.$BannerPayload>
  */
 export type Contact = $Result.DefaultSelection<Prisma.$ContactPayload>
 /**
- * Model MarketingOutbox
+ * Model Outbox
  * 
  */
-export type MarketingOutbox = $Result.DefaultSelection<Prisma.$MarketingOutboxPayload>
+export type Outbox = $Result.DefaultSelection<Prisma.$OutboxPayload>
 
 /**
  * Enums
@@ -217,14 +217,14 @@ export class PrismaClient<
   get contact(): Prisma.ContactDelegate<ExtArgs, ClientOptions>;
 
   /**
-   * `prisma.marketingOutbox`: Exposes CRUD operations for the **MarketingOutbox** model.
+   * `prisma.outbox`: Exposes CRUD operations for the **Outbox** model.
     * Example usage:
     * ```ts
-    * // Fetch zero or more MarketingOutboxes
-    * const marketingOutboxes = await prisma.marketingOutbox.findMany()
+    * // Fetch zero or more Outboxes
+    * const outboxes = await prisma.outbox.findMany()
     * ```
     */
-  get marketingOutbox(): Prisma.MarketingOutboxDelegate<ExtArgs, ClientOptions>;
+  get outbox(): Prisma.OutboxDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -662,7 +662,7 @@ export namespace Prisma {
     BannerLocation: 'BannerLocation',
     Banner: 'Banner',
     Contact: 'Contact',
-    MarketingOutbox: 'MarketingOutbox'
+    Outbox: 'Outbox'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -678,7 +678,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "bannerLocation" | "banner" | "contact" | "marketingOutbox"
+      modelProps: "bannerLocation" | "banner" | "contact" | "outbox"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -904,77 +904,77 @@ export namespace Prisma {
           }
         }
       }
-      MarketingOutbox: {
-        payload: Prisma.$MarketingOutboxPayload<ExtArgs>
-        fields: Prisma.MarketingOutboxFieldRefs
+      Outbox: {
+        payload: Prisma.$OutboxPayload<ExtArgs>
+        fields: Prisma.OutboxFieldRefs
         operations: {
           findUnique: {
-            args: Prisma.MarketingOutboxFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload> | null
+            args: Prisma.OutboxFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload> | null
           }
           findUniqueOrThrow: {
-            args: Prisma.MarketingOutboxFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>
+            args: Prisma.OutboxFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>
           }
           findFirst: {
-            args: Prisma.MarketingOutboxFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload> | null
+            args: Prisma.OutboxFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload> | null
           }
           findFirstOrThrow: {
-            args: Prisma.MarketingOutboxFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>
+            args: Prisma.OutboxFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>
           }
           findMany: {
-            args: Prisma.MarketingOutboxFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>[]
+            args: Prisma.OutboxFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>[]
           }
           create: {
-            args: Prisma.MarketingOutboxCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>
+            args: Prisma.OutboxCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>
           }
           createMany: {
-            args: Prisma.MarketingOutboxCreateManyArgs<ExtArgs>
+            args: Prisma.OutboxCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
           createManyAndReturn: {
-            args: Prisma.MarketingOutboxCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>[]
+            args: Prisma.OutboxCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>[]
           }
           delete: {
-            args: Prisma.MarketingOutboxDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>
+            args: Prisma.OutboxDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>
           }
           update: {
-            args: Prisma.MarketingOutboxUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>
+            args: Prisma.OutboxUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>
           }
           deleteMany: {
-            args: Prisma.MarketingOutboxDeleteManyArgs<ExtArgs>
+            args: Prisma.OutboxDeleteManyArgs<ExtArgs>
             result: BatchPayload
           }
           updateMany: {
-            args: Prisma.MarketingOutboxUpdateManyArgs<ExtArgs>
+            args: Prisma.OutboxUpdateManyArgs<ExtArgs>
             result: BatchPayload
           }
           updateManyAndReturn: {
-            args: Prisma.MarketingOutboxUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>[]
+            args: Prisma.OutboxUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>[]
           }
           upsert: {
-            args: Prisma.MarketingOutboxUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$MarketingOutboxPayload>
+            args: Prisma.OutboxUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxPayload>
           }
           aggregate: {
-            args: Prisma.MarketingOutboxAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateMarketingOutbox>
+            args: Prisma.OutboxAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateOutbox>
           }
           groupBy: {
-            args: Prisma.MarketingOutboxGroupByArgs<ExtArgs>
-            result: $Utils.Optional<MarketingOutboxGroupByOutputType>[]
+            args: Prisma.OutboxGroupByArgs<ExtArgs>
+            result: $Utils.Optional<OutboxGroupByOutputType>[]
           }
           count: {
-            args: Prisma.MarketingOutboxCountArgs<ExtArgs>
-            result: $Utils.Optional<MarketingOutboxCountAggregateOutputType> | number
+            args: Prisma.OutboxCountArgs<ExtArgs>
+            result: $Utils.Optional<OutboxCountAggregateOutputType> | number
           }
         }
       }
@@ -1089,7 +1089,7 @@ export namespace Prisma {
     bannerLocation?: BannerLocationOmit
     banner?: BannerOmit
     contact?: ContactOmit
-    marketingOutbox?: MarketingOutboxOmit
+    outbox?: OutboxOmit
   }
 
   /* Types for Logging */
@@ -4726,40 +4726,40 @@ export namespace Prisma {
 
 
   /**
-   * Model MarketingOutbox
+   * Model Outbox
    */
 
-  export type AggregateMarketingOutbox = {
-    _count: MarketingOutboxCountAggregateOutputType | null
-    _avg: MarketingOutboxAvgAggregateOutputType | null
-    _sum: MarketingOutboxSumAggregateOutputType | null
-    _min: MarketingOutboxMinAggregateOutputType | null
-    _max: MarketingOutboxMaxAggregateOutputType | null
+  export type AggregateOutbox = {
+    _count: OutboxCountAggregateOutputType | null
+    _avg: OutboxAvgAggregateOutputType | null
+    _sum: OutboxSumAggregateOutputType | null
+    _min: OutboxMinAggregateOutputType | null
+    _max: OutboxMaxAggregateOutputType | null
   }
 
-  export type MarketingOutboxAvgAggregateOutputType = {
+  export type OutboxAvgAggregateOutputType = {
     id: number | null
   }
 
-  export type MarketingOutboxSumAggregateOutputType = {
+  export type OutboxSumAggregateOutputType = {
     id: bigint | null
   }
 
-  export type MarketingOutboxMinAggregateOutputType = {
-    id: bigint | null
-    event_type: string | null
-    published: boolean | null
-    created_at: Date | null
-  }
-
-  export type MarketingOutboxMaxAggregateOutputType = {
+  export type OutboxMinAggregateOutputType = {
     id: bigint | null
     event_type: string | null
     published: boolean | null
     created_at: Date | null
   }
 
-  export type MarketingOutboxCountAggregateOutputType = {
+  export type OutboxMaxAggregateOutputType = {
+    id: bigint | null
+    event_type: string | null
+    published: boolean | null
+    created_at: Date | null
+  }
+
+  export type OutboxCountAggregateOutputType = {
     id: number
     event_type: number
     payload: number
@@ -4769,29 +4769,29 @@ export namespace Prisma {
   }
 
 
-  export type MarketingOutboxAvgAggregateInputType = {
+  export type OutboxAvgAggregateInputType = {
     id?: true
   }
 
-  export type MarketingOutboxSumAggregateInputType = {
+  export type OutboxSumAggregateInputType = {
     id?: true
   }
 
-  export type MarketingOutboxMinAggregateInputType = {
-    id?: true
-    event_type?: true
-    published?: true
-    created_at?: true
-  }
-
-  export type MarketingOutboxMaxAggregateInputType = {
+  export type OutboxMinAggregateInputType = {
     id?: true
     event_type?: true
     published?: true
     created_at?: true
   }
 
-  export type MarketingOutboxCountAggregateInputType = {
+  export type OutboxMaxAggregateInputType = {
+    id?: true
+    event_type?: true
+    published?: true
+    created_at?: true
+  }
+
+  export type OutboxCountAggregateInputType = {
     id?: true
     event_type?: true
     payload?: true
@@ -4800,144 +4800,144 @@ export namespace Prisma {
     _all?: true
   }
 
-  export type MarketingOutboxAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Filter which MarketingOutbox to aggregate.
+     * Filter which Outbox to aggregate.
      */
-    where?: MarketingOutboxWhereInput
+    where?: OutboxWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of MarketingOutboxes to fetch.
+     * Determine the order of Outboxes to fetch.
      */
-    orderBy?: MarketingOutboxOrderByWithRelationInput | MarketingOutboxOrderByWithRelationInput[]
+    orderBy?: OutboxOrderByWithRelationInput | OutboxOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
      * Sets the start position
      */
-    cursor?: MarketingOutboxWhereUniqueInput
+    cursor?: OutboxWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` MarketingOutboxes from the position of the cursor.
+     * Take `±n` Outboxes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` MarketingOutboxes.
+     * Skip the first `n` Outboxes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
-     * Count returned MarketingOutboxes
+     * Count returned Outboxes
     **/
-    _count?: true | MarketingOutboxCountAggregateInputType
+    _count?: true | OutboxCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to average
     **/
-    _avg?: MarketingOutboxAvgAggregateInputType
+    _avg?: OutboxAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to sum
     **/
-    _sum?: MarketingOutboxSumAggregateInputType
+    _sum?: OutboxSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to find the minimum value
     **/
-    _min?: MarketingOutboxMinAggregateInputType
+    _min?: OutboxMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to find the maximum value
     **/
-    _max?: MarketingOutboxMaxAggregateInputType
+    _max?: OutboxMaxAggregateInputType
   }
 
-  export type GetMarketingOutboxAggregateType<T extends MarketingOutboxAggregateArgs> = {
-        [P in keyof T & keyof AggregateMarketingOutbox]: P extends '_count' | 'count'
+  export type GetOutboxAggregateType<T extends OutboxAggregateArgs> = {
+        [P in keyof T & keyof AggregateOutbox]: P extends '_count' | 'count'
       ? T[P] extends true
         ? number
-        : GetScalarType<T[P], AggregateMarketingOutbox[P]>
-      : GetScalarType<T[P], AggregateMarketingOutbox[P]>
+        : GetScalarType<T[P], AggregateOutbox[P]>
+      : GetScalarType<T[P], AggregateOutbox[P]>
   }
 
 
 
 
-  export type MarketingOutboxGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: MarketingOutboxWhereInput
-    orderBy?: MarketingOutboxOrderByWithAggregationInput | MarketingOutboxOrderByWithAggregationInput[]
-    by: MarketingOutboxScalarFieldEnum[] | MarketingOutboxScalarFieldEnum
-    having?: MarketingOutboxScalarWhereWithAggregatesInput
+  export type OutboxGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: OutboxWhereInput
+    orderBy?: OutboxOrderByWithAggregationInput | OutboxOrderByWithAggregationInput[]
+    by: OutboxScalarFieldEnum[] | OutboxScalarFieldEnum
+    having?: OutboxScalarWhereWithAggregatesInput
     take?: number
     skip?: number
-    _count?: MarketingOutboxCountAggregateInputType | true
-    _avg?: MarketingOutboxAvgAggregateInputType
-    _sum?: MarketingOutboxSumAggregateInputType
-    _min?: MarketingOutboxMinAggregateInputType
-    _max?: MarketingOutboxMaxAggregateInputType
+    _count?: OutboxCountAggregateInputType | true
+    _avg?: OutboxAvgAggregateInputType
+    _sum?: OutboxSumAggregateInputType
+    _min?: OutboxMinAggregateInputType
+    _max?: OutboxMaxAggregateInputType
   }
 
-  export type MarketingOutboxGroupByOutputType = {
+  export type OutboxGroupByOutputType = {
     id: bigint
     event_type: string
     payload: JsonValue
     published: boolean
     created_at: Date
-    _count: MarketingOutboxCountAggregateOutputType | null
-    _avg: MarketingOutboxAvgAggregateOutputType | null
-    _sum: MarketingOutboxSumAggregateOutputType | null
-    _min: MarketingOutboxMinAggregateOutputType | null
-    _max: MarketingOutboxMaxAggregateOutputType | null
+    _count: OutboxCountAggregateOutputType | null
+    _avg: OutboxAvgAggregateOutputType | null
+    _sum: OutboxSumAggregateOutputType | null
+    _min: OutboxMinAggregateOutputType | null
+    _max: OutboxMaxAggregateOutputType | null
   }
 
-  type GetMarketingOutboxGroupByPayload<T extends MarketingOutboxGroupByArgs> = Prisma.PrismaPromise<
+  type GetOutboxGroupByPayload<T extends OutboxGroupByArgs> = Prisma.PrismaPromise<
     Array<
-      PickEnumerable<MarketingOutboxGroupByOutputType, T['by']> &
+      PickEnumerable<OutboxGroupByOutputType, T['by']> &
         {
-          [P in ((keyof T) & (keyof MarketingOutboxGroupByOutputType))]: P extends '_count'
+          [P in ((keyof T) & (keyof OutboxGroupByOutputType))]: P extends '_count'
             ? T[P] extends boolean
               ? number
-              : GetScalarType<T[P], MarketingOutboxGroupByOutputType[P]>
-            : GetScalarType<T[P], MarketingOutboxGroupByOutputType[P]>
+              : GetScalarType<T[P], OutboxGroupByOutputType[P]>
+            : GetScalarType<T[P], OutboxGroupByOutputType[P]>
         }
       >
     >
 
 
-  export type MarketingOutboxSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type OutboxSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     event_type?: boolean
     payload?: boolean
     published?: boolean
     created_at?: boolean
-  }, ExtArgs["result"]["marketingOutbox"]>
+  }, ExtArgs["result"]["outbox"]>
 
-  export type MarketingOutboxSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type OutboxSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     event_type?: boolean
     payload?: boolean
     published?: boolean
     created_at?: boolean
-  }, ExtArgs["result"]["marketingOutbox"]>
+  }, ExtArgs["result"]["outbox"]>
 
-  export type MarketingOutboxSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type OutboxSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     event_type?: boolean
     payload?: boolean
     published?: boolean
     created_at?: boolean
-  }, ExtArgs["result"]["marketingOutbox"]>
+  }, ExtArgs["result"]["outbox"]>
 
-  export type MarketingOutboxSelectScalar = {
+  export type OutboxSelectScalar = {
     id?: boolean
     event_type?: boolean
     payload?: boolean
@@ -4945,10 +4945,10 @@ export namespace Prisma {
     created_at?: boolean
   }
 
-  export type MarketingOutboxOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "event_type" | "payload" | "published" | "created_at", ExtArgs["result"]["marketingOutbox"]>
+  export type OutboxOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "event_type" | "payload" | "published" | "created_at", ExtArgs["result"]["outbox"]>
 
-  export type $MarketingOutboxPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "MarketingOutbox"
+  export type $OutboxPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Outbox"
     objects: {}
     scalars: $Extensions.GetPayloadResult<{
       id: bigint
@@ -4956,136 +4956,136 @@ export namespace Prisma {
       payload: Prisma.JsonValue
       published: boolean
       created_at: Date
-    }, ExtArgs["result"]["marketingOutbox"]>
+    }, ExtArgs["result"]["outbox"]>
     composites: {}
   }
 
-  type MarketingOutboxGetPayload<S extends boolean | null | undefined | MarketingOutboxDefaultArgs> = $Result.GetResult<Prisma.$MarketingOutboxPayload, S>
+  type OutboxGetPayload<S extends boolean | null | undefined | OutboxDefaultArgs> = $Result.GetResult<Prisma.$OutboxPayload, S>
 
-  type MarketingOutboxCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<MarketingOutboxFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: MarketingOutboxCountAggregateInputType | true
+  type OutboxCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<OutboxFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: OutboxCountAggregateInputType | true
     }
 
-  export interface MarketingOutboxDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['MarketingOutbox'], meta: { name: 'MarketingOutbox' } }
+  export interface OutboxDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Outbox'], meta: { name: 'Outbox' } }
     /**
-     * Find zero or one MarketingOutbox that matches the filter.
-     * @param {MarketingOutboxFindUniqueArgs} args - Arguments to find a MarketingOutbox
+     * Find zero or one Outbox that matches the filter.
+     * @param {OutboxFindUniqueArgs} args - Arguments to find a Outbox
      * @example
-     * // Get one MarketingOutbox
-     * const marketingOutbox = await prisma.marketingOutbox.findUnique({
+     * // Get one Outbox
+     * const outbox = await prisma.outbox.findUnique({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findUnique<T extends MarketingOutboxFindUniqueArgs>(args: SelectSubset<T, MarketingOutboxFindUniqueArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findUnique<T extends OutboxFindUniqueArgs>(args: SelectSubset<T, OutboxFindUniqueArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find one MarketingOutbox that matches the filter or throw an error with `error.code='P2025'`
+     * Find one Outbox that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
-     * @param {MarketingOutboxFindUniqueOrThrowArgs} args - Arguments to find a MarketingOutbox
+     * @param {OutboxFindUniqueOrThrowArgs} args - Arguments to find a Outbox
      * @example
-     * // Get one MarketingOutbox
-     * const marketingOutbox = await prisma.marketingOutbox.findUniqueOrThrow({
+     * // Get one Outbox
+     * const outbox = await prisma.outbox.findUniqueOrThrow({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findUniqueOrThrow<T extends MarketingOutboxFindUniqueOrThrowArgs>(args: SelectSubset<T, MarketingOutboxFindUniqueOrThrowArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findUniqueOrThrow<T extends OutboxFindUniqueOrThrowArgs>(args: SelectSubset<T, OutboxFindUniqueOrThrowArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find the first MarketingOutbox that matches the filter.
+     * Find the first Outbox that matches the filter.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {MarketingOutboxFindFirstArgs} args - Arguments to find a MarketingOutbox
+     * @param {OutboxFindFirstArgs} args - Arguments to find a Outbox
      * @example
-     * // Get one MarketingOutbox
-     * const marketingOutbox = await prisma.marketingOutbox.findFirst({
+     * // Get one Outbox
+     * const outbox = await prisma.outbox.findFirst({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findFirst<T extends MarketingOutboxFindFirstArgs>(args?: SelectSubset<T, MarketingOutboxFindFirstArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findFirst<T extends OutboxFindFirstArgs>(args?: SelectSubset<T, OutboxFindFirstArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find the first MarketingOutbox that matches the filter or
+     * Find the first Outbox that matches the filter or
      * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {MarketingOutboxFindFirstOrThrowArgs} args - Arguments to find a MarketingOutbox
+     * @param {OutboxFindFirstOrThrowArgs} args - Arguments to find a Outbox
      * @example
-     * // Get one MarketingOutbox
-     * const marketingOutbox = await prisma.marketingOutbox.findFirstOrThrow({
+     * // Get one Outbox
+     * const outbox = await prisma.outbox.findFirstOrThrow({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findFirstOrThrow<T extends MarketingOutboxFindFirstOrThrowArgs>(args?: SelectSubset<T, MarketingOutboxFindFirstOrThrowArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findFirstOrThrow<T extends OutboxFindFirstOrThrowArgs>(args?: SelectSubset<T, OutboxFindFirstOrThrowArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find zero or more MarketingOutboxes that matches the filter.
+     * Find zero or more Outboxes that matches the filter.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {MarketingOutboxFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @param {OutboxFindManyArgs} args - Arguments to filter and select certain fields only.
      * @example
-     * // Get all MarketingOutboxes
-     * const marketingOutboxes = await prisma.marketingOutbox.findMany()
+     * // Get all Outboxes
+     * const outboxes = await prisma.outbox.findMany()
      * 
-     * // Get first 10 MarketingOutboxes
-     * const marketingOutboxes = await prisma.marketingOutbox.findMany({ take: 10 })
+     * // Get first 10 Outboxes
+     * const outboxes = await prisma.outbox.findMany({ take: 10 })
      * 
      * // Only select the `id`
-     * const marketingOutboxWithIdOnly = await prisma.marketingOutbox.findMany({ select: { id: true } })
+     * const outboxWithIdOnly = await prisma.outbox.findMany({ select: { id: true } })
      * 
      */
-    findMany<T extends MarketingOutboxFindManyArgs>(args?: SelectSubset<T, MarketingOutboxFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+    findMany<T extends OutboxFindManyArgs>(args?: SelectSubset<T, OutboxFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
     /**
-     * Create a MarketingOutbox.
-     * @param {MarketingOutboxCreateArgs} args - Arguments to create a MarketingOutbox.
+     * Create a Outbox.
+     * @param {OutboxCreateArgs} args - Arguments to create a Outbox.
      * @example
-     * // Create one MarketingOutbox
-     * const MarketingOutbox = await prisma.marketingOutbox.create({
+     * // Create one Outbox
+     * const Outbox = await prisma.outbox.create({
      *   data: {
-     *     // ... data to create a MarketingOutbox
+     *     // ... data to create a Outbox
      *   }
      * })
      * 
      */
-    create<T extends MarketingOutboxCreateArgs>(args: SelectSubset<T, MarketingOutboxCreateArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    create<T extends OutboxCreateArgs>(args: SelectSubset<T, OutboxCreateArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Create many MarketingOutboxes.
-     * @param {MarketingOutboxCreateManyArgs} args - Arguments to create many MarketingOutboxes.
+     * Create many Outboxes.
+     * @param {OutboxCreateManyArgs} args - Arguments to create many Outboxes.
      * @example
-     * // Create many MarketingOutboxes
-     * const marketingOutbox = await prisma.marketingOutbox.createMany({
+     * // Create many Outboxes
+     * const outbox = await prisma.outbox.createMany({
      *   data: [
      *     // ... provide data here
      *   ]
      * })
      *     
      */
-    createMany<T extends MarketingOutboxCreateManyArgs>(args?: SelectSubset<T, MarketingOutboxCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    createMany<T extends OutboxCreateManyArgs>(args?: SelectSubset<T, OutboxCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many MarketingOutboxes and returns the data saved in the database.
-     * @param {MarketingOutboxCreateManyAndReturnArgs} args - Arguments to create many MarketingOutboxes.
+     * Create many Outboxes and returns the data saved in the database.
+     * @param {OutboxCreateManyAndReturnArgs} args - Arguments to create many Outboxes.
      * @example
-     * // Create many MarketingOutboxes
-     * const marketingOutbox = await prisma.marketingOutbox.createManyAndReturn({
+     * // Create many Outboxes
+     * const outbox = await prisma.outbox.createManyAndReturn({
      *   data: [
      *     // ... provide data here
      *   ]
      * })
      * 
-     * // Create many MarketingOutboxes and only return the `id`
-     * const marketingOutboxWithIdOnly = await prisma.marketingOutbox.createManyAndReturn({
+     * // Create many Outboxes and only return the `id`
+     * const outboxWithIdOnly = await prisma.outbox.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -5095,28 +5095,28 @@ export namespace Prisma {
      * Read more here: https://pris.ly/d/null-undefined
      * 
      */
-    createManyAndReturn<T extends MarketingOutboxCreateManyAndReturnArgs>(args?: SelectSubset<T, MarketingOutboxCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+    createManyAndReturn<T extends OutboxCreateManyAndReturnArgs>(args?: SelectSubset<T, OutboxCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
 
     /**
-     * Delete a MarketingOutbox.
-     * @param {MarketingOutboxDeleteArgs} args - Arguments to delete one MarketingOutbox.
+     * Delete a Outbox.
+     * @param {OutboxDeleteArgs} args - Arguments to delete one Outbox.
      * @example
-     * // Delete one MarketingOutbox
-     * const MarketingOutbox = await prisma.marketingOutbox.delete({
+     * // Delete one Outbox
+     * const Outbox = await prisma.outbox.delete({
      *   where: {
-     *     // ... filter to delete one MarketingOutbox
+     *     // ... filter to delete one Outbox
      *   }
      * })
      * 
      */
-    delete<T extends MarketingOutboxDeleteArgs>(args: SelectSubset<T, MarketingOutboxDeleteArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    delete<T extends OutboxDeleteArgs>(args: SelectSubset<T, OutboxDeleteArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Update one MarketingOutbox.
-     * @param {MarketingOutboxUpdateArgs} args - Arguments to update one MarketingOutbox.
+     * Update one Outbox.
+     * @param {OutboxUpdateArgs} args - Arguments to update one Outbox.
      * @example
-     * // Update one MarketingOutbox
-     * const marketingOutbox = await prisma.marketingOutbox.update({
+     * // Update one Outbox
+     * const outbox = await prisma.outbox.update({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -5126,30 +5126,30 @@ export namespace Prisma {
      * })
      * 
      */
-    update<T extends MarketingOutboxUpdateArgs>(args: SelectSubset<T, MarketingOutboxUpdateArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    update<T extends OutboxUpdateArgs>(args: SelectSubset<T, OutboxUpdateArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Delete zero or more MarketingOutboxes.
-     * @param {MarketingOutboxDeleteManyArgs} args - Arguments to filter MarketingOutboxes to delete.
+     * Delete zero or more Outboxes.
+     * @param {OutboxDeleteManyArgs} args - Arguments to filter Outboxes to delete.
      * @example
-     * // Delete a few MarketingOutboxes
-     * const { count } = await prisma.marketingOutbox.deleteMany({
+     * // Delete a few Outboxes
+     * const { count } = await prisma.outbox.deleteMany({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      * 
      */
-    deleteMany<T extends MarketingOutboxDeleteManyArgs>(args?: SelectSubset<T, MarketingOutboxDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    deleteMany<T extends OutboxDeleteManyArgs>(args?: SelectSubset<T, OutboxDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Update zero or more MarketingOutboxes.
+     * Update zero or more Outboxes.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {MarketingOutboxUpdateManyArgs} args - Arguments to update one or more rows.
+     * @param {OutboxUpdateManyArgs} args - Arguments to update one or more rows.
      * @example
-     * // Update many MarketingOutboxes
-     * const marketingOutbox = await prisma.marketingOutbox.updateMany({
+     * // Update many Outboxes
+     * const outbox = await prisma.outbox.updateMany({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -5159,14 +5159,14 @@ export namespace Prisma {
      * })
      * 
      */
-    updateMany<T extends MarketingOutboxUpdateManyArgs>(args: SelectSubset<T, MarketingOutboxUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    updateMany<T extends OutboxUpdateManyArgs>(args: SelectSubset<T, OutboxUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Update zero or more MarketingOutboxes and returns the data updated in the database.
-     * @param {MarketingOutboxUpdateManyAndReturnArgs} args - Arguments to update many MarketingOutboxes.
+     * Update zero or more Outboxes and returns the data updated in the database.
+     * @param {OutboxUpdateManyAndReturnArgs} args - Arguments to update many Outboxes.
      * @example
-     * // Update many MarketingOutboxes
-     * const marketingOutbox = await prisma.marketingOutbox.updateManyAndReturn({
+     * // Update many Outboxes
+     * const outbox = await prisma.outbox.updateManyAndReturn({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -5175,8 +5175,8 @@ export namespace Prisma {
      *   ]
      * })
      * 
-     * // Update zero or more MarketingOutboxes and only return the `id`
-     * const marketingOutboxWithIdOnly = await prisma.marketingOutbox.updateManyAndReturn({
+     * // Update zero or more Outboxes and only return the `id`
+     * const outboxWithIdOnly = await prisma.outbox.updateManyAndReturn({
      *   select: { id: true },
      *   where: {
      *     // ... provide filter here
@@ -5189,56 +5189,56 @@ export namespace Prisma {
      * Read more here: https://pris.ly/d/null-undefined
      * 
      */
-    updateManyAndReturn<T extends MarketingOutboxUpdateManyAndReturnArgs>(args: SelectSubset<T, MarketingOutboxUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+    updateManyAndReturn<T extends OutboxUpdateManyAndReturnArgs>(args: SelectSubset<T, OutboxUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
-     * Create or update one MarketingOutbox.
-     * @param {MarketingOutboxUpsertArgs} args - Arguments to update or create a MarketingOutbox.
+     * Create or update one Outbox.
+     * @param {OutboxUpsertArgs} args - Arguments to update or create a Outbox.
      * @example
-     * // Update or create a MarketingOutbox
-     * const marketingOutbox = await prisma.marketingOutbox.upsert({
+     * // Update or create a Outbox
+     * const outbox = await prisma.outbox.upsert({
      *   create: {
-     *     // ... data to create a MarketingOutbox
+     *     // ... data to create a Outbox
      *   },
      *   update: {
      *     // ... in case it already exists, update
      *   },
      *   where: {
-     *     // ... the filter for the MarketingOutbox we want to update
+     *     // ... the filter for the Outbox we want to update
      *   }
      * })
      */
-    upsert<T extends MarketingOutboxUpsertArgs>(args: SelectSubset<T, MarketingOutboxUpsertArgs<ExtArgs>>): Prisma__MarketingOutboxClient<$Result.GetResult<Prisma.$MarketingOutboxPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    upsert<T extends OutboxUpsertArgs>(args: SelectSubset<T, OutboxUpsertArgs<ExtArgs>>): Prisma__OutboxClient<$Result.GetResult<Prisma.$OutboxPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
 
     /**
-     * Count the number of MarketingOutboxes.
+     * Count the number of Outboxes.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {MarketingOutboxCountArgs} args - Arguments to filter MarketingOutboxes to count.
+     * @param {OutboxCountArgs} args - Arguments to filter Outboxes to count.
      * @example
-     * // Count the number of MarketingOutboxes
-     * const count = await prisma.marketingOutbox.count({
+     * // Count the number of Outboxes
+     * const count = await prisma.outbox.count({
      *   where: {
-     *     // ... the filter for the MarketingOutboxes we want to count
+     *     // ... the filter for the Outboxes we want to count
      *   }
      * })
     **/
-    count<T extends MarketingOutboxCountArgs>(
-      args?: Subset<T, MarketingOutboxCountArgs>,
+    count<T extends OutboxCountArgs>(
+      args?: Subset<T, OutboxCountArgs>,
     ): Prisma.PrismaPromise<
       T extends $Utils.Record<'select', any>
         ? T['select'] extends true
           ? number
-          : GetScalarType<T['select'], MarketingOutboxCountAggregateOutputType>
+          : GetScalarType<T['select'], OutboxCountAggregateOutputType>
         : number
     >
 
     /**
-     * Allows you to perform aggregations operations on a MarketingOutbox.
+     * Allows you to perform aggregations operations on a Outbox.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {MarketingOutboxAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @param {OutboxAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
      * @example
      * // Ordered by age ascending
      * // Where email contains prisma.io
@@ -5258,13 +5258,13 @@ export namespace Prisma {
      *   take: 10,
      * })
     **/
-    aggregate<T extends MarketingOutboxAggregateArgs>(args: Subset<T, MarketingOutboxAggregateArgs>): Prisma.PrismaPromise<GetMarketingOutboxAggregateType<T>>
+    aggregate<T extends OutboxAggregateArgs>(args: Subset<T, OutboxAggregateArgs>): Prisma.PrismaPromise<GetOutboxAggregateType<T>>
 
     /**
-     * Group by MarketingOutbox.
+     * Group by Outbox.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {MarketingOutboxGroupByArgs} args - Group by arguments.
+     * @param {OutboxGroupByArgs} args - Group by arguments.
      * @example
      * // Group by city, order by createdAt, get count
      * const result = await prisma.user.groupBy({
@@ -5279,14 +5279,14 @@ export namespace Prisma {
      * 
     **/
     groupBy<
-      T extends MarketingOutboxGroupByArgs,
+      T extends OutboxGroupByArgs,
       HasSelectOrTake extends Or<
         Extends<'skip', Keys<T>>,
         Extends<'take', Keys<T>>
       >,
       OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: MarketingOutboxGroupByArgs['orderBy'] }
-        : { orderBy?: MarketingOutboxGroupByArgs['orderBy'] },
+        ? { orderBy: OutboxGroupByArgs['orderBy'] }
+        : { orderBy?: OutboxGroupByArgs['orderBy'] },
       OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
       ByFields extends MaybeTupleToUnion<T['by']>,
       ByValid extends Has<ByFields, OrderFields>,
@@ -5335,20 +5335,20 @@ export namespace Prisma {
             ? never
             : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
         }[OrderFields]
-    >(args: SubsetIntersection<T, MarketingOutboxGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetMarketingOutboxGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+    >(args: SubsetIntersection<T, OutboxGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetOutboxGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
   /**
-   * Fields of the MarketingOutbox model
+   * Fields of the Outbox model
    */
-  readonly fields: MarketingOutboxFieldRefs;
+  readonly fields: OutboxFieldRefs;
   }
 
   /**
-   * The delegate class that acts as a "Promise-like" for MarketingOutbox.
+   * The delegate class that acts as a "Promise-like" for Outbox.
    * Why is this prefixed with `Prisma__`?
    * Because we want to prevent naming conflicts as mentioned in
    * https://github.com/prisma/prisma-client-js/issues/707
    */
-  export interface Prisma__MarketingOutboxClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+  export interface Prisma__OutboxClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -5376,382 +5376,382 @@ export namespace Prisma {
 
 
   /**
-   * Fields of the MarketingOutbox model
+   * Fields of the Outbox model
    */
-  interface MarketingOutboxFieldRefs {
-    readonly id: FieldRef<"MarketingOutbox", 'BigInt'>
-    readonly event_type: FieldRef<"MarketingOutbox", 'String'>
-    readonly payload: FieldRef<"MarketingOutbox", 'Json'>
-    readonly published: FieldRef<"MarketingOutbox", 'Boolean'>
-    readonly created_at: FieldRef<"MarketingOutbox", 'DateTime'>
+  interface OutboxFieldRefs {
+    readonly id: FieldRef<"Outbox", 'BigInt'>
+    readonly event_type: FieldRef<"Outbox", 'String'>
+    readonly payload: FieldRef<"Outbox", 'Json'>
+    readonly published: FieldRef<"Outbox", 'Boolean'>
+    readonly created_at: FieldRef<"Outbox", 'DateTime'>
   }
     
 
   // Custom InputTypes
   /**
-   * MarketingOutbox findUnique
+   * Outbox findUnique
    */
-  export type MarketingOutboxFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * Filter, which MarketingOutbox to fetch.
+     * Filter, which Outbox to fetch.
      */
-    where: MarketingOutboxWhereUniqueInput
+    where: OutboxWhereUniqueInput
   }
 
   /**
-   * MarketingOutbox findUniqueOrThrow
+   * Outbox findUniqueOrThrow
    */
-  export type MarketingOutboxFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * Filter, which MarketingOutbox to fetch.
+     * Filter, which Outbox to fetch.
      */
-    where: MarketingOutboxWhereUniqueInput
+    where: OutboxWhereUniqueInput
   }
 
   /**
-   * MarketingOutbox findFirst
+   * Outbox findFirst
    */
-  export type MarketingOutboxFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * Filter, which MarketingOutbox to fetch.
+     * Filter, which Outbox to fetch.
      */
-    where?: MarketingOutboxWhereInput
+    where?: OutboxWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of MarketingOutboxes to fetch.
+     * Determine the order of Outboxes to fetch.
      */
-    orderBy?: MarketingOutboxOrderByWithRelationInput | MarketingOutboxOrderByWithRelationInput[]
+    orderBy?: OutboxOrderByWithRelationInput | OutboxOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for searching for MarketingOutboxes.
+     * Sets the position for searching for Outboxes.
      */
-    cursor?: MarketingOutboxWhereUniqueInput
+    cursor?: OutboxWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` MarketingOutboxes from the position of the cursor.
+     * Take `±n` Outboxes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` MarketingOutboxes.
+     * Skip the first `n` Outboxes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of MarketingOutboxes.
+     * Filter by unique combinations of Outboxes.
      */
-    distinct?: MarketingOutboxScalarFieldEnum | MarketingOutboxScalarFieldEnum[]
+    distinct?: OutboxScalarFieldEnum | OutboxScalarFieldEnum[]
   }
 
   /**
-   * MarketingOutbox findFirstOrThrow
+   * Outbox findFirstOrThrow
    */
-  export type MarketingOutboxFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * Filter, which MarketingOutbox to fetch.
+     * Filter, which Outbox to fetch.
      */
-    where?: MarketingOutboxWhereInput
+    where?: OutboxWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of MarketingOutboxes to fetch.
+     * Determine the order of Outboxes to fetch.
      */
-    orderBy?: MarketingOutboxOrderByWithRelationInput | MarketingOutboxOrderByWithRelationInput[]
+    orderBy?: OutboxOrderByWithRelationInput | OutboxOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for searching for MarketingOutboxes.
+     * Sets the position for searching for Outboxes.
      */
-    cursor?: MarketingOutboxWhereUniqueInput
+    cursor?: OutboxWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` MarketingOutboxes from the position of the cursor.
+     * Take `±n` Outboxes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` MarketingOutboxes.
+     * Skip the first `n` Outboxes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of MarketingOutboxes.
+     * Filter by unique combinations of Outboxes.
      */
-    distinct?: MarketingOutboxScalarFieldEnum | MarketingOutboxScalarFieldEnum[]
+    distinct?: OutboxScalarFieldEnum | OutboxScalarFieldEnum[]
   }
 
   /**
-   * MarketingOutbox findMany
+   * Outbox findMany
    */
-  export type MarketingOutboxFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * Filter, which MarketingOutboxes to fetch.
+     * Filter, which Outboxes to fetch.
      */
-    where?: MarketingOutboxWhereInput
+    where?: OutboxWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of MarketingOutboxes to fetch.
+     * Determine the order of Outboxes to fetch.
      */
-    orderBy?: MarketingOutboxOrderByWithRelationInput | MarketingOutboxOrderByWithRelationInput[]
+    orderBy?: OutboxOrderByWithRelationInput | OutboxOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for listing MarketingOutboxes.
+     * Sets the position for listing Outboxes.
      */
-    cursor?: MarketingOutboxWhereUniqueInput
+    cursor?: OutboxWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` MarketingOutboxes from the position of the cursor.
+     * Take `±n` Outboxes from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` MarketingOutboxes.
+     * Skip the first `n` Outboxes.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of MarketingOutboxes.
+     * Filter by unique combinations of Outboxes.
      */
-    distinct?: MarketingOutboxScalarFieldEnum | MarketingOutboxScalarFieldEnum[]
+    distinct?: OutboxScalarFieldEnum | OutboxScalarFieldEnum[]
   }
 
   /**
-   * MarketingOutbox create
+   * Outbox create
    */
-  export type MarketingOutboxCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * The data needed to create a MarketingOutbox.
+     * The data needed to create a Outbox.
      */
-    data: XOR<MarketingOutboxCreateInput, MarketingOutboxUncheckedCreateInput>
+    data: XOR<OutboxCreateInput, OutboxUncheckedCreateInput>
   }
 
   /**
-   * MarketingOutbox createMany
+   * Outbox createMany
    */
-  export type MarketingOutboxCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * The data used to create many MarketingOutboxes.
+     * The data used to create many Outboxes.
      */
-    data: MarketingOutboxCreateManyInput | MarketingOutboxCreateManyInput[]
+    data: OutboxCreateManyInput | OutboxCreateManyInput[]
     skipDuplicates?: boolean
   }
 
   /**
-   * MarketingOutbox createManyAndReturn
+   * Outbox createManyAndReturn
    */
-  export type MarketingOutboxCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelectCreateManyAndReturn<ExtArgs> | null
+    select?: OutboxSelectCreateManyAndReturn<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * The data used to create many MarketingOutboxes.
+     * The data used to create many Outboxes.
      */
-    data: MarketingOutboxCreateManyInput | MarketingOutboxCreateManyInput[]
+    data: OutboxCreateManyInput | OutboxCreateManyInput[]
     skipDuplicates?: boolean
   }
 
   /**
-   * MarketingOutbox update
+   * Outbox update
    */
-  export type MarketingOutboxUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * The data needed to update a MarketingOutbox.
+     * The data needed to update a Outbox.
      */
-    data: XOR<MarketingOutboxUpdateInput, MarketingOutboxUncheckedUpdateInput>
+    data: XOR<OutboxUpdateInput, OutboxUncheckedUpdateInput>
     /**
-     * Choose, which MarketingOutbox to update.
+     * Choose, which Outbox to update.
      */
-    where: MarketingOutboxWhereUniqueInput
+    where: OutboxWhereUniqueInput
   }
 
   /**
-   * MarketingOutbox updateMany
+   * Outbox updateMany
    */
-  export type MarketingOutboxUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * The data used to update MarketingOutboxes.
+     * The data used to update Outboxes.
      */
-    data: XOR<MarketingOutboxUpdateManyMutationInput, MarketingOutboxUncheckedUpdateManyInput>
+    data: XOR<OutboxUpdateManyMutationInput, OutboxUncheckedUpdateManyInput>
     /**
-     * Filter which MarketingOutboxes to update
+     * Filter which Outboxes to update
      */
-    where?: MarketingOutboxWhereInput
+    where?: OutboxWhereInput
     /**
-     * Limit how many MarketingOutboxes to update.
+     * Limit how many Outboxes to update.
      */
     limit?: number
   }
 
   /**
-   * MarketingOutbox updateManyAndReturn
+   * Outbox updateManyAndReturn
    */
-  export type MarketingOutboxUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelectUpdateManyAndReturn<ExtArgs> | null
+    select?: OutboxSelectUpdateManyAndReturn<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * The data used to update MarketingOutboxes.
+     * The data used to update Outboxes.
      */
-    data: XOR<MarketingOutboxUpdateManyMutationInput, MarketingOutboxUncheckedUpdateManyInput>
+    data: XOR<OutboxUpdateManyMutationInput, OutboxUncheckedUpdateManyInput>
     /**
-     * Filter which MarketingOutboxes to update
+     * Filter which Outboxes to update
      */
-    where?: MarketingOutboxWhereInput
+    where?: OutboxWhereInput
     /**
-     * Limit how many MarketingOutboxes to update.
+     * Limit how many Outboxes to update.
      */
     limit?: number
   }
 
   /**
-   * MarketingOutbox upsert
+   * Outbox upsert
    */
-  export type MarketingOutboxUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * The filter to search for the MarketingOutbox to update in case it exists.
+     * The filter to search for the Outbox to update in case it exists.
      */
-    where: MarketingOutboxWhereUniqueInput
+    where: OutboxWhereUniqueInput
     /**
-     * In case the MarketingOutbox found by the `where` argument doesn't exist, create a new MarketingOutbox with this data.
+     * In case the Outbox found by the `where` argument doesn't exist, create a new Outbox with this data.
      */
-    create: XOR<MarketingOutboxCreateInput, MarketingOutboxUncheckedCreateInput>
+    create: XOR<OutboxCreateInput, OutboxUncheckedCreateInput>
     /**
-     * In case the MarketingOutbox was found with the provided `where` argument, update it with this data.
+     * In case the Outbox was found with the provided `where` argument, update it with this data.
      */
-    update: XOR<MarketingOutboxUpdateInput, MarketingOutboxUncheckedUpdateInput>
+    update: XOR<OutboxUpdateInput, OutboxUncheckedUpdateInput>
   }
 
   /**
-   * MarketingOutbox delete
+   * Outbox delete
    */
-  export type MarketingOutboxDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
     /**
-     * Filter which MarketingOutbox to delete.
+     * Filter which Outbox to delete.
      */
-    where: MarketingOutboxWhereUniqueInput
+    where: OutboxWhereUniqueInput
   }
 
   /**
-   * MarketingOutbox deleteMany
+   * Outbox deleteMany
    */
-  export type MarketingOutboxDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Filter which MarketingOutboxes to delete
+     * Filter which Outboxes to delete
      */
-    where?: MarketingOutboxWhereInput
+    where?: OutboxWhereInput
     /**
-     * Limit how many MarketingOutboxes to delete.
+     * Limit how many Outboxes to delete.
      */
     limit?: number
   }
 
   /**
-   * MarketingOutbox without action
+   * Outbox without action
    */
-  export type MarketingOutboxDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type OutboxDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the MarketingOutbox
+     * Select specific fields to fetch from the Outbox
      */
-    select?: MarketingOutboxSelect<ExtArgs> | null
+    select?: OutboxSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the MarketingOutbox
+     * Omit specific fields from the Outbox
      */
-    omit?: MarketingOutboxOmit<ExtArgs> | null
+    omit?: OutboxOmit<ExtArgs> | null
   }
 
 
@@ -5823,7 +5823,7 @@ export namespace Prisma {
   export type ContactScalarFieldEnum = (typeof ContactScalarFieldEnum)[keyof typeof ContactScalarFieldEnum]
 
 
-  export const MarketingOutboxScalarFieldEnum: {
+  export const OutboxScalarFieldEnum: {
     id: 'id',
     event_type: 'event_type',
     payload: 'payload',
@@ -5831,7 +5831,7 @@ export namespace Prisma {
     created_at: 'created_at'
   };
 
-  export type MarketingOutboxScalarFieldEnum = (typeof MarketingOutboxScalarFieldEnum)[keyof typeof MarketingOutboxScalarFieldEnum]
+  export type OutboxScalarFieldEnum = (typeof OutboxScalarFieldEnum)[keyof typeof OutboxScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -6274,18 +6274,18 @@ export namespace Prisma {
     updated_at?: DateTimeWithAggregatesFilter<"Contact"> | Date | string
   }
 
-  export type MarketingOutboxWhereInput = {
-    AND?: MarketingOutboxWhereInput | MarketingOutboxWhereInput[]
-    OR?: MarketingOutboxWhereInput[]
-    NOT?: MarketingOutboxWhereInput | MarketingOutboxWhereInput[]
-    id?: BigIntFilter<"MarketingOutbox"> | bigint | number
-    event_type?: StringFilter<"MarketingOutbox"> | string
-    payload?: JsonFilter<"MarketingOutbox">
-    published?: BoolFilter<"MarketingOutbox"> | boolean
-    created_at?: DateTimeFilter<"MarketingOutbox"> | Date | string
+  export type OutboxWhereInput = {
+    AND?: OutboxWhereInput | OutboxWhereInput[]
+    OR?: OutboxWhereInput[]
+    NOT?: OutboxWhereInput | OutboxWhereInput[]
+    id?: BigIntFilter<"Outbox"> | bigint | number
+    event_type?: StringFilter<"Outbox"> | string
+    payload?: JsonFilter<"Outbox">
+    published?: BoolFilter<"Outbox"> | boolean
+    created_at?: DateTimeFilter<"Outbox"> | Date | string
   }
 
-  export type MarketingOutboxOrderByWithRelationInput = {
+  export type OutboxOrderByWithRelationInput = {
     id?: SortOrder
     event_type?: SortOrder
     payload?: SortOrder
@@ -6293,39 +6293,39 @@ export namespace Prisma {
     created_at?: SortOrder
   }
 
-  export type MarketingOutboxWhereUniqueInput = Prisma.AtLeast<{
+  export type OutboxWhereUniqueInput = Prisma.AtLeast<{
     id?: bigint | number
-    AND?: MarketingOutboxWhereInput | MarketingOutboxWhereInput[]
-    OR?: MarketingOutboxWhereInput[]
-    NOT?: MarketingOutboxWhereInput | MarketingOutboxWhereInput[]
-    event_type?: StringFilter<"MarketingOutbox"> | string
-    payload?: JsonFilter<"MarketingOutbox">
-    published?: BoolFilter<"MarketingOutbox"> | boolean
-    created_at?: DateTimeFilter<"MarketingOutbox"> | Date | string
+    AND?: OutboxWhereInput | OutboxWhereInput[]
+    OR?: OutboxWhereInput[]
+    NOT?: OutboxWhereInput | OutboxWhereInput[]
+    event_type?: StringFilter<"Outbox"> | string
+    payload?: JsonFilter<"Outbox">
+    published?: BoolFilter<"Outbox"> | boolean
+    created_at?: DateTimeFilter<"Outbox"> | Date | string
   }, "id">
 
-  export type MarketingOutboxOrderByWithAggregationInput = {
+  export type OutboxOrderByWithAggregationInput = {
     id?: SortOrder
     event_type?: SortOrder
     payload?: SortOrder
     published?: SortOrder
     created_at?: SortOrder
-    _count?: MarketingOutboxCountOrderByAggregateInput
-    _avg?: MarketingOutboxAvgOrderByAggregateInput
-    _max?: MarketingOutboxMaxOrderByAggregateInput
-    _min?: MarketingOutboxMinOrderByAggregateInput
-    _sum?: MarketingOutboxSumOrderByAggregateInput
+    _count?: OutboxCountOrderByAggregateInput
+    _avg?: OutboxAvgOrderByAggregateInput
+    _max?: OutboxMaxOrderByAggregateInput
+    _min?: OutboxMinOrderByAggregateInput
+    _sum?: OutboxSumOrderByAggregateInput
   }
 
-  export type MarketingOutboxScalarWhereWithAggregatesInput = {
-    AND?: MarketingOutboxScalarWhereWithAggregatesInput | MarketingOutboxScalarWhereWithAggregatesInput[]
-    OR?: MarketingOutboxScalarWhereWithAggregatesInput[]
-    NOT?: MarketingOutboxScalarWhereWithAggregatesInput | MarketingOutboxScalarWhereWithAggregatesInput[]
-    id?: BigIntWithAggregatesFilter<"MarketingOutbox"> | bigint | number
-    event_type?: StringWithAggregatesFilter<"MarketingOutbox"> | string
-    payload?: JsonWithAggregatesFilter<"MarketingOutbox">
-    published?: BoolWithAggregatesFilter<"MarketingOutbox"> | boolean
-    created_at?: DateTimeWithAggregatesFilter<"MarketingOutbox"> | Date | string
+  export type OutboxScalarWhereWithAggregatesInput = {
+    AND?: OutboxScalarWhereWithAggregatesInput | OutboxScalarWhereWithAggregatesInput[]
+    OR?: OutboxScalarWhereWithAggregatesInput[]
+    NOT?: OutboxScalarWhereWithAggregatesInput | OutboxScalarWhereWithAggregatesInput[]
+    id?: BigIntWithAggregatesFilter<"Outbox"> | bigint | number
+    event_type?: StringWithAggregatesFilter<"Outbox"> | string
+    payload?: JsonWithAggregatesFilter<"Outbox">
+    published?: BoolWithAggregatesFilter<"Outbox"> | boolean
+    created_at?: DateTimeWithAggregatesFilter<"Outbox"> | Date | string
   }
 
   export type BannerLocationCreateInput = {
@@ -6646,7 +6646,7 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type MarketingOutboxCreateInput = {
+  export type OutboxCreateInput = {
     id?: bigint | number
     event_type: string
     payload: JsonNullValueInput | InputJsonValue
@@ -6654,7 +6654,7 @@ export namespace Prisma {
     created_at?: Date | string
   }
 
-  export type MarketingOutboxUncheckedCreateInput = {
+  export type OutboxUncheckedCreateInput = {
     id?: bigint | number
     event_type: string
     payload: JsonNullValueInput | InputJsonValue
@@ -6662,7 +6662,7 @@ export namespace Prisma {
     created_at?: Date | string
   }
 
-  export type MarketingOutboxUpdateInput = {
+  export type OutboxUpdateInput = {
     id?: BigIntFieldUpdateOperationsInput | bigint | number
     event_type?: StringFieldUpdateOperationsInput | string
     payload?: JsonNullValueInput | InputJsonValue
@@ -6670,7 +6670,7 @@ export namespace Prisma {
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type MarketingOutboxUncheckedUpdateInput = {
+  export type OutboxUncheckedUpdateInput = {
     id?: BigIntFieldUpdateOperationsInput | bigint | number
     event_type?: StringFieldUpdateOperationsInput | string
     payload?: JsonNullValueInput | InputJsonValue
@@ -6678,7 +6678,7 @@ export namespace Prisma {
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type MarketingOutboxCreateManyInput = {
+  export type OutboxCreateManyInput = {
     id?: bigint | number
     event_type: string
     payload: JsonNullValueInput | InputJsonValue
@@ -6686,7 +6686,7 @@ export namespace Prisma {
     created_at?: Date | string
   }
 
-  export type MarketingOutboxUpdateManyMutationInput = {
+  export type OutboxUpdateManyMutationInput = {
     id?: BigIntFieldUpdateOperationsInput | bigint | number
     event_type?: StringFieldUpdateOperationsInput | string
     payload?: JsonNullValueInput | InputJsonValue
@@ -6694,7 +6694,7 @@ export namespace Prisma {
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type MarketingOutboxUncheckedUpdateManyInput = {
+  export type OutboxUncheckedUpdateManyInput = {
     id?: BigIntFieldUpdateOperationsInput | bigint | number
     event_type?: StringFieldUpdateOperationsInput | string
     payload?: JsonNullValueInput | InputJsonValue
@@ -7146,7 +7146,7 @@ export namespace Prisma {
     not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
-  export type MarketingOutboxCountOrderByAggregateInput = {
+  export type OutboxCountOrderByAggregateInput = {
     id?: SortOrder
     event_type?: SortOrder
     payload?: SortOrder
@@ -7154,25 +7154,25 @@ export namespace Prisma {
     created_at?: SortOrder
   }
 
-  export type MarketingOutboxAvgOrderByAggregateInput = {
+  export type OutboxAvgOrderByAggregateInput = {
     id?: SortOrder
   }
 
-  export type MarketingOutboxMaxOrderByAggregateInput = {
-    id?: SortOrder
-    event_type?: SortOrder
-    published?: SortOrder
-    created_at?: SortOrder
-  }
-
-  export type MarketingOutboxMinOrderByAggregateInput = {
+  export type OutboxMaxOrderByAggregateInput = {
     id?: SortOrder
     event_type?: SortOrder
     published?: SortOrder
     created_at?: SortOrder
   }
 
-  export type MarketingOutboxSumOrderByAggregateInput = {
+  export type OutboxMinOrderByAggregateInput = {
+    id?: SortOrder
+    event_type?: SortOrder
+    published?: SortOrder
+    created_at?: SortOrder
+  }
+
+  export type OutboxSumOrderByAggregateInput = {
     id?: SortOrder
   }
   export type JsonWithAggregatesFilter<$PrismaModel = never> =

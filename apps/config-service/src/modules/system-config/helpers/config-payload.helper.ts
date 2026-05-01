@@ -1,4 +1,4 @@
-import { toPrimaryKey } from '../../../common/core/primary-key.util';
+import { toPrimaryKey } from '../../../types';
 
 export function buildConfigPayload<T extends object>(
   dto: T,

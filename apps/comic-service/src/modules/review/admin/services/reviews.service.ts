@@ -1,27 +1,29 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
-import { ComicReviewRepository } from '../../repositories/comic-review.repository';
+import { ReviewFilter, ReviewRepository } from '../../repositories/review.repository';
 
 @Injectable()
 export class AdminReviewService {
-  constructor(private readonly reviewRepo: ComicReviewRepository) {}
+  constructor(private readonly reviewRepo: ReviewRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const where: any = {};
-    if (query.comic_id) where.comic_id = BigInt(query.comic_id);
+    const filter: ReviewFilter = {};
+    if (query.comic_id) filter.comic_id = query.comic_id;
+    if (query.user_id) filter.user_id = query.user_id;
+    if (query.rating) filter.rating = Number(query.rating);
 
+    const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
-      this.reviewRepo.findMany(where, options),
-      this.reviewRepo.count(where),
+      this.reviewRepo.findMany(filter, options),
+      skipCount ? Promise.resolve(0) : this.reviewRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async delete(id: PrimaryKey) {
+  async delete(id: any) {
     const review = await this.reviewRepo.findById(id);
     if (!review) throw new NotFoundException('Review not found');
 

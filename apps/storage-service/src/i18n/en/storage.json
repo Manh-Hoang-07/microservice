@@ -1,0 +1,9 @@
+{
+  "FILE_NOT_FOUND": "File not found: {filename}.",
+  "BUCKET_NOT_CONFIGURED": "S3 bucket is not configured.",
+  "S3_DESERIALIZATION_ERROR": "S3 Storage Error: Failed to parse response from storage provider{details}. Please check your S3/MinIO endpoint and credentials. Original error: {message}",
+  "CLOUDINARY_UPLOAD_FAILED": "Cloudinary upload failed: {message}",
+  "CLOUDINARY_DELETE_FAILED": "Cloudinary delete failed: {message}",
+  "CLOUDINARY_LIST_FAILED": "Cloudinary list failed: {message}",
+  "CLOUDINARY_FETCH_FAILED": "Could not fetch file from Cloudinary: {filename}"
+}

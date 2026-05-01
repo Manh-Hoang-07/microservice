@@ -30,6 +30,11 @@ export class AuthService {
     private readonly i18n: I18nService,
   ) {}
 
+  private t(key: string): string {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang }) as string;
+  }
+
   async login(dto: LoginDto) {
     return this.loginService.login(dto);
   }
@@ -47,9 +52,8 @@ export class AuthService {
   }
 
   async me(userId: PrimaryKey) {
-    const lang = I18nContext.current()?.lang ?? 'en';
     const user = await this.userRepo.findById(userId);
-    if (!user) throw new NotFoundException(this.i18n.t('auth.USER_NOT_FOUND', { lang }));
+    if (!user) throw new NotFoundException(this.t('auth.USER_NOT_FOUND'));
     return safeUser(user);
   }
 
@@ -66,20 +70,18 @@ export class AuthService {
   }
 
   async sendOtpForRegister(dto: SendOtpDto) {
-    const lang = I18nContext.current()?.lang ?? 'en';
     const existing = await this.userRepo.findByEmail(dto.email.toLowerCase());
-    if (existing) throw new BadRequestException(this.i18n.t('auth.EMAIL_IN_USE', { lang }));
+    if (existing) throw new BadRequestException(this.t('auth.EMAIL_IN_USE'));
     await this.otpService.sendRegisterOtp(dto.email);
-    return { message: this.i18n.t('auth.OTP_SENT', { lang }) };
+    return { message: this.t('auth.OTP_SENT') };
   }
 
   async sendOtpForForgotPassword(dto: SendOtpDto) {
-    const lang = I18nContext.current()?.lang ?? 'en';
     const existing = await this.userRepo.findByEmail(dto.email.toLowerCase());
     if (existing) {
       await this.otpService.sendForgotPasswordOtp(dto.email);
     }
-    return { message: this.i18n.t('auth.OTP_SENT', { lang }) };
+    return { message: this.t('auth.OTP_SENT') };
   }
 
   async handleGoogleAuth(profile: any) {

@@ -13,7 +13,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import { Response, Request, CookieOptions } from 'express';
+import { Response, Request } from 'express';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import {
   ApiOperation,
   ApiTags,
@@ -36,10 +37,13 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendOtpDto } from '../dto/send-otp.dto';
 import { LogoutDto } from '../dto/logout.dto';
 import { Public } from '@package/common';
-
-const ACCESS_COOKIE = 'auth_token';
-const REFRESH_COOKIE = 'auth_refresh_token';
-const REFRESH_COOKIE_PATH = '/api/auth/refresh';
+import {
+  REFRESH_COOKIE,
+  clearAuthCookies,
+  extractBearer,
+  requireUserId,
+  setAuthCookies,
+} from '../utils/auth-cookies.util';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -48,7 +52,19 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
     private readonly configService: ConfigService,
+    private readonly i18n: I18nService,
   ) {}
+
+  private get isProd(): boolean {
+    return this.configService.get<string>('app.nodeEnv') === 'production';
+  }
+
+  private writeAuthCookies(req: Request, res: Response, accessToken: string, refreshToken: string): void {
+    setAuthCookies(req, res, accessToken, refreshToken, {
+      accessMs: this.tokenService.getAccessTtlSec() * 1000,
+      refreshMs: this.tokenService.getRefreshTtlSec() * 1000,
+    }, this.isProd);
+  }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -65,7 +81,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(dto);
-    this.setAuthCookies(req, res, result.token, result.refreshToken);
+    this.writeAuthCookies(req, res, result.token, result.refreshToken);
     return result;
   }
 
@@ -92,10 +108,10 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const accessToken = this.extractBearer(authHeader);
+    const accessToken = extractBearer(authHeader);
     const refreshToken = dto?.refreshToken ?? (req.cookies?.[REFRESH_COOKIE] as string | undefined);
     await this.authService.logout(accessToken, refreshToken);
-    this.clearAuthCookies(req, res);
+    clearAuthCookies(req, res, this.isProd);
     return { success: true };
   }
 
@@ -108,10 +124,10 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const accessToken = this.extractBearer(authHeader);
-    const userId = this.requireUserId(req);
+    const accessToken = extractBearer(authHeader);
+    const userId = requireUserId(req);
     await this.authService.logoutAll(BigInt(userId), accessToken);
-    this.clearAuthCookies(req, res);
+    clearAuthCookies(req, res, this.isProd);
     return { success: true };
   }
 
@@ -130,10 +146,13 @@ export class AuthController {
   ) {
     const refreshToken = dto.refreshToken || (req.cookies?.[REFRESH_COOKIE] as string | undefined);
     if (!refreshToken) {
-      throw new InternalServerErrorException('Refresh token required');
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new InternalServerErrorException(
+        this.i18n.t('auth.REFRESH_TOKEN_REQUIRED', { lang }),
+      );
     }
     const result = await this.authService.refreshTokenByValue(refreshToken);
-    this.setAuthCookies(req, res, result.token, result.refreshToken);
+    this.writeAuthCookies(req, res, result.token, result.refreshToken);
     return result;
   }
 
@@ -141,7 +160,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current authenticated user' })
   @Get('me')
   async me(@Req() req: Request) {
-    const userId = this.requireUserId(req);
+    const userId = requireUserId(req);
     return this.authService.me(BigInt(userId));
   }
 
@@ -208,47 +227,7 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
-    this.setAuthCookies(req, res, result.token, result.refreshToken);
+    this.writeAuthCookies(req, res, result.token, result.refreshToken);
     return res.redirect(`${frontendUrl}/auth/google/success`);
-  }
-
-  private setAuthCookies(req: Request, res: Response, accessToken: string, refreshToken: string): void {
-    const accessTtlMs = this.tokenService.getAccessTtlSec() * 1000;
-    const refreshTtlMs = this.tokenService.getRefreshTtlSec() * 1000;
-    res.cookie(ACCESS_COOKIE, accessToken, this.cookieOptions(req, accessTtlMs));
-    res.cookie(REFRESH_COOKIE, refreshToken, {
-      ...this.cookieOptions(req, refreshTtlMs),
-      path: REFRESH_COOKIE_PATH,
-    });
-  }
-
-  private clearAuthCookies(req: Request, res: Response): void {
-    const opts = this.cookieOptions(req, 0);
-    res.clearCookie(ACCESS_COOKIE, { ...opts, maxAge: undefined });
-    res.clearCookie(REFRESH_COOKIE, { ...opts, maxAge: undefined, path: REFRESH_COOKIE_PATH });
-  }
-
-  private cookieOptions(req: Request, maxAgeMs: number): CookieOptions {
-    const isProd = this.configService.get<string>('app.nodeEnv') === 'production';
-    return {
-      maxAge: maxAgeMs,
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'strict' : 'lax',
-      domain: req.hostname === 'localhost' ? 'localhost' : undefined,
-      path: '/',
-    };
-  }
-
-  private extractBearer(authHeader?: string): string | undefined {
-    if (!authHeader?.startsWith('Bearer ')) return undefined;
-    return authHeader.slice(7);
-  }
-
-  private requireUserId(req: Request): string {
-    const user = (req as any).user;
-    const sub = user?.sub ?? user?.id;
-    if (!sub) throw new InternalServerErrorException('Authenticated user missing from request');
-    return String(sub);
   }
 }

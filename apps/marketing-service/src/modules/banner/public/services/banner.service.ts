@@ -1,28 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { toPrimaryKey } from 'src/types';
-import { BannerRepository } from '../../repositories/banner.repository';
+import { BannerFilter, BannerRepository } from '../../repositories/banner.repository';
 
 @Injectable()
 export class PublicBannerService {
   constructor(private readonly bannerRepo: BannerRepository) {}
 
-  async getList(query: any) {
+  async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const now = new Date();
-    const where: any = {
+    const filter: BannerFilter = {
       status: 'active',
-      OR: [{ start_date: null }, { start_date: { lte: now } }],
-      AND: [{ OR: [{ end_date: null }, { end_date: { gte: now } }] }],
+      active_at: new Date(),
     };
-
-    if (query.location_id) where.location_id = toPrimaryKey(query.location_id);
-    if (query.location_code) where.location = { code: query.location_code };
+    if (query.location_id) filter.location_id = query.location_id;
+    if (query.location_code) filter.location_code = query.location_code;
 
     const [data, total] = await Promise.all([
-      this.bannerRepo.findManyPublic(where, options),
-      this.bannerRepo.count(where),
+      this.bannerRepo.findManyPublic(filter, options),
+      this.bannerRepo.count(filter),
     ]);
 
     return { data, meta: createPaginationMeta(options, total) };

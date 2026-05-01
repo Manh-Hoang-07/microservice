@@ -1,17 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-  Patch,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Patch } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
 import { AdminBannerLocationService } from '../services/banner-location.service';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
@@ -30,7 +19,7 @@ export class AdminBannerLocationController {
   @Permission('marketing.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.bannerLocationService.getOne(toPrimaryKey(id));
+    return this.bannerLocationService.getOne(id);
   }
 
   @Permission('marketing.manage')
@@ -42,18 +31,18 @@ export class AdminBannerLocationController {
   @Permission('marketing.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateBannerLocationDto) {
-    return this.bannerLocationService.update(toPrimaryKey(id), dto);
+    return this.bannerLocationService.update(id, dto);
   }
 
   @Permission('marketing.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.bannerLocationService.delete(toPrimaryKey(id));
+    return this.bannerLocationService.delete(id);
   }
 
   @Permission('marketing.manage')
   @Patch(':id/status')
   async changeStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.bannerLocationService.changeStatus(toPrimaryKey(id), status);
+    return this.bannerLocationService.changeStatus(id, status);
   }
 }

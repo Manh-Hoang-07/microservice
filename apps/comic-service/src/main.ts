@@ -1,18 +1,22 @@
+import 'dotenv/config';
 import { initTracing } from '@package/tracing';
-initTracing('comic-service');
+
+initTracing(process.env.SERVICE_NAME ?? 'comic-service');
 
 import { AppModule } from './app.module';
 import { createApp } from '@package/bootstrap';
 
+const SERVICE_NAME = process.env.SERVICE_NAME ?? 'Comic Service';
+
 createApp({
-  serviceName: 'Comic Service',
-  defaultPort: 3001,
+  serviceName: SERVICE_NAME,
+  defaultPort: parseInt(process.env.PORT ?? '3001', 10),
   module: AppModule,
   swagger: {
-    title: 'Comic Service',
-    description: 'Comic domain microservice — Comic Platform',
+    title: SERVICE_NAME,
+    description: 'Comic domain microservice',
   },
 }).catch((err) => {
-  console.error('Comic Service failed to start', err);
+  console.error(`${SERVICE_NAME} failed to start`, err);
   process.exit(1);
 });

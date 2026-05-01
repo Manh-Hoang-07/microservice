@@ -1,0 +1,4 @@
+{
+  "EMAIL_UPDATE_FAILED": "Failed to update email config.",
+  "GENERAL_UPDATE_FAILED": "Failed to create or update general config."
+}

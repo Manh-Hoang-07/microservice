@@ -4,6 +4,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
+import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
+import { join } from 'path';
 import { createAppConfig, createRedisConfig } from '@package/config';
 import {
   JwtGuard,
@@ -35,6 +37,17 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
         createRedisConfig(),
       ],
       validationSchema: envValidationSchema,
+    }),
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: join(__dirname, 'i18n'),
+        watch: process.env.NODE_ENV !== 'production',
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+      ],
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),

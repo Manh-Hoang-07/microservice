@@ -1,0 +1,9 @@
+{
+  "FILE_NOT_FOUND": "Không tìm thấy tệp: {filename}.",
+  "BUCKET_NOT_CONFIGURED": "Chưa cấu hình S3 bucket.",
+  "S3_DESERIALIZATION_ERROR": "Lỗi S3 Storage: Không thể đọc phản hồi từ nhà cung cấp lưu trữ{details}. Vui lòng kiểm tra lại endpoint và thông tin đăng nhập S3/MinIO. Lỗi gốc: {message}",
+  "CLOUDINARY_UPLOAD_FAILED": "Tải lên Cloudinary thất bại: {message}",
+  "CLOUDINARY_DELETE_FAILED": "Xóa trên Cloudinary thất bại: {message}",
+  "CLOUDINARY_LIST_FAILED": "Lấy danh sách Cloudinary thất bại: {message}",
+  "CLOUDINARY_FETCH_FAILED": "Không thể tải tệp từ Cloudinary: {filename}"
+}
