@@ -270,7 +270,7 @@ services:
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
 
-  # ══ API Gateway (Nginx) ═══════════════════════════════════════════════════════
+  # ══ API Gateway (Nginx) — full Docker mode ═══════════════════════════════════
   nginx:
     image: nginx:1.25-alpine
     container_name: comic-nginx
@@ -290,6 +290,26 @@ services:
       - iam-service
     volumes:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ══ API Gateway (Nginx) — DEV mode ═══════════════════════════════════════════
+  # Service chạy host (npm start), nginx route ngược qua host.docker.internal.
+  # Chỉ start khi gọi: docker compose --profile dev up -d nginx-dev
+  nginx-dev:
+    image: nginx:1.25-alpine
+    container_name: comic-nginx-dev
+    profiles: ["dev"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./infrastructure/nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 10s

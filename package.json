@@ -42,7 +42,9 @@
     "prisma:generate": "npm run prisma:generate:auth && npm run prisma:generate:comic && npm run prisma:generate:config && npm run prisma:generate:iam && npm run prisma:generate:introduction && npm run prisma:generate:marketing && npm run prisma:generate:notification && npm run prisma:generate:post",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:build": "docker compose build"
+    "docker:build": "docker compose build",
+    "gateway:up": "docker compose --profile dev up -d nginx-dev",
+    "gateway:down": "docker compose --profile dev rm -sf nginx-dev"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
