@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Patch } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminBannerLocationService } from '../services/banner-location.service';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
 
-@ApiTags('Admin Banner Locations')
 @Controller('admin/banner-locations')
 export class AdminBannerLocationController {
   constructor(private readonly bannerLocationService: AdminBannerLocationService) {}

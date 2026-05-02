@@ -2,18 +2,11 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
-export interface SwaggerOptions {
-  title: string;
-  description: string;
-}
 
 export interface BootstrapOptions {
   serviceName: string;
   defaultPort: number;
   module: any;
-  swagger?: SwaggerOptions;
   /** Paths to exclude from global prefix (e.g. ['.well-known/(.*)'] for auth-service JWKS) */
   excludePrefixes?: string[];
 }
@@ -51,19 +44,6 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
       forbidNonWhitelisted: false,
     }),
   );
-
-  if (process.env.NODE_ENV !== 'production' && options.swagger) {
-    const doc = new DocumentBuilder()
-      .setTitle(options.swagger.title)
-      .setDescription(options.swagger.description)
-      .setVersion('1.0')
-      .addBearerAuth(
-        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-        'access-token',
-      )
-      .build();
-    SwaggerModule.setup(`${prefix}/docs`, app, SwaggerModule.createDocument(app, doc));
-  }
 
   await app.listen(port);
   console.log(`${serviceName} running on http://localhost:${port}/${prefix}`);

@@ -1,17 +1,13 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { PrismaService } from '../../database/prisma.service';
 import { Internal } from '@package/common';
 
-@ApiTags('Internal')
 @Internal()
 @Controller('internal/users')
 export class InternalUsersController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get users by IDs (internal)' })
-  @ApiQuery({ name: 'ids', description: 'Comma-separated user IDs', required: true })
   async getUsersByIds(@Query('ids') ids: string) {
     if (!ids) return [];
     const idList = ids

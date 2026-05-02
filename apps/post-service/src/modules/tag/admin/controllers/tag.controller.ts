@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminTagService } from '../services/tag.service';
 import { CreateTagDto } from '../dtos/create-tag.dto';
 import { UpdateTagDto } from '../dtos/update-tag.dto';
 
-@ApiTags('Admin Post Tags')
 @Controller('admin/post-tags')
 export class AdminTagController {
   constructor(private readonly tagService: AdminTagService) {}

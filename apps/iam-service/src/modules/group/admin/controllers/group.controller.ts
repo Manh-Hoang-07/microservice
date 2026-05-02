@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { GroupService } from '../services/group.service';
@@ -7,7 +6,6 @@ import { CreateGroupDto } from '../dtos/create-group.dto';
 import { UpdateGroupDto } from '../dtos/update-group.dto';
 import { AddMemberDto } from '../dtos/add-member.dto';
 
-@ApiTags('Groups')
 @Controller('groups')
 export class GroupController {
   constructor(private readonly service: GroupService) {}

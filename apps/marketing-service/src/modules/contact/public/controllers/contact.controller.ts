@@ -1,10 +1,8 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
 import { PublicContactService } from '../services/contact.service';
 import { CreateContactDto } from '../../admin/dtos/create-contact.dto';
 
-@ApiTags('Public Contacts')
 @Controller('public/contacts')
 export class PublicContactController {
   constructor(private readonly contactService: PublicContactService) {}

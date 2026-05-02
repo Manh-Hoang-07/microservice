@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminFaqService } from '../services/faq.service';
 import { CreateFaqDto } from '../dtos/create-faq.dto';
 import { UpdateFaqDto } from '../dtos/update-faq.dto';
 
-@ApiTags('Admin FAQs')
 @Controller('admin/faqs')
 export class AdminFaqController {
   constructor(private readonly faqService: AdminFaqService) {}

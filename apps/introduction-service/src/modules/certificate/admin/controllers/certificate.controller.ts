@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminCertificateService } from '../services/certificate.service';
 import { CreateCertificateDto } from '../dtos/create-certificate.dto';
 import { UpdateCertificateDto } from '../dtos/update-certificate.dto';
 
-@ApiTags('Admin Certificates')
 @Controller('admin/certificates')
 export class AdminCertificateController {
   constructor(private readonly certificateService: AdminCertificateService) {}

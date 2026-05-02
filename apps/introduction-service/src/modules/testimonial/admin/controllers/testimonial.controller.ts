@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminTestimonialService } from '../services/testimonial.service';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
 
-@ApiTags('Admin Testimonials')
 @Controller('admin/testimonials')
 export class AdminTestimonialController {
   constructor(private readonly testimonialService: AdminTestimonialService) {}

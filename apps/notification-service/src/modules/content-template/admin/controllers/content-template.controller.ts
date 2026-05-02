@@ -1,12 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminContentTemplateService } from '../services/content-template.service';
 import { CreateContentTemplateDto } from '../dtos/create-content-template.dto';
 import { UpdateContentTemplateDto } from '../dtos/update-content-template.dto';
 
-@ApiTags('Admin Content Templates')
 @Controller('admin/content-templates')
 export class AdminContentTemplateController {
   constructor(private readonly service: AdminContentTemplateService) {}

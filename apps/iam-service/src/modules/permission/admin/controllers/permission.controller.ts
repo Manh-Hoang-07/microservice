@@ -1,12 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { PermissionService } from '../services/permission.service';
 import { CreatePermissionDto } from '../dtos/create-permission.dto';
 import { UpdatePermissionDto } from '../dtos/update-permission.dto';
 
-@ApiTags('Permissions')
 @Controller('permissions')
 export class PermissionController {
   constructor(private readonly service: PermissionService) {}

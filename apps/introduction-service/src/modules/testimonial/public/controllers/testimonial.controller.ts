@@ -1,10 +1,8 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { PublicTestimonialService } from '../services/testimonial.service';
 
-@ApiTags('Public Testimonials')
 @Controller('public/testimonials')
 export class PublicTestimonialController {
   constructor(private readonly testimonialService: PublicTestimonialService) {}

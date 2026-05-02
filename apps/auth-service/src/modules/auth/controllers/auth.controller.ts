@@ -15,17 +15,6 @@ import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { Response, Request } from 'express';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import {
-  ApiOperation,
-  ApiTags,
-  ApiBody,
-  ApiOkResponse,
-  ApiCreatedResponse,
-  ApiBearerAuth,
-  ApiUnauthorizedResponse,
-  ApiBadRequestResponse,
-  ApiTooManyRequestsResponse,
-} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from '../services/auth.service';
 import { TokenService } from '../services/token.service';
@@ -45,7 +34,6 @@ import {
   setAuthCookies,
 } from '../utils/auth-cookies.util';
 
-@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -68,11 +56,6 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Login with email and password' })
-  @ApiBody({ type: LoginDto })
-  @ApiOkResponse({ description: 'Login successful' })
-  @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
-  @ApiTooManyRequestsResponse({ description: 'Too many login attempts' })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -87,19 +70,12 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Register new account' })
-  @ApiBody({ type: RegisterDto })
-  @ApiCreatedResponse({ description: 'Registration successful' })
-  @ApiBadRequestResponse({ description: 'Invalid data or email already in use' })
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Logout current session (revokes the provided refresh token)' })
-  @ApiBody({ type: LogoutDto, required: false })
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
@@ -115,8 +91,6 @@ export class AuthController {
     return { success: true };
   }
 
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Logout from every active session for the current user' })
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   async logoutAll(
@@ -133,10 +107,6 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Refresh access token' })
-  @ApiBody({ type: RefreshTokenDto })
-  @ApiOkResponse({ description: 'Token refreshed successfully' })
-  @ApiBadRequestResponse({ description: 'Invalid or expired refresh token' })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
@@ -156,8 +126,6 @@ export class AuthController {
     return result;
   }
 
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get current authenticated user' })
   @Get('me')
   async me(@Req() req: Request) {
     const userId = requireUserId(req);
@@ -166,8 +134,6 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @ApiOperation({ summary: 'Request password reset OTP' })
-  @ApiBody({ type: ForgotPasswordDto })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -177,8 +143,6 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @ApiOperation({ summary: 'Reset password with OTP' })
-  @ApiBody({ type: ResetPasswordDto })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {
@@ -188,8 +152,6 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 2, ttl: 60000 } })
-  @ApiOperation({ summary: 'Send registration OTP' })
-  @ApiBody({ type: SendOtpDto })
   @Post('register/send-otp')
   async registerSendOtp(@Body() dto: SendOtpDto) {
     return this.authService.sendOtpForRegister(dto);
@@ -197,8 +159,6 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 2, ttl: 60000 } })
-  @ApiOperation({ summary: 'Send forgot password OTP' })
-  @ApiBody({ type: SendOtpDto })
   @Post('forgot-password/send-otp')
   async forgotPasswordSendOtp(@Body() dto: SendOtpDto) {
     return this.authService.sendOtpForForgotPassword(dto);
@@ -207,7 +167,6 @@ export class AuthController {
   @Public()
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Initiate Google OAuth login' })
   async googleAuth() {
     // Guard redirects to Google
   }
@@ -215,7 +174,6 @@ export class AuthController {
   @Public()
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Google OAuth callback handler' })
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const frontendUrl = this.configService.get<string>('googleOAuth.frontendUrl');
     if (!frontendUrl) throw new InternalServerErrorException('GOOGLE_FRONTEND_URL not configured');

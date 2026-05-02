@@ -4,12 +4,9 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { WardService } from '../../admin/services/ward.service';
 import { Public } from '@package/common';
 
-@ApiTags('Location - Wards')
-@ApiBearerAuth('access-token')
 @Controller()
 export class PublicWardController {
   constructor(private readonly wardService: WardService) {}

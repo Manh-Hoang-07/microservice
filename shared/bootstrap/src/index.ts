@@ -1,1 +1,1 @@
-export { createApp, BootstrapOptions, SwaggerOptions } from './bootstrap';
+export { createApp, BootstrapOptions } from './bootstrap';

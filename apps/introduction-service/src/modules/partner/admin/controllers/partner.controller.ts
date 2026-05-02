@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminPartnerService } from '../services/partner.service';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
 
-@ApiTags('Admin Partners')
 @Controller('admin/partners')
 export class AdminPartnerController {
   constructor(private readonly partnerService: AdminPartnerService) {}

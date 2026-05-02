@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { ContextService } from '../services/context.service';
@@ -7,7 +6,6 @@ import { CreateContextDto } from '../dtos/create-context.dto';
 import { UpdateContextDto } from '../dtos/update-context.dto';
 import { SyncRolesDto } from '../dtos/sync-roles.dto';
 
-@ApiTags('Contexts')
 @Controller('contexts')
 export class ContextController {
   constructor(private readonly service: ContextService) {}

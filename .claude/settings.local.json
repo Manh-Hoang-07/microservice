@@ -96,7 +96,10 @@
       "Bash(find node_modules/prisma/config* node_modules/prisma/dist/config* -maxdepth 2 -name \"*.d.ts\")",
       "Bash(python -c ' *)",
       "Bash(taskkill //PID 17396 //F)",
-      "Bash(taskkill //PID 15996 //F)"
+      "Bash(taskkill //PID 15996 //F)",
+      "Bash(node .refactor-swagger.js)",
+      "Bash(git checkout *)",
+      "Bash(npm -w apps/web-api-service run build)"
     ]
   }
 }

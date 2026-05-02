@@ -1,10 +1,8 @@
 import { Controller, Get, Inject } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 const PERMS_KEY = 'perms_required';
 import { SetMetadata } from '@nestjs/common';
 
-@ApiTags('Health')
 @Controller('health')
 export class HealthController {
   constructor(
@@ -13,7 +11,6 @@ export class HealthController {
 
   @Get()
   @SetMetadata(PERMS_KEY, ['public'])
-  @ApiOperation({ summary: 'Health check' })
   check() {
     return {
       status: 'ok',

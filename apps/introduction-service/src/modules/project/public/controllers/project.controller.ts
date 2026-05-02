@@ -1,9 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
 import { PublicProjectService } from '../services/project.service';
 
-@ApiTags('Public Projects')
 @Controller('public/projects')
 export class PublicProjectController {
   constructor(private readonly projectService: PublicProjectService) {}

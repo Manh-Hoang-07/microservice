@@ -8,14 +8,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ProvinceService } from '../services/province.service';
 import { Permission } from '@package/common';
 import { CreateProvinceDto } from '../dtos/create-province.dto';
 import { UpdateProvinceDto } from '../dtos/update-province.dto';
 
-@ApiTags('Location - Provinces (Admin)')
-@ApiBearerAuth('access-token')
 @Controller('admin/provinces')
 export class AdminProvinceController {
   constructor(private readonly provinceService: ProvinceService) {}

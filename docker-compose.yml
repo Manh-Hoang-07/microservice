@@ -239,14 +239,14 @@ services:
       - post_redis_data:/data
     command: redis-server --appendonly yes
 
-  gateway-redis:
+  web-api-redis:
     image: redis:7-alpine
-    container_name: comic-gateway-redis
+    container_name: comic-web-api-redis
     restart: unless-stopped
     ports:
       - "6383:6379"
     volumes:
-      - gateway_redis_data:/data
+      - web_api_redis_data:/data
     command: redis-server --appendonly yes
 
   iam-redis:
@@ -279,7 +279,7 @@ services:
       - "80:80"
     depends_on:
       - storage-service
-      - gateway-service
+      - web-api-service
       - auth-service
       - config-service
       - comic-service
@@ -406,14 +406,14 @@ services:
     ports:
       - "3005:3005"
 
-  # ══ Gateway Service (:3006) ═══════════════════════════════════════════════════
-  gateway-service:
+  # ══ Web API Service (:3006) — aggregator for FE (homepage, search) ═══════════
+  web-api-service:
     build:
-      context: ./apps/gateway-service
-    container_name: comic-gateway-service
+      context: ./apps/web-api-service
+    container_name: comic-web-api-service
     restart: unless-stopped
     depends_on:
-      gateway-redis:
+      web-api-redis:
         condition: service_started
     environment:
       NODE_ENV: ${NODE_ENV:-development}
@@ -421,7 +421,7 @@ services:
       GLOBAL_PREFIX: ${GLOBAL_PREFIX:-api}
       COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://comic-service:3001/api}
       POST_SERVICE_URL: ${POST_SERVICE_URL:-http://post-service:3007/api}
-      GATEWAY_REDIS_URL: redis://gateway-redis:6379
+      WEB_API_REDIS_URL: redis://web-api-redis:6379
       SERVICE_TIMEOUT_MS: ${SERVICE_TIMEOUT_MS:-5000}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
@@ -598,5 +598,5 @@ volumes:
   comic_redis_data:
   notification_redis_data:
   post_redis_data:
-  gateway_redis_data:
+  web_api_redis_data:
   iam_redis_data:

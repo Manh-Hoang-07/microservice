@@ -1,9 +1,7 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { UserReadingHistoryService } from '../services/reading-history.service';
 
-@ApiTags('User Reading History')
 @Controller('user/reading-history')
 export class UserReadingHistoryController {
   constructor(private readonly historyService: UserReadingHistoryService) {}

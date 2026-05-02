@@ -2,14 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
-import gatewayConfig from './config/gateway.config';
+import webApiConfig from './config/web-api.config';
 import { envValidationSchema } from './config/env.validation';
 import { JwtGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { ClientsModule } from './clients/clients.module';
 import { CacheModule } from './cache/cache.module';
 import { GatewayHomepageModule } from './homepage/homepage.module';
-import { GatewayComicsModule } from './comics/comics.module';
-import { GatewayPostsModule } from './posts/posts.module';
 import { GatewaySearchModule } from './search/search.module';
 
 @Module({
@@ -17,15 +15,13 @@ import { GatewaySearchModule } from './search/search.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [gatewayConfig],
+      load: [webApiConfig],
       validationSchema: envValidationSchema,
     }),
     ClientsModule,
     CacheModule,
-    HealthModule.register('gateway-service'),
+    HealthModule.register('web-api-service'),
     GatewayHomepageModule,
-    GatewayComicsModule,
-    GatewayPostsModule,
     GatewaySearchModule,
   ],
   providers: [

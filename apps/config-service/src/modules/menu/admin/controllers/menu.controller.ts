@@ -10,15 +10,12 @@ import {
   ValidationPipe,
   Req,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { MenuService } from '../services/menu.service';
 import { CreateMenuDto } from '../dtos/create-menu.dto';
 import { UpdateMenuDto } from '../dtos/update-menu.dto';
 import { QueryMenuDto } from '../dtos/query-menu.dto';
 import { Permission } from '@package/common';
 
-@ApiTags('Menus')
-@ApiBearerAuth('access-token')
 @Controller()
 export class AdminMenuController {
   constructor(private readonly service: MenuService) {}

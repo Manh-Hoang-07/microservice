@@ -8,10 +8,6 @@ createApp({
   serviceName: 'Storage Service',
   defaultPort: 3003,
   module: StorageAppModule,
-  swagger: {
-    title: 'Storage Service',
-    description: 'File upload service — Comic Platform',
-  },
 }).catch((err) => {
   console.error('Storage Service failed to start', err);
   process.exit(1);

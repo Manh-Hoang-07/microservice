@@ -1,10 +1,8 @@
 import { Controller, Post, Put, Delete, Body, Param, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { UserCommentService } from '../services/comment.service';
 import { CreateCommentDto } from '../dtos/create-comment.dto';
 
-@ApiTags('User Post Comments')
 @Controller('user/post-comments')
 export class UserCommentController {
   constructor(private readonly commentService: UserCommentService) {}

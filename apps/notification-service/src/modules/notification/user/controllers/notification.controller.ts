@@ -1,10 +1,8 @@
 import { Controller, Get, Patch, Param, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserNotificationService } from '../services/notification.service';
 
-@ApiTags('User Notifications')
 @Controller('user/notifications')
 export class UserNotificationController {
   constructor(private readonly notifService: UserNotificationService) {}

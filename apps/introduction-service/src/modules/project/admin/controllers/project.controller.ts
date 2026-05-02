@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminProjectService } from '../services/project.service';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
 
-@ApiTags('Admin Projects')
 @Controller('admin/projects')
 export class AdminProjectController {
   constructor(private readonly projectService: AdminProjectService) {}

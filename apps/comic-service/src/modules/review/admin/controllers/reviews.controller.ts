@@ -1,9 +1,7 @@
 import { Controller, Get, Delete, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminReviewService } from '../services/reviews.service';
 
-@ApiTags('Admin Reviews')
 @Controller('admin/reviews')
 export class AdminReviewController {
   constructor(private readonly reviewService: AdminReviewService) {}

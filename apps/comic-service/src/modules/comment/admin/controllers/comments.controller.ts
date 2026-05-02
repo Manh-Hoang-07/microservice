@@ -1,9 +1,7 @@
 import { Controller, Get, Patch, Param, Query, Body } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminCommentService } from '../services/comments.service';
 
-@ApiTags('Admin Comments')
 @Controller('admin/comments')
 export class AdminCommentController {
   constructor(private readonly commentService: AdminCommentService) {}

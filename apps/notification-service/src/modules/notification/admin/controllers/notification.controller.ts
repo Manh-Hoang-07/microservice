@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminNotificationService } from '../services/notification.service';
 import { SendNotificationDto } from '../dtos/send-notification.dto';
 
-@ApiTags('Admin Notifications')
 @Controller('admin/notifications')
 export class AdminNotificationController {
   constructor(private readonly notifService: AdminNotificationService) {}

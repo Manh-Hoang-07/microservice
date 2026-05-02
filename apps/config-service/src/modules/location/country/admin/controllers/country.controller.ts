@@ -8,14 +8,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CountryService } from '../services/country.service';
 import { Permission } from '@package/common';
 import { CreateCountryDto } from '../dtos/create-country.dto';
 import { UpdateCountryDto } from '../dtos/update-country.dto';
 
-@ApiTags('Location - Countries (Admin)')
-@ApiBearerAuth('access-token')
 @Controller('admin/countries')
 export class AdminCountryController {
   constructor(private readonly countryService: CountryService) {}

@@ -32,17 +32,16 @@ type: project
   - `src/common/permission.decorator.ts` — Permission, Public decorators
   - `src/upload/` — toàn bộ upload logic (interface, 3 strategies, 2 services, controller, module, dtos)
   - Endpoints: POST /upload/file, POST /upload/files, GET /upload, GET /upload/allowed-types, GET /upload/meta/:filename, GET /upload/:filename, DELETE /upload/:filename
-- **apps/gateway-service** (:3006): **Hoàn toàn standalone**, không import từ `@auth-client` hay `@/`
-  - `src/config/gateway.config.ts` — registerAs('gateway', ...) với typed config
-  - `src/guards/jwt.guard.ts` — JwtGuard inline, đọc `gateway.jwksUrl`
-  - `src/common/permission.decorator.ts` — decorators riêng
-  - Comics: GET /comics, /comics/top, /comics/:slug, /:slug/chapters, /:slug/chapters/:chapterSlug, /:slug/comments, /:slug/reviews
-  - Posts: GET /posts, /posts/categories, /posts/tags, /posts/:slug, /:slug/comments
-  - Search: GET /search?q=
-  - Homepage: GET /homepage, DELETE /homepage/cache
-- **infrastructure/nginx/nginx.conf**: API Gateway routing
-- **docker-compose.yml** thêm: nginx + storage-service + gateway-service containers
-- **Scripts**: `npm run start:storage` (port 3003), `npm run start:gateway` (port 3006)
+- **apps/web-api-service** (:3006) — đổi tên từ `gateway-service` (2026-05-02): aggregator BFF cho FE
+  - `src/config/web-api.config.ts` — registerAs('webApi', ...)
+  - Modules còn lại: `homepage/` (aggregate 6 endpoint comic+post), `search/` (cross-service search). Hai module proxy `comics/` + `posts/` đã xoá vì chỉ là cache wrapper trùng lặp với upstream service.
+  - Class prefix: `WebApiAppModule`, `WebApiHomepageService`, `WebApiSearchService`, `WebApiCacheService`
+  - Redis: container `web-api-redis`, env `WEB_API_REDIS_URL`, key prefix `web-api:`
+  - Routes: `GET /homepage`, `DELETE /homepage/cache`, `GET /search?q=`
+  - **Lý do rename**: tên cũ "gateway" gây hiểu lầm vì Nginx mới là API gateway thực sự (routing/auth/rate-limit). Service này chỉ là BFF cho FE.
+- **infrastructure/nginx/nginx.conf**: API Gateway routing (upstream `web_api_service`)
+- **docker-compose.yml** thêm: nginx + storage-service + web-api-service containers
+- **Scripts**: `npm run start:storage` (port 3003), `npm run start:web-api` (port 3006)
 
 ## Nguyên tắc kiến trúc đã áp dụng
 - Mỗi service có `src/config/` riêng với `registerAs` pattern (như `src/core/config/` của monolith)
@@ -90,8 +89,8 @@ npm run start:dev
 # Storage Service
 npm run start:storage
 
-# Gateway Service
-npm run start:gateway
+# Web API Service
+npm run start:web-api
 ```
 
 ## Env vars quan trọng
@@ -99,6 +98,6 @@ npm run start:gateway
 - `AUTH_MODE=local|distributed` (default: local)
 - `EVENT_DRIVER=local|kafka` (default: local)
 - `AUTH_JWKS_URL` — bắt buộc khi AUTH_MODE=distributed
-- `COMIC_SERVICE_URL` — Gateway gọi đến (default: main service)
-- `Gateway_REDIS_URL` — Redis cho Gateway cache
+- `COMIC_SERVICE_URL` — web-api-service gọi đến (default: main service)
+- `WEB_API_REDIS_URL` — Redis cho web-api cache
 - `KAFKA_BROKERS` — bắt buộc khi EVENT_DRIVER=kafka

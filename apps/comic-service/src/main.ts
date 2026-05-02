@@ -12,10 +12,6 @@ createApp({
   serviceName: SERVICE_NAME,
   defaultPort: parseInt(process.env.PORT ?? '3001', 10),
   module: AppModule,
-  swagger: {
-    title: SERVICE_NAME,
-    description: 'Comic domain microservice',
-  },
 }).catch((err) => {
   console.error(`${SERVICE_NAME} failed to start`, err);
   process.exit(1);

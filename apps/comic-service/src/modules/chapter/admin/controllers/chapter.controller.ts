@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminChapterService } from '../services/chapter.service';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
 
-@ApiTags('Admin Chapters')
 @Controller('admin/chapters')
 export class AdminChapterController {
   constructor(private readonly chapterService: AdminChapterService) {}

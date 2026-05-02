@@ -1,9 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
 import { PublicCertificateService } from '../services/certificate.service';
 
-@ApiTags('Public Certificates')
 @Controller('public/certificates')
 export class PublicCertificateController {
   constructor(private readonly certificateService: PublicCertificateService) {}

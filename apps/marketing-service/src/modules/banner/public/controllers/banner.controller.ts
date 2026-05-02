@@ -1,9 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
 import { PublicBannerService } from '../services/banner.service';
 
-@ApiTags('Public Banners')
 @Controller('public/banners')
 export class PublicBannerController {
   constructor(private readonly bannerService: PublicBannerService) {}

@@ -1,9 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Public } from '@package/common';
 import { PublicChapterService } from '../services/chapter.service';
 
-@ApiTags('Public Chapters')
 @Controller('public/chapters')
 export class PublicChapterController {
   constructor(private readonly chapterService: PublicChapterService) {}

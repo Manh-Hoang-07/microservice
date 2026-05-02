@@ -1,10 +1,8 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { UserBookmarkService } from '../services/bookmarks.service';
 import { CreateBookmarkDto } from '../dtos/create-bookmark.dto';
 
-@ApiTags('User Bookmarks')
 @Controller('user/bookmarks')
 export class UserBookmarkController {
   constructor(private readonly bookmarkService: UserBookmarkService) {}

@@ -1,11 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { AdminGalleryService } from '../services/gallery.service';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
 
-@ApiTags('Admin Galleries')
 @Controller('admin/galleries')
 export class AdminGalleryController {
   constructor(private readonly galleryService: AdminGalleryService) {}

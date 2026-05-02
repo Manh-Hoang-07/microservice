@@ -8,10 +8,6 @@ createApp({
   serviceName: 'Config Service',
   defaultPort: 3005,
   module: ConfigAppModule,
-  swagger: {
-    title: 'Config Service',
-    description: 'System configuration, menu, and location microservice — Comic Platform',
-  },
 }).catch((err) => {
   console.error('Config Service failed to start', err);
   process.exit(1);

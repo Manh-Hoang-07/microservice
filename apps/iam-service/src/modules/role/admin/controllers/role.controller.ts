@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { RoleService } from '../services/role.service';
@@ -7,7 +6,6 @@ import { CreateRoleDto } from '../dtos/create-role.dto';
 import { UpdateRoleDto } from '../dtos/update-role.dto';
 import { SyncPermissionsDto } from '../dtos/sync-permissions.dto';
 
-@ApiTags('Roles')
 @Controller('roles')
 export class RoleController {
   constructor(private readonly service: RoleService) {}

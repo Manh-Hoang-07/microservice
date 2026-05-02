@@ -8,14 +8,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { WardService } from '../services/ward.service';
 import { Permission } from '@package/common';
 import { CreateWardDto } from '../dtos/create-ward.dto';
 import { UpdateWardDto } from '../dtos/update-ward.dto';
 
-@ApiTags('Location - Wards (Admin)')
-@ApiBearerAuth('access-token')
 @Controller('admin/wards')
 export class AdminWardController {
   constructor(private readonly wardService: WardService) {}
