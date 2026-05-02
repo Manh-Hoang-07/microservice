@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminTestimonialService } from '../services/testimonial.service';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
+import { ListTestimonialAdminQueryDto } from '../dtos/list-testimonial.query.dto';
 
 @Controller('admin/testimonials')
 export class AdminTestimonialController {
@@ -10,7 +11,7 @@ export class AdminTestimonialController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListTestimonialAdminQueryDto) {
     return this.testimonialService.getList(query);
   }
 

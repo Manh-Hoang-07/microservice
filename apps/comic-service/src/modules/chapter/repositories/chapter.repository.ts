@@ -128,10 +128,34 @@ export class ChapterRepository {
     return this.prisma.chapter.delete({ where: { id: toPrimaryKey(id) } });
   }
 
-  updateComicLastChapter(comicId: any, chapterId: any) {
+  /**
+   * Update `last_chapter_id` only when the new chapter is genuinely the
+   * latest. Without the `chapter_index` guard, re-publishing an old chapter
+   * (e.g. fixing typos in chapter 1) overwrote the pointer with the wrong
+   * chapter and the homepage "latest update" went backwards.
+   */
+  async updateComicLastChapter(comicId: any, chapterId: any) {
+    const cid = toPrimaryKey(comicId);
+    const chid = toPrimaryKey(chapterId);
+    const chapter = await this.prisma.chapter.findUnique({
+      where: { id: chid },
+      select: { chapter_index: true },
+    });
+    if (!chapter) return null;
+
+    const max = await this.prisma.chapter.aggregate({
+      where: { comic_id: cid, status: 'published' },
+      _max: { chapter_index: true },
+    });
+
+    const isLatest =
+      max._max.chapter_index == null ||
+      chapter.chapter_index >= max._max.chapter_index;
+    if (!isLatest) return null;
+
     return this.prisma.comic.update({
-      where: { id: toPrimaryKey(comicId) },
-      data: { last_chapter_id: toPrimaryKey(chapterId), last_chapter_updated_at: new Date() },
+      where: { id: cid },
+      data: { last_chapter_id: chid, last_chapter_updated_at: new Date() },
     });
   }
 

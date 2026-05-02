@@ -137,6 +137,56 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client.smembers(key);
   }
 
+  async srem(key: string, ...members: string[]): Promise<number> {
+    if (!this.client) return 0;
+    return this.client.srem(key, ...members);
+  }
+
+  /**
+   * Atomic GET + DEL. Returns the previous value or null. Requires Redis >= 6.2.
+   */
+  async getdel(key: string): Promise<string | null> {
+    if (!this.client) return null;
+    return (this.client as any).getdel
+      ? (this.client as any).getdel(key)
+      : this.client.call('GETDEL', key) as Promise<string | null>;
+  }
+
+  /**
+   * Run an atomic Redis transaction (MULTI/EXEC). Returns array of results
+   * or throws on connection failure.
+   */
+  async multi(commands: Array<[string, ...(string | number)[]]>): Promise<unknown[]> {
+    if (!this.client) return [];
+    let pipeline = this.client.multi();
+    for (const [cmd, ...args] of commands) {
+      pipeline = (pipeline as any)[cmd.toLowerCase()](...args);
+    }
+    const result = await pipeline.exec();
+    if (!result) return [];
+    return result.map(([err, val]) => {
+      if (err) throw err;
+      return val;
+    });
+  }
+
+  /**
+   * Atomically delete tracked keys + the tracked-set in a single round trip.
+   */
+  async deleteMany(keys: string[]): Promise<void> {
+    if (!this.client || !keys.length) return;
+    await this.client.del(...keys);
+  }
+
+  /**
+   * Atomic RENAME. Throws when the source key does not exist; callers should
+   * wrap in try/catch to treat "missing source" as a no-op.
+   */
+  async rename(source: string, destination: string): Promise<void> {
+    if (!this.client) return;
+    await this.client.rename(source, destination);
+  }
+
   async publish(channel: string, message: string): Promise<void> {
     if (!this.client) return;
     await this.client.publish(channel, message);
@@ -158,6 +208,32 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       await this.subscriberClient.subscribe(channel);
     } catch {
       // ignore subscriber failure
+    }
+  }
+
+  /**
+   * Detach a callback from a pubsub channel. When the last callback for a
+   * channel is removed, also unsubscribes the underlying client. Used by
+   * services that subscribe in `onModuleInit` and need to clean up in
+   * `onModuleDestroy` — otherwise the closure retains `this` and prevents
+   * GC of the module during hot-reload tests.
+   */
+  async unsubscribe(channel: string, callback?: (message: string) => void): Promise<void> {
+    const callbacks = this.channelCallbacks.get(channel);
+    if (!callbacks?.length) return;
+    if (callback) {
+      const idx = callbacks.indexOf(callback);
+      if (idx >= 0) callbacks.splice(idx, 1);
+    } else {
+      callbacks.length = 0;
+    }
+    if (!callbacks.length) {
+      this.channelCallbacks.delete(channel);
+      try {
+        await this.subscriberClient?.unsubscribe(channel);
+      } catch {
+        // best-effort cleanup
+      }
     }
   }
 }

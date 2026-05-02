@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { PublicStaffService } from '../services/staff.service';
+import { ListStaffPublicQueryDto } from '../../admin/dtos/list-staff.query.dto';
 
 @Controller('public/staff')
 export class PublicStaffController {
@@ -9,7 +10,7 @@ export class PublicStaffController {
 
   @Public()
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListStaffPublicQueryDto) {
     return this.staffService.getList(query);
   }
 

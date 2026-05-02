@@ -1,8 +1,12 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreateRoleDto {
   @IsString()
+  @MinLength(2)
   @MaxLength(100)
+  @Matches(/^[a-z][a-z0-9_.-]{1,99}$/i, {
+    message: 'code must start with a letter and contain only letters, digits, underscore, dot, dash.',
+  })
   code: string;
 
   @IsOptional()
@@ -12,5 +16,6 @@ export class CreateRoleDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^\d{1,20}$/, { message: 'parent_id must be numeric.' })
   parent_id?: string;
 }

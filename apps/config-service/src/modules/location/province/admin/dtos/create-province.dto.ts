@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateProvinceDto {
   @IsNotEmpty()
@@ -22,15 +29,17 @@ export class CreateProvinceDto {
   phone_code?: string;
 
   @IsNotEmpty()
-  country_id: any;
+  @IsString()
+  @Matches(/^\d{1,20}$/, { message: 'country_id must be numeric.' })
+  country_id: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(30)
+  @IsIn(['active', 'inactive'])
   status?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   note?: string;
 
   @IsOptional()

@@ -1,5 +1,7 @@
 import * as Joi from 'joi';
 
+const isProd = Joi.string().valid('production');
+
 export const envValidationSchema = Joi.object({
   // App
   SERVICE_NAME: Joi.string().default('Post Service'),
@@ -8,19 +10,46 @@ export const envValidationSchema = Joi.object({
   APP_TIMEZONE: Joi.string().default('Asia/Ho_Chi_Minh'),
   NODE_ENV: Joi.string().valid('development', 'staging', 'production').default('development'),
   GLOBAL_PREFIX: Joi.string().default('api'),
-  CORS_ORIGINS: Joi.string().default('*'),
+  CORS_ORIGINS: Joi.alternatives().conditional('NODE_ENV', {
+    is: isProd,
+    then: Joi.string()
+      .required()
+      .pattern(/^(?!\*$).+/, { name: 'no-wildcard' })
+      .messages({
+        'string.pattern.name':
+          'CORS_ORIGINS must be an explicit comma-separated origin list in production (no "*").',
+      }),
+    otherwise: Joi.string().default('*'),
+  }),
 
   // Database
   DATABASE_URL: Joi.string().required(),
 
   // Redis
-  REDIS_URL: Joi.string().optional().allow(''),
+  REDIS_URL: Joi.alternatives().conditional('NODE_ENV', {
+    is: isProd,
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
 
-  // JWT (consumer)
-  AUTH_JWKS_URL: Joi.string().optional().allow(''),
+  // JWT (consumer) — required in prod so JwtGuard cannot fall back to bypass
+  AUTH_JWKS_URL: Joi.alternatives().conditional('NODE_ENV', {
+    is: isProd,
+    then: Joi.string().uri().required(),
+    otherwise: Joi.string().uri().optional().allow(''),
+  }),
+  IAM_INTERNAL_URL: Joi.alternatives().conditional('NODE_ENV', {
+    is: isProd,
+    then: Joi.string().uri().required(),
+    otherwise: Joi.string().uri().optional().allow(''),
+  }),
 
   // Internal
-  INTERNAL_API_SECRET: Joi.string().optional().allow(''),
+  INTERNAL_API_SECRET: Joi.alternatives().conditional('NODE_ENV', {
+    is: isProd,
+    then: Joi.string().min(16).required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
 
   // Kafka
   EVENT_DRIVER: Joi.string().valid('kafka', 'local').default('local'),

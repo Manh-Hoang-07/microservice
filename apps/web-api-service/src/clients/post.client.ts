@@ -17,9 +17,12 @@ export class PostClient implements OnModuleInit {
   private readonly timeout: number;
   private breaker!: CircuitBreakerPolicy;
 
+  private readonly internalSecret: string;
+
   constructor(private readonly config: ConfigService) {
     this.baseUrl = config.get<string>('gateway.postServiceUrl', 'http://localhost:3007/api');
     this.timeout = config.get<number>('gateway.serviceTimeoutMs', 5000);
+    this.internalSecret = config.get<string>('gateway.internalApiSecret', '');
   }
 
   onModuleInit() {
@@ -90,9 +93,12 @@ export class PostClient implements OnModuleInit {
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
     try {
+      const headers: Record<string, string> = { Accept: 'application/json' };
+      if (this.internalSecret) headers['x-internal-secret'] = this.internalSecret;
+
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { Accept: 'application/json' },
+        headers,
       });
 
       if (!res.ok) {

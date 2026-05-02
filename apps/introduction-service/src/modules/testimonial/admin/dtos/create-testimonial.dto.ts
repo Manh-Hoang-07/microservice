@@ -1,13 +1,18 @@
 import {
-  IsString,
-  IsOptional,
-  IsInt,
   IsBoolean,
+  IsEnum,
+  IsInt,
   IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
   MaxLength,
-  Min,
   Max,
+  Min,
 } from 'class-validator';
+import { BasicStatus } from '../../../../common/enums/status.enum';
+
+const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateTestimonialDto {
   @IsString()
@@ -25,11 +30,12 @@ export class CreateTestimonialDto {
   client_company?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl(URL_OPTS, { message: 'client_avatar must be an http(s) URL.' })
   @MaxLength(500)
   client_avatar?: string;
 
   @IsString()
+  @MaxLength(5000)
   content: string;
 
   @IsOptional()
@@ -47,10 +53,11 @@ export class CreateTestimonialDto {
   featured?: boolean;
 
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   sort_order?: number;
 }

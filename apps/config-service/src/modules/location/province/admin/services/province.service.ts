@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { ProvinceRepository, ProvinceFilter } from '../../repositories/province.repository';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -54,6 +54,16 @@ export class ProvinceService {
 
   async delete(id: any) {
     await this.getOne(id);
+    // Province → Ward FK is Cascade per schema, but we still warn the
+    // operator about destructive action by surfacing how many wards will
+    // be removed alongside, instead of silently cascading.
+    const wardCount = await this.provinceRepo.countWards(id);
+    if (wardCount > 0) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new ConflictException(
+        this.i18n.t('location.PROVINCE_HAS_WARDS', { lang, args: { count: wardCount } }),
+      );
+    }
     await this.provinceRepo.delete(id);
     return true;
   }

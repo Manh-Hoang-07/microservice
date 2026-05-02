@@ -12,6 +12,8 @@ import { RegistrationService } from './services/registration.service';
 import { PasswordService } from './services/password.service';
 import { SocialAuthService } from './services/social-auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
+import { GoogleOauthStateService } from './services/google-state.service';
 import { UserRepository } from './repositories/user.repository';
 
 @Module({
@@ -31,6 +33,8 @@ import { UserRepository } from './repositories/user.repository';
     PasswordService,
     SocialAuthService,
     GoogleStrategy,
+    GoogleOauthStateService,
+    GoogleOAuthGuard,
   ],
   exports: [AuthService, TokenService],
 })

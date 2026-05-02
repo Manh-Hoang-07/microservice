@@ -8,7 +8,8 @@ import { createAppConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { AboutModule } from './modules/about/about.module';
 import { StaffModule } from './modules/staff/staff.module';
@@ -44,10 +45,19 @@ import { FaqModule } from './modules/faq/faq.module';
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new JwtGuard(reflector, config),
+      inject: [Reflector, ConfigService],
+    },
+    // RbacGuard required so the per-route `@Permission(...)` codes (about/staff/
+    // project/etc.) are actually checked against IAM.
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService) =>
+        new RbacGuard(reflector, config),
       inject: [Reflector, ConfigService],
     },
     {

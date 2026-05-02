@@ -19,9 +19,31 @@ export class UserRoleRepository {
     });
   }
 
-  removeRole(userId: PrimaryKey, roleId: PrimaryKey, groupId: PrimaryKey) {
-    return this.prisma.userRoleAssignment.deleteMany({
+  async removeRole(
+    userId: PrimaryKey,
+    roleId: PrimaryKey,
+    groupId: PrimaryKey,
+  ): Promise<number> {
+    const result = await this.prisma.userRoleAssignment.deleteMany({
       where: { user_id: userId, role_id: roleId, group_id: groupId },
     });
+    return result.count;
+  }
+
+  async getActiveRoleIdsForUserInGroup(
+    userId: PrimaryKey,
+    groupId: PrimaryKey | null,
+  ): Promise<bigint[]> {
+    const where: any = { user_id: userId };
+    if (groupId === null) {
+      where.group = { context: { type: 'system', status: 'active' }, status: 'active' };
+    } else {
+      where.group_id = groupId;
+    }
+    const rows = await this.prisma.userRoleAssignment.findMany({
+      where,
+      select: { role_id: true },
+    });
+    return rows.map((r) => r.role_id);
   }
 }

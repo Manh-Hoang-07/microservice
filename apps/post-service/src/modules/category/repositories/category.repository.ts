@@ -46,9 +46,10 @@ export class CategoryRepository {
   private buildWhere(filter: CategoryFilter): Prisma.CategoryWhereInput {
     const where: Prisma.CategoryWhereInput = {};
     if (filter.search) {
+      const search = filter.search.slice(0, 100);
       where.OR = [
-        { name: { contains: filter.search } },
-        { slug: { contains: filter.search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.parent_id !== undefined) {
@@ -56,6 +57,15 @@ export class CategoryRepository {
     }
     if (filter.is_active !== undefined) where.is_active = filter.is_active;
     return where;
+  }
+
+  /** Walk up the parent chain — used to detect cycles before saving. */
+  async getParentId(id: bigint): Promise<bigint | null> {
+    const row = await this.prisma.category.findUnique({
+      where: { id },
+      select: { parent_id: true },
+    });
+    return row?.parent_id ?? null;
   }
 
   findMany(filter: CategoryFilter, options: { skip: number; take: number }) {
@@ -109,12 +119,26 @@ export class CategoryRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
-    const bigIntFields = ['parent_id', 'created_user_id', 'updated_user_id', 'group_id'];
-    for (const field of bigIntFields) {
-      const value = payload[field];
-      if (value === undefined) continue;
-      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
+    const ALLOWED: ReadonlySet<string> = new Set([
+      'name',
+      'slug',
+      'description',
+      'parent_id',
+      'sort_order',
+      'is_active',
+      'seo_title',
+      'seo_description',
+      'seo_keywords',
+    ]);
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED.has(key)) payload[key] = data[key];
+    }
+    if (payload.parent_id !== undefined) {
+      payload.parent_id =
+        payload.parent_id === null || payload.parent_id === ''
+          ? null
+          : toPrimaryKey(payload.parent_id);
     }
     return payload;
   }

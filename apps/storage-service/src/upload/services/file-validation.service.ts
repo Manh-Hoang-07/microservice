@@ -169,6 +169,14 @@ export class FileValidationService {
     }
   }
 
+  // Extensions that can execute scripts when served from the storage origin.
+  // Always rejected, even if runtime config tries to allow them back.
+  private static readonly DANGEROUS_EXTENSIONS: ReadonlySet<string> = new Set([
+    '.svg', '.html', '.htm', '.xhtml', '.js', '.mjs', '.cjs',
+    '.xml', '.swf', '.jar', '.exe', '.bat', '.sh', '.ps1',
+    '.cmd', '.dll', '.app', '.apk', '.msi',
+  ]);
+
   /**
    * Validate file extension
    */
@@ -177,6 +185,13 @@ export class FileValidationService {
     category: string;
   } {
     const ext = this.getExtension(filename).toLowerCase();
+
+    if (FileValidationService.DANGEROUS_EXTENSIONS.has(ext)) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new BadRequestException(
+        this.i18n.t('upload.FILE_TYPE_NOT_ALLOWED', { lang, args: { types: ext } }),
+      );
+    }
 
     for (const [category, config] of this.allowedFileTypes.entries()) {
       if (config.extensions.includes(ext)) {
@@ -194,13 +209,13 @@ export class FileValidationService {
   }
 
   /**
-   * Validate MIME type
+   * Validate MIME type. We accept `application/octet-stream` as a generic
+   * fallback (browsers send it), but the magic-byte check is still required
+   * downstream so a generic content-type cannot itself bypass validation.
    */
   private validateMimeType(mimeType: string, allowedMimeTypes: string[]): void {
-    // Some clients send generic content-type; rely on extension + magic-bytes in that case.
-    if (!mimeType || mimeType === 'application/octet-stream') {
-      return;
-    }
+    if (!mimeType) return;
+    if (mimeType === 'application/octet-stream') return;
     if (!allowedMimeTypes.includes(mimeType)) {
       const lang = I18nContext.current()?.lang ?? 'en';
       throw new BadRequestException(

@@ -17,9 +17,10 @@ export class AboutSectionRepository {
   private buildWhere(filter: AboutSectionFilter): Prisma.AboutSectionWhereInput {
     const where: Prisma.AboutSectionWhereInput = {};
     if (filter.search) {
+      const search = filter.search.slice(0, 100);
       where.OR = [
-        { title: { contains: filter.search } },
-        { slug: { contains: filter.search } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -31,7 +32,7 @@ export class AboutSectionRepository {
   findMany(filter: AboutSectionFilter, options: { skip: number; take: number }) {
     return this.prisma.aboutSection.findMany({
       where: this.buildWhere(filter),
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

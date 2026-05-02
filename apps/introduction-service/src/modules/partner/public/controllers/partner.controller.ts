@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { PublicPartnerService } from '../services/partner.service';
+import { ListPartnerPublicQueryDto } from '../../admin/dtos/list-partner.query.dto';
 
 @Controller('public/partners')
 export class PublicPartnerController {
@@ -9,7 +10,7 @@ export class PublicPartnerController {
 
   @Public()
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListPartnerPublicQueryDto) {
     return this.partnerService.getList(query);
   }
 

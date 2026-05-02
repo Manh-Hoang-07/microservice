@@ -4,6 +4,7 @@ import { toPrimaryKey } from 'src/types';
 import { AdminContentTemplateService } from '../services/content-template.service';
 import { CreateContentTemplateDto } from '../dtos/create-content-template.dto';
 import { UpdateContentTemplateDto } from '../dtos/update-content-template.dto';
+import { ListContentTemplatesAdminQueryDto } from '../dtos/list-content-templates.query.dto';
 
 @Controller('admin/content-templates')
 export class AdminContentTemplateController {
@@ -11,7 +12,7 @@ export class AdminContentTemplateController {
 
   @Permission('notification.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListContentTemplatesAdminQueryDto) {
     return this.service.getList(query);
   }
 

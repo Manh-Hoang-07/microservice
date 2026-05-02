@@ -28,7 +28,25 @@ export class UploadService {
       throw new BadRequestException(this.i18n.t('upload.FILES_REQUIRED', { lang }));
     }
 
-    return Promise.all(files.map((file) => this.strategy.upload(file)));
+    // Best-effort cleanup on partial failure: if any single upload throws,
+    // delete the ones that already succeeded so we don't leave orphaned
+    // blobs in S3/disk/Cloudinary while the caller sees an error.
+    const results = await Promise.allSettled(
+      files.map((file) => this.strategy.upload(file)),
+    );
+    const successes: UploadResult[] = [];
+    const errors: unknown[] = [];
+    for (const r of results) {
+      if (r.status === 'fulfilled') successes.push(r.value);
+      else errors.push(r.reason);
+    }
+    if (errors.length > 0) {
+      for (const s of successes) {
+        await this.strategy.delete(s.filename).catch(() => undefined);
+      }
+      throw errors[0];
+    }
+    return successes;
   }
 
   async downloadFile(

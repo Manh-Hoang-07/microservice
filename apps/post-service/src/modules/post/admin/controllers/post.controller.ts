@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminPostService } from '../services/post.service';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
+import { ListPostsAdminQueryDto } from '../dtos/list-posts.query.dto';
 
 @Controller('admin/posts')
 export class AdminPostController {
@@ -10,13 +11,13 @@ export class AdminPostController {
 
   @Permission('post.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListPostsAdminQueryDto) {
     return this.postService.getList(query);
   }
 
   @Permission('post.manage')
   @Get('simple')
-  async getSimpleList(@Query() query: any) {
+  async getSimpleList(@Query() query: ListPostsAdminQueryDto) {
     return this.postService.getSimpleList(query);
   }
 

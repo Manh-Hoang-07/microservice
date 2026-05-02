@@ -20,9 +20,9 @@ export class TestimonialRepository {
     const where: Prisma.TestimonialWhereInput = {};
     if (filter.search) {
       where.OR = [
-        { client_name: { contains: filter.search } },
-        { client_company: { contains: filter.search } },
-        { content: { contains: filter.search } },
+        { client_name: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { client_company: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { content: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -35,7 +35,7 @@ export class TestimonialRepository {
     return this.prisma.testimonial.findMany({
       where: this.buildWhere(filter),
       include: { project: { select: PROJECT_SELECT } },
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

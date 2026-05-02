@@ -161,7 +161,11 @@ model Comment {
 
   comic   Comic     @relation(fields: [comic_id], references: [id], onDelete: Cascade)
   chapter Chapter?  @relation(fields: [chapter_id], references: [id], onDelete: SetNull)
-  parent  Comment?  @relation("CommentToReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  // SetNull (was Cascade): admin hard-delete of one parent comment used to
+  // wipe the entire reply subtree even though user-side delete already
+  // soft-deletes via status='deleted'. Replies now survive with parent_id
+  // = NULL; the renderer can display "[deleted]" for missing parents.
+  parent  Comment?  @relation("CommentToReplies", fields: [parent_id], references: [id], onDelete: SetNull)
   replies Comment[] @relation("CommentToReplies")
 
   @@index([user_id], map: "comments_idx_user_id")
@@ -282,6 +286,9 @@ model Bookmark {
 
   chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
 
+  // Unique on (user, chapter, page) so double-tap doesn't insert two rows
+  // for the same bookmark; the service uses upsert against this constraint.
+  @@unique([user_id, chapter_id, page_number], map: "bookmarks_idx_user_chapter_page_unique")
   @@index([user_id], map: "bookmarks_idx_user_id")
   @@index([chapter_id], map: "bookmarks_idx_chapter_id")
   @@index([user_id, chapter_id], map: "bookmarks_idx_user_chapter")

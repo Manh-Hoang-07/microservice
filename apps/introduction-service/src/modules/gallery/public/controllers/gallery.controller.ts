@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@package/common';
 import { PublicGalleryService } from '../services/gallery.service';
+import { ListGalleryPublicQueryDto } from '../../admin/dtos/list-gallery.query.dto';
 
 @Controller('public/galleries')
 export class PublicGalleryController {
@@ -8,7 +9,7 @@ export class PublicGalleryController {
 
   @Public()
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListGalleryPublicQueryDto) {
     return this.galleryService.getList(query);
   }
 

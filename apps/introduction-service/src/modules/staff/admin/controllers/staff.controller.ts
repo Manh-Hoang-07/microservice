@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminStaffService } from '../services/staff.service';
 import { CreateStaffDto } from '../dtos/create-staff.dto';
 import { UpdateStaffDto } from '../dtos/update-staff.dto';
+import { ListStaffAdminQueryDto } from '../dtos/list-staff.query.dto';
 
 @Controller('admin/staff')
 export class AdminStaffController {
@@ -10,7 +11,7 @@ export class AdminStaffController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListStaffAdminQueryDto) {
     return this.staffService.getList(query);
   }
 

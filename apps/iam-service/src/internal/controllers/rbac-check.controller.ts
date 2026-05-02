@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
 import { RbacService } from '../../rbac/services/rbac.service';
 import { RbacCheckDto } from '../dtos/rbac-check.dto';
 import { Internal } from '@package/common';
@@ -13,12 +13,20 @@ export class InternalRbacController {
     const { userId, groupId, permissions } = body;
     if (!permissions?.length) return { allowed: false };
 
+    let parsedUser: bigint;
+    let parsedGroup: bigint | null;
+    try {
+      parsedUser = BigInt(userId);
+      parsedGroup = groupId ? BigInt(groupId) : null;
+    } catch {
+      throw new BadRequestException('Invalid id');
+    }
+
     const allowed = await this.rbacService.hasPermissions(
-      userId,
-      groupId ?? null,
+      parsedUser,
+      parsedGroup,
       permissions,
     );
-
     return { allowed };
   }
 }

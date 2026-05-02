@@ -17,8 +17,8 @@ export class GalleryRepository {
     const where: Prisma.GalleryWhereInput = {};
     if (filter.search) {
       where.OR = [
-        { title: { contains: filter.search } },
-        { slug: { contains: filter.search } },
+        { title: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { slug: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -29,7 +29,7 @@ export class GalleryRepository {
   findMany(filter: GalleryFilter, options: { skip: number; take: number }) {
     return this.prisma.gallery.findMany({
       where: this.buildWhere(filter),
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

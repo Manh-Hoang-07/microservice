@@ -1,12 +1,16 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreateGroupDto {
   @IsString()
+  @MinLength(2)
   @MaxLength(50)
+  @Matches(/^[a-z][a-z0-9_-]{1,49}$/i, { message: 'type is invalid.' })
   type: string;
 
   @IsString()
+  @MinLength(2)
   @MaxLength(100)
+  @Matches(/^[a-z][a-z0-9_.-]{1,99}$/i, { message: 'code is invalid.' })
   code: string;
 
   @IsString()
@@ -14,13 +18,16 @@ export class CreateGroupDto {
   name: string;
 
   @IsString()
+  @Matches(/^\d{1,20}$/, { message: 'context_id must be numeric.' })
   context_id: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   description?: string;
 
   @IsOptional()
   @IsString()
+  @Matches(/^\d{1,20}$/, { message: 'owner_id must be numeric.' })
   owner_id?: string;
 }

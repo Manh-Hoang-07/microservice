@@ -1,7 +1,8 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class RefreshTokenDto {
+  // Refresh token may also come from cookie; controller validates presence.
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  refreshToken: string;
+  refreshToken?: string;
 }

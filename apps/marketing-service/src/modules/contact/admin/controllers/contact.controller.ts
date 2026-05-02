@@ -1,6 +1,8 @@
 import { Controller, Get, Param, Query, Patch, Body, Req } from '@nestjs/common';
 import { Permission } from '@package/common';
 import { AdminContactService } from '../services/contact.service';
+import { ReplyContactDto } from '../dtos/reply-contact.dto';
+import { ListContactsAdminQueryDto } from '../dtos/list-contacts.query.dto';
 
 @Controller('admin/contacts')
 export class AdminContactController {
@@ -8,7 +10,7 @@ export class AdminContactController {
 
   @Permission('marketing.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListContactsAdminQueryDto) {
     return this.contactService.getList(query);
   }
 
@@ -22,10 +24,10 @@ export class AdminContactController {
   @Patch(':id/reply')
   async reply(
     @Param('id') id: string,
-    @Body('reply') reply: string,
+    @Body() body: ReplyContactDto,
     @Req() req: any,
   ) {
-    return this.contactService.reply(id, reply, req.user?.sub ?? req.user?.id ?? 0);
+    return this.contactService.reply(id, body.reply, req.user?.sub ?? req.user?.id ?? 0);
   }
 
   @Permission('marketing.manage')

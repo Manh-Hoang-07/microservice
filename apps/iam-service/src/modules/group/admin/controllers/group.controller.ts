@@ -5,6 +5,7 @@ import { GroupService } from '../services/group.service';
 import { CreateGroupDto } from '../dtos/create-group.dto';
 import { UpdateGroupDto } from '../dtos/update-group.dto';
 import { AddMemberDto } from '../dtos/add-member.dto';
+import { ListGroupsAdminQueryDto, ListGroupMembersAdminQueryDto } from '../dtos/list-group.query.dto';
 
 @Controller('groups')
 export class GroupController {
@@ -12,7 +13,7 @@ export class GroupController {
 
   @Permission('group.manage')
   @Get()
-  getList(@Query() query: any) {
+  getList(@Query() query: ListGroupsAdminQueryDto) {
     return this.service.getList(query);
   }
 
@@ -42,7 +43,7 @@ export class GroupController {
 
   @Permission('group.manage')
   @Get(':id/members')
-  getMembers(@Param('id') id: string, @Query() query: any) {
+  getMembers(@Param('id') id: string, @Query() query: ListGroupMembersAdminQueryDto) {
     return this.service.getMembers(toPrimaryKey(id), query);
   }
 

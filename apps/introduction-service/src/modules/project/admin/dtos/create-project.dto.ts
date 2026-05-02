@@ -1,14 +1,19 @@
 import {
-  IsString,
-  IsOptional,
-  IsEnum,
-  IsInt,
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDateString,
-  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { ProjectStatus } from '../../enums/project-status.enum';
+
+const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateProjectDto {
   @IsString()
@@ -30,7 +35,7 @@ export class CreateProjectDto {
   short_description?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl(URL_OPTS, { message: 'cover_image must be an http(s) URL.' })
   @MaxLength(500)
   cover_image?: string;
 
@@ -68,6 +73,7 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(200)
   images?: any[];
 
   @IsOptional()
@@ -76,6 +82,7 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   sort_order?: number;
 
   @IsOptional()

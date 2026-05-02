@@ -30,6 +30,12 @@ export class GatewayHomepageService {
   ) {}
 
   async getHomepageData() {
+    // Skip caching empty arrays / null — those come from circuit-open or
+    // upstream 5xx and would otherwise lock the homepage into a broken
+    // state for the full TTL (up to 12h for categories).
+    const nonEmptyArray = (v: unknown) => Array.isArray(v) && v.length > 0;
+    const nonNull = (v: unknown) => v != null && v !== '';
+
     const [
       topViewedComics,
       popularComics,
@@ -41,34 +47,36 @@ export class GatewayHomepageService {
       this.cache.getOrSet(
         'homepage:comics:top_viewed',
         () => this.comicClient.getTopViewed(8),
-        TTL.TOP_VIEWED,
+        { ttlSeconds: TTL.TOP_VIEWED, shouldCache: nonEmptyArray },
       ),
       this.cache.getOrSet(
         'homepage:comics:popular',
         () => this.comicClient.getPopular(8),
-        TTL.POPULAR,
+        { ttlSeconds: TTL.POPULAR, shouldCache: nonEmptyArray },
       ),
       this.cache.getOrSet(
         'homepage:comics:newest',
         () => this.comicClient.getNewest(8),
-        TTL.NEWEST,
+        { ttlSeconds: TTL.NEWEST, shouldCache: nonEmptyArray },
       ),
       this.cache.getOrSet(
         'homepage:comics:recent_updated',
         () => this.comicClient.getRecentlyUpdated(8),
-        TTL.RECENT_UPDATED,
+        { ttlSeconds: TTL.RECENT_UPDATED, shouldCache: nonEmptyArray },
       ),
       this.cache.getOrSet(
         'homepage:categories',
         () => this.comicClient.getCategories(),
-        TTL.CATEGORIES,
+        { ttlSeconds: TTL.CATEGORIES, shouldCache: nonEmptyArray },
       ),
       this.cache.getOrSet(
         'homepage:posts:latest',
         () => this.postClient.getLatestPosts(6),
-        TTL.LATEST_POSTS,
+        { ttlSeconds: TTL.LATEST_POSTS, shouldCache: nonEmptyArray },
       ),
     ]);
+    // Keep `nonNull` referenced in case future call sites need it.
+    void nonNull;
 
     return {
       top_viewed_comics: topViewedComics,

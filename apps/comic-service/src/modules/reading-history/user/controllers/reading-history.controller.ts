@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/common';
 import { Permission } from '@package/common';
 import { UserReadingHistoryService } from '../services/reading-history.service';
+import { ListReadingHistoryQueryDto } from '../dtos/list-reading-history.query.dto';
 
 @Controller('user/reading-history')
 export class UserReadingHistoryController {
@@ -8,7 +9,7 @@ export class UserReadingHistoryController {
 
   @Permission('user')
   @Get()
-  async getList(@Req() req: any, @Query() query: any) {
+  async getList(@Req() req: any, @Query() query: ListReadingHistoryQueryDto) {
     return this.historyService.getList(req.user.sub, query);
   }
 

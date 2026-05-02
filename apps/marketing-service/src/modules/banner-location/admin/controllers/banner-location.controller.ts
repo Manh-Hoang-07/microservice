@@ -3,6 +3,8 @@ import { Permission } from '@package/common';
 import { AdminBannerLocationService } from '../services/banner-location.service';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
+import { ChangeStatusDto } from '../dtos/change-status.dto';
+import { ListBannerLocationsAdminQueryDto } from '../dtos/list-banner-locations.query.dto';
 
 @Controller('admin/banner-locations')
 export class AdminBannerLocationController {
@@ -10,7 +12,7 @@ export class AdminBannerLocationController {
 
   @Permission('marketing.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListBannerLocationsAdminQueryDto) {
     return this.bannerLocationService.getList(query);
   }
 
@@ -40,7 +42,7 @@ export class AdminBannerLocationController {
 
   @Permission('marketing.manage')
   @Patch(':id/status')
-  async changeStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.bannerLocationService.changeStatus(id, status);
+  async changeStatus(@Param('id') id: string, @Body() body: ChangeStatusDto) {
+    return this.bannerLocationService.changeStatus(id, body);
   }
 }

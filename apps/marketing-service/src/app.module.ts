@@ -8,7 +8,8 @@ import { createAppConfig, createKafkaConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
 
 import { BannerModule } from './modules/banner/banner.module';
@@ -37,10 +38,19 @@ import { ContactModule } from './modules/contact/contact.module';
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new JwtGuard(reflector, config),
+      inject: [Reflector, ConfigService],
+    },
+    // RbacGuard required so `@Permission('banner.manage' | 'contact.manage')`
+    // is enforced; without it any authenticated user can write banners.
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService) =>
+        new RbacGuard(reflector, config),
       inject: [Reflector, ConfigService],
     },
     {

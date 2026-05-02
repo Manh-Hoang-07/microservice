@@ -16,7 +16,7 @@ export class WardRepository {
 
   private buildWhere(filter: WardFilter): Prisma.WardWhereInput {
     const where: Prisma.WardWhereInput = {};
-    if (filter.name) where.name = { contains: filter.name };
+    if (filter.name) where.name = { contains: filter.name, mode: 'insensitive' };
     if (filter.code) where.code = filter.code;
     if (filter.status) where.status = filter.status;
     if (filter.province_id !== undefined && filter.province_id !== null) {

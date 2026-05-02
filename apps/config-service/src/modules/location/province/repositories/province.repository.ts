@@ -16,13 +16,17 @@ export class ProvinceRepository {
 
   private buildWhere(filter: ProvinceFilter): Prisma.ProvinceWhereInput {
     const where: Prisma.ProvinceWhereInput = {};
-    if (filter.name) where.name = { contains: filter.name };
+    if (filter.name) where.name = { contains: filter.name, mode: 'insensitive' };
     if (filter.code) where.code = filter.code;
     if (filter.status) where.status = filter.status;
     if (filter.country_id !== undefined && filter.country_id !== null) {
       where.country_id = toPrimaryKey(filter.country_id);
     }
     return where;
+  }
+
+  countWards(provinceId: any) {
+    return this.prisma.ward.count({ where: { province_id: toPrimaryKey(provinceId) } });
   }
 
   findMany(filter: ProvinceFilter, options: { skip: number; take: number }) {

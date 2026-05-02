@@ -1,11 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../database/prisma.service';
 import { PrimaryKey } from 'src/types';
 
+type Tx = Prisma.TransactionClient | PrismaService;
+
 @Injectable()
 export class UserRepository {
+  private readonly logger = new Logger(UserRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Expose Prisma instance for service-level transactions. */
+  get client(): PrismaService {
+    return this.prisma;
+  }
 
   findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
@@ -34,17 +43,34 @@ export class UserRepository {
     return this.prisma.user.findUnique({ where: { phone } });
   }
 
-  create(data: Record<string, any>) {
-    return this.prisma.user.create({ data: data as Prisma.UserCreateInput });
+  create(data: Record<string, any>, tx: Tx = this.prisma) {
+    return tx.user.create({ data: data as Prisma.UserCreateInput });
   }
 
-  update(id: PrimaryKey, data: Record<string, any>) {
-    return this.prisma.user.update({ where: { id }, data: data as Prisma.UserUpdateInput });
+  update(id: PrimaryKey, data: Record<string, any>, tx: Tx = this.prisma) {
+    return tx.user.update({ where: { id }, data: data as Prisma.UserUpdateInput });
   }
 
   updateLastLogin(id: PrimaryKey) {
     return this.prisma.user
       .update({ where: { id }, data: { last_login_at: new Date() } })
-      .catch(() => undefined);
+      .catch((err) => {
+        this.logger.warn(`updateLastLogin failed for user ${id}: ${(err as Error).message}`);
+        return undefined;
+      });
+  }
+
+  /** Insert an outbox event in the same transaction as a business write. */
+  enqueueOutboxEvent(
+    eventType: string,
+    payload: Record<string, unknown>,
+    tx: Tx = this.prisma,
+  ) {
+    return tx.authOutbox.create({
+      data: {
+        event_type: eventType,
+        payload: payload as any,
+      },
+    });
   }
 }

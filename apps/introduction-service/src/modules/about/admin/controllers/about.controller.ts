@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminAboutService } from '../services/about.service';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
+import { ListAboutAdminQueryDto } from '../dtos/list-about.query.dto';
 
 @Controller('admin/about-sections')
 export class AdminAboutController {
@@ -10,7 +11,7 @@ export class AdminAboutController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListAboutAdminQueryDto) {
     return this.aboutService.getList(query);
   }
 

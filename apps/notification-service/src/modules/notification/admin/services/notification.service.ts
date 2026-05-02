@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService, I18nContext } from 'nestjs-i18n';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { NotificationRepository } from '../../repositories/notification.repository';
 import { SendNotificationDto } from '../dtos/send-notification.dto';
+
+const NUMERIC_RE = /^\d{1,20}$/;
+const ALLOWED_TYPES = new Set(['info', 'success', 'warning', 'error']);
+const ALLOWED_STATUSES = new Set(['active', 'archived', 'deleted']);
 
 @Injectable()
 export class AdminNotificationService {
@@ -16,9 +20,26 @@ export class AdminNotificationService {
     const options = parseQueryOptions(query);
 
     const filter: any = {};
-    if (query.user_id) filter.user_id = query.user_id;
-    if (query.type) filter.type = query.type;
-    if (query.status) filter.status = query.status;
+    // Validate at the service boundary: surface bad values as 400 instead
+    // of a 500 from `BigInt('abc')` deep in the repo.
+    if (query.user_id) {
+      if (!NUMERIC_RE.test(String(query.user_id))) {
+        throw new BadRequestException('user_id must be numeric');
+      }
+      filter.user_id = String(query.user_id);
+    }
+    if (query.type) {
+      if (!ALLOWED_TYPES.has(String(query.type))) {
+        throw new BadRequestException('Invalid notification type');
+      }
+      filter.type = query.type;
+    }
+    if (query.status) {
+      if (!ALLOWED_STATUSES.has(String(query.status))) {
+        throw new BadRequestException('Invalid notification status');
+      }
+      filter.status = query.status;
+    }
     if (query.is_read !== undefined) filter.is_read = query.is_read === 'true';
 
     const [data, total] = await Promise.all([

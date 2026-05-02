@@ -100,6 +100,10 @@ model Post {
   @@index([is_featured], map: "posts_idx_is_featured")
   @@index([is_pinned], map: "posts_idx_is_pinned")
   @@index([published_at], map: "posts_idx_published_at")
+  // Composite index for the public list. Filter is `status IN (...)` and
+  // ordering is by `published_at DESC` — without this composite, Postgres
+  // can use only one of the two single-column indexes per query.
+  @@index([status, published_at(sort: Desc)], map: "posts_idx_status_published_at")
   @@index([created_at], map: "posts_idx_created_at")
   @@index([created_user_id], map: "posts_idx_created_user_id")
   @@index([updated_user_id], map: "posts_idx_updated_user_id")
@@ -170,7 +174,11 @@ model Comment {
   updated_at      DateTime @updatedAt @db.Timestamp(0)
 
   post    Post      @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  parent  Comment?  @relation("CommentToReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  // SetNull (was Cascade): admin hard-delete of one parent comment used to
+  // wipe the entire reply subtree even though user-side delete already
+  // soft-deletes via status='deleted'. Replies now survive with parent_id
+  // = NULL; the renderer can display "[deleted]" for missing parents.
+  parent  Comment?  @relation("CommentToReplies", fields: [parent_id], references: [id], onDelete: SetNull)
   replies Comment[] @relation("CommentToReplies")
 
   @@index([user_id], map: "comments_idx_user_id")

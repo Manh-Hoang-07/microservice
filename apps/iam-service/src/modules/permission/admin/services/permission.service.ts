@@ -1,9 +1,10 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { PermissionRepository } from '../../repositories/permission.repository';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
+import { RbacPermissionIndexService } from '../../../../rbac/services/rbac-permission-index.service';
 import { CreatePermissionDto } from '../dtos/create-permission.dto';
 import { UpdatePermissionDto } from '../dtos/update-permission.dto';
 
@@ -12,8 +13,14 @@ export class PermissionService {
   constructor(
     private readonly repo: PermissionRepository,
     private readonly rbacCache: RbacCacheService,
+    private readonly permIndex: RbacPermissionIndexService,
     private readonly i18n: I18nService,
   ) {}
+
+  private t(key: string): string {
+    const lang = I18nContext.current()?.lang ?? 'en';
+    return this.i18n.t(key, { lang }) as string;
+  }
 
   async getList(query: any) {
     const options = parseQueryOptions(query);
@@ -30,8 +37,7 @@ export class PermissionService {
   async getOne(id: PrimaryKey) {
     const item = await this.repo.findById(id);
     if (!item) {
-      const lang = I18nContext.current()?.lang ?? 'en';
-      throw new NotFoundException(this.i18n.t('permission.NOT_FOUND', { lang }));
+      throw new NotFoundException(this.t('permission.NOT_FOUND'));
     }
     return item;
   }
@@ -39,8 +45,7 @@ export class PermissionService {
   async create(dto: CreatePermissionDto, actorId: PrimaryKey) {
     const existing = await this.repo.findByCode(dto.code);
     if (existing) {
-      const lang = I18nContext.current()?.lang ?? 'en';
-      throw new ConflictException(this.i18n.t('permission.CODE_EXISTS', { lang }));
+      throw new ConflictException(this.t('permission.CODE_EXISTS'));
     }
     const data: any = {
       code: dto.code,
@@ -51,11 +56,15 @@ export class PermissionService {
     if (dto.parent_id) data.parent = { connect: { id: BigInt(dto.parent_id) } };
     const result = await this.repo.create(data);
     await this.rbacCache.bumpVersion();
+    await this.permIndex.publishRefresh();
     return result;
   }
 
   async update(id: PrimaryKey, dto: UpdatePermissionDto, actorId: PrimaryKey) {
     await this.getOne(id);
+    if (dto.parent_id) {
+      await this.assertNoCycle(id, BigInt(dto.parent_id));
+    }
     const data: any = { updated_user_id: actorId };
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.status !== undefined) data.status = dto.status;
@@ -66,6 +75,7 @@ export class PermissionService {
     }
     const result = await this.repo.update(id, data);
     await this.rbacCache.bumpVersion();
+    await this.permIndex.publishRefresh();
     return result;
   }
 
@@ -73,6 +83,24 @@ export class PermissionService {
     await this.getOne(id);
     await this.repo.delete(id);
     await this.rbacCache.bumpVersion();
+    await this.permIndex.publishRefresh();
     return { deleted: true };
+  }
+
+  private async assertNoCycle(id: PrimaryKey, candidateParentId: bigint): Promise<void> {
+    if (BigInt(String(id)) === candidateParentId) {
+      throw new BadRequestException(this.t('permission.CYCLE_DETECTED'));
+    }
+    const visited = new Set<string>();
+    let cur: bigint | null = candidateParentId;
+    while (cur != null) {
+      const key = String(cur);
+      if (visited.has(key)) break;
+      visited.add(key);
+      if (cur === BigInt(String(id))) {
+        throw new BadRequestException(this.t('permission.CYCLE_DETECTED'));
+      }
+      cur = await this.repo.getParentId(cur);
+    }
   }
 }

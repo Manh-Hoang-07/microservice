@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminNotificationService } from '../services/notification.service';
 import { SendNotificationDto } from '../dtos/send-notification.dto';
+import { ListNotificationsAdminQueryDto } from '../dtos/list-notifications.query.dto';
 
 @Controller('admin/notifications')
 export class AdminNotificationController {
@@ -10,7 +11,7 @@ export class AdminNotificationController {
 
   @Permission('notification.manage')
   @Get()
-  getList(@Query() query: any) {
+  getList(@Query() query: ListNotificationsAdminQueryDto) {
     return this.notifService.getList(query);
   }
 

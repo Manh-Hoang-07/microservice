@@ -2,6 +2,10 @@
 dist/
 *.tsbuildinfo
 /node_modules
+apps/*/dist/
+apps/*/node_modules/
+shared/*/dist/
+shared/*/node_modules/
 
 # Logs
 logs
@@ -48,6 +52,19 @@ lerna-debug.log*
 # /storage/uploads
 
 
-src/generated/prisma
+# Generated Prisma client (regenerate with `prisma generate` at build time)
+src/generated/
+apps/*/src/generated/
 
 storage/comics
+
+# Prisma config compiled artifacts (only the .ts is canonical)
+apps/*/prisma.config.js
+apps/*/prisma.config.js.map
+apps/*/prisma.config.d.ts
+
+# Accidental zero-byte files created from stray shell redirections
+/auth-service@*
+/comic-platform@*
+/npm
+/prisma

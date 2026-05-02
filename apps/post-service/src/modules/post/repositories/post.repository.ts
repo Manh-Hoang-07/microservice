@@ -3,6 +3,41 @@ import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
+type Tx = Prisma.TransactionClient | PrismaService;
+
+// Whitelist of columns that can come in via the request body. Anything
+// outside this list is dropped before reaching Prisma to defeat
+// mass-assignment via spread (e.g. attacker setting `created_user_id` or
+// `view_count` from JSON body).
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'slug',
+  'excerpt',
+  'content',
+  'image',
+  'cover_image',
+  'status',
+  'post_type',
+  'video_url',
+  'audio_url',
+  'is_featured',
+  'is_pinned',
+  'published_at',
+  'seo_title',
+  'seo_description',
+  'seo_keywords',
+]);
+
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'created_at',
+  'updated_at',
+  'published_at',
+  'view_count',
+  'is_featured',
+  'is_pinned',
+]);
+
 export interface PostFilter {
   search?: string;
   status?: string | string[];
@@ -58,9 +93,12 @@ export class PostRepository {
   private buildWhere(filter: PostFilter): Prisma.PostWhereInput {
     const where: Prisma.PostWhereInput = {};
     if (filter.search) {
+      // Cap search length and use insensitive mode — Postgres `contains`
+      // is case-sensitive by default and unbounded length is a DoS vector.
+      const search = filter.search.slice(0, 100);
       where.OR = [
-        { name: { contains: filter.search } },
-        { slug: { contains: filter.search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.status !== undefined) {
@@ -82,6 +120,10 @@ export class PostRepository {
   private buildOrderBy(sort?: string): Prisma.PostOrderByWithRelationInput {
     if (!sort) return { published_at: 'desc' };
     const [field, dirRaw] = sort.split(':');
+    // Allowlist sortable columns. Without this, an arbitrary `sort=foo:bar`
+    // makes Prisma throw at runtime → 500 on a public endpoint, which is a
+    // trivial DoS / fingerprinting vector.
+    if (!field || !SORTABLE_FIELDS.has(field)) return { published_at: 'desc' };
     const dir: 'asc' | 'desc' = dirRaw?.toLowerCase() === 'asc' ? 'asc' : 'desc';
     if (field === 'view_count') return { stats: { view_count: dir } };
     return { [field]: dir } as Prisma.PostOrderByWithRelationInput;
@@ -137,14 +179,19 @@ export class PostRepository {
     return this.prisma.post.findUnique({ where: { slug } });
   }
 
-  create(data: Record<string, any>) {
-    return this.prisma.post.create({
+  /** Direct Prisma access for service-level transactions. */
+  get client(): PrismaService {
+    return this.prisma;
+  }
+
+  create(data: Record<string, any>, tx: Tx = this.prisma) {
+    return tx.post.create({
       data: this.normalizePayload(data) as Prisma.PostUncheckedCreateInput,
     });
   }
 
-  update(id: any, data: Record<string, any>) {
-    return this.prisma.post.update({
+  update(id: any, data: Record<string, any>, tx: Tx = this.prisma) {
+    return tx.post.update({
       where: { id: toPrimaryKey(id) },
       data: this.normalizePayload(data) as Prisma.PostUncheckedUpdateInput,
     });
@@ -154,48 +201,48 @@ export class PostRepository {
     return this.prisma.post.delete({ where: { id: toPrimaryKey(id) } });
   }
 
-  createStats(postId: any) {
-    return this.prisma.stats.create({ data: { post_id: toPrimaryKey(postId) } });
+  createStats(postId: any, tx: Tx = this.prisma) {
+    return tx.stats.create({ data: { post_id: toPrimaryKey(postId) } });
   }
 
-  async syncCategories(postId: any, categoryIds: any[]) {
+  async syncCategories(postId: any, categoryIds: any[], tx: Tx = this.prisma) {
     const pid = toPrimaryKey(postId);
-    await this.prisma.postCategory.deleteMany({ where: { post_id: pid } });
+    await tx.postCategory.deleteMany({ where: { post_id: pid } });
     if (categoryIds.length > 0) {
-      await this.prisma.postCategory.createMany({
+      await tx.postCategory.createMany({
         data: categoryIds.map((catId) => ({
           post_id: pid,
           category_id: toPrimaryKey(catId),
         })),
+        skipDuplicates: true,
       });
     }
   }
 
-  async syncTags(postId: any, tagIds: any[]) {
+  async syncTags(postId: any, tagIds: any[], tx: Tx = this.prisma) {
     const pid = toPrimaryKey(postId);
-    await this.prisma.postTag.deleteMany({ where: { post_id: pid } });
+    await tx.postTag.deleteMany({ where: { post_id: pid } });
     if (tagIds.length > 0) {
-      await this.prisma.postTag.createMany({
+      await tx.postTag.createMany({
         data: tagIds.map((tagId) => ({
           post_id: pid,
           tag_id: toPrimaryKey(tagId),
         })),
+        skipDuplicates: true,
       });
     }
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
-    delete payload.category_ids;
-    delete payload.tag_ids;
+    // Strict allowlist: drop everything that isn't a recognised content field.
+    // Combined with the global ValidationPipe whitelist, this is the second
+    // line of defense against mass-assignment via spread.
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
+    }
     if (payload.published_at !== undefined) {
       payload.published_at = payload.published_at ? new Date(payload.published_at) : null;
-    }
-    const bigIntFields = ['created_user_id', 'updated_user_id', 'group_id'];
-    for (const field of bigIntFields) {
-      const value = payload[field];
-      if (value === undefined) continue;
-      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
     }
     return payload;
   }

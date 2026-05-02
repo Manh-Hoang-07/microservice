@@ -69,17 +69,27 @@ export class AuthService {
     return this.passwordService.resetPassword(dto);
   }
 
+  /**
+   * Always responds with OTP_SENT to avoid leaking which emails are
+   * registered. The OTP is only actually emailed when the email is unused.
+   */
   async sendOtpForRegister(dto: SendOtpDto) {
-    const existing = await this.userRepo.findByEmail(dto.email.toLowerCase());
-    if (existing) throw new BadRequestException(this.t('auth.EMAIL_IN_USE'));
-    await this.otpService.sendRegisterOtp(dto.email);
+    const email = dto.email.toLowerCase();
+    const existing = await this.userRepo.findByEmail(email);
+    if (!existing) {
+      await this.otpService.sendRegisterOtp(email);
+    }
     return { message: this.t('auth.OTP_SENT') };
   }
 
+  /**
+   * Always responds with OTP_SENT regardless of account existence.
+   */
   async sendOtpForForgotPassword(dto: SendOtpDto) {
-    const existing = await this.userRepo.findByEmail(dto.email.toLowerCase());
-    if (existing) {
-      await this.otpService.sendForgotPasswordOtp(dto.email);
+    const email = dto.email.toLowerCase();
+    const existing = await this.userRepo.findByEmail(email);
+    if (existing && existing.status === 'active') {
+      await this.otpService.sendForgotPasswordOtp(email);
     }
     return { message: this.t('auth.OTP_SENT') };
   }

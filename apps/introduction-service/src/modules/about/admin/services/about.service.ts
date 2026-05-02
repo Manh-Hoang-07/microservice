@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from 'src/generated/prisma';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -7,6 +8,13 @@ import { AboutSectionFilter, AboutSectionRepository } from '../../repositories/a
 @Injectable()
 export class AdminAboutService {
   constructor(private readonly aboutRepo: AboutSectionRepository) {}
+
+  private mapP2002(err: unknown): never {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      throw new BadRequestException('Slug already in use');
+    }
+    throw err;
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -35,15 +43,20 @@ export class AdminAboutService {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.title, {
       findOne: (filter: any) => this.aboutRepo.findBySlug(filter.slug),
     });
-
-    return this.aboutRepo.create({ ...dto, slug });
+    try {
+      return await this.aboutRepo.create({ ...dto, slug });
+    } catch (err) {
+      // Concurrent create raced our slug check.
+      this.mapP2002(err);
+    }
   }
 
   async update(id: any, dto: UpdateAboutDto) {
-    await this.getOne(id);
+    const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
-    if (dto.title || dto.slug) {
+    const titleChanged = dto.title !== undefined && dto.title !== (current as any).title;
+    if (dto.slug || titleChanged) {
       data.slug = await SlugHelper.uniqueSlug(
         dto.slug || dto.title || '',
         { findOne: (filter: any) => this.aboutRepo.findBySlug(filter.slug) },
@@ -51,7 +64,11 @@ export class AdminAboutService {
       );
     }
 
-    return this.aboutRepo.update(id, data);
+    try {
+      return await this.aboutRepo.update(id, data);
+    } catch (err) {
+      this.mapP2002(err);
+    }
   }
 
   async delete(id: any) {

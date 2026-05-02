@@ -46,13 +46,30 @@ export class BookmarkRepository {
     return this.prisma.bookmark.findUnique({ where: { id: toPrimaryKey(id) } });
   }
 
-  create(data: { user_id: any; chapter_id: any; page_number: number }) {
-    return this.prisma.bookmark.create({
-      data: {
-        user_id: toPrimaryKey(data.user_id),
-        chapter_id: toPrimaryKey(data.chapter_id),
+  /**
+   * Upsert keyed on (user_id, chapter_id, page_number). Idempotent — a
+   * double-tap from the client returns the same row instead of inserting a
+   * duplicate. Requires the @@unique migration on the Bookmark model.
+   */
+  upsert(data: { user_id: any; chapter_id: any; page_number: number }) {
+    const uid = toPrimaryKey(data.user_id);
+    const cid = toPrimaryKey(data.chapter_id);
+    return this.prisma.bookmark.upsert({
+      where: {
+        user_id_chapter_id_page_number: {
+          user_id: uid,
+          chapter_id: cid,
+          page_number: data.page_number,
+        },
+      },
+      create: {
+        user_id: uid,
+        chapter_id: cid,
         page_number: data.page_number,
       },
+      // No fields actually need updating — refresh `created_at` would be a
+      // semantic change. Empty update is a no-op.
+      update: {},
     });
   }
 

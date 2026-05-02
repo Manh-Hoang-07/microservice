@@ -1,4 +1,4 @@
-import { Controller, Get, Req } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { MenuService } from '../../admin/services/menu.service';
 import { Public } from '@package/common';
 
@@ -6,10 +6,16 @@ import { Public } from '@package/common';
 export class PublicMenuController {
   constructor(private readonly service: MenuService) {}
 
+  /**
+   * Public menu tree — anonymous only. The previous implementation took
+   * `req.user?.sub` and forwarded a `userId` truthy value, which made the
+   * service return ALL non-public menus to any authenticated caller.
+   * Authenticated/personalised menus should be served via an admin-side
+   * endpoint that pre-resolves the caller's permission set.
+   */
   @Public()
   @Get('menus')
-  async getPublicMenuTree(@Req() req: any) {
-    const userId = req.user?.sub ?? req.user?.id;
-    return this.service.getPublicMenuTree(userId);
+  async getPublicMenuTree() {
+    return this.service.getPublicMenuTree();
   }
 }

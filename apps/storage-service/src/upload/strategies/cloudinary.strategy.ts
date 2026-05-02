@@ -2,12 +2,18 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
 import {
   FileMetadata,
   IUploadStrategy,
   UploadResult,
 } from '../interfaces/upload-strategy.interface';
+
+function safeExtension(originalName: string): string {
+  const ext = path.extname(originalName || '').toLowerCase();
+  return /^\.[a-z0-9]{1,10}$/.test(ext) ? ext : '';
+}
 
 @Injectable()
 export class CloudinaryStorageStrategy implements IUploadStrategy {
@@ -37,17 +43,20 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
   }
 
   async upload(file: any): Promise<UploadResult> {
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const ext = path.extname(file.originalname);
-    const publicId = `${timestamp}-${randomString}`;
+    // UUID-based public_id; Math.random was weak entropy + enumerable.
+    const ext = safeExtension(file.originalname);
+    const publicId = `${Date.now()}-${randomUUID()}`;
 
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           public_id: publicId,
-          resource_type: 'auto',
-          format: ext.replace('.', '') || undefined,
+          // Pin resource_type to 'raw' so an attacker can't smuggle an image
+          // resource type for files that might be served as HTML/JS by the
+          // CDN. Callers wanting image transformations can layer that in
+          // front of this service if needed.
+          resource_type: 'raw',
+          format: ext ? ext.slice(1) : undefined,
         },
         (error, result) => {
           if (error) return reject(error);
@@ -67,7 +76,7 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
       url: result.secure_url,
       filename: `${publicId}${ext}`,
       size: file.size,
-      mimetype: file.mimetype,
+      mimetype: 'application/octet-stream',
     };
   }
 
@@ -88,19 +97,39 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
     }
 
     const url: string = resource.secure_url;
+    // Pin the fetch host to res.cloudinary.com to defend against SSRF in
+    // the (admittedly unlikely) case Cloudinary's API ever returns an
+    // attacker-controlled URL.
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new NotFoundException(
+        this.translate('storage.CLOUDINARY_FETCH_FAILED', { filename }),
+      );
+    }
+    if (parsed.hostname !== 'res.cloudinary.com') {
+      throw new NotFoundException(
+        this.translate('storage.CLOUDINARY_FETCH_FAILED', { filename }),
+      );
+    }
     const metadata: FileMetadata = {
       filename,
       size: resource.bytes ?? 0,
-      mimetype: resource.resource_type === 'image'
-        ? `image/${resource.format}`
-        : `${resource.resource_type}/${resource.format}`,
+      mimetype: 'application/octet-stream',
       url,
       createdAt: resource.created_at ? new Date(resource.created_at) : undefined,
       etag: resource.etag,
     };
 
-    // Fetch the CDN URL and return the response body as a readable stream
-    const response = await fetch(url);
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 15_000);
+    let response: Response;
+    try {
+      response = await fetch(url, { signal: ac.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!response.ok) {
       throw new NotFoundException(
         this.translate('storage.CLOUDINARY_FETCH_FAILED', { filename }),

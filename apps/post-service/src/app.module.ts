@@ -8,7 +8,8 @@ import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from '@package/redis';
-import { JwtGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
 
 import { PostModule } from './modules/post/post.module';
@@ -42,10 +43,20 @@ import { StatsModule } from './modules/stats/stats.module';
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
+    // ThrottlerGuard first — `@Throttle(...)` decorators are inert without it.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new JwtGuard(reflector, config),
+      inject: [Reflector, ConfigService],
+    },
+    // RbacGuard MUST follow JwtGuard. Without this, `@Permission(...)` is
+    // decoration-only and any authenticated user reaches admin endpoints.
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService) =>
+        new RbacGuard(reflector, config),
       inject: [Reflector, ConfigService],
     },
     {

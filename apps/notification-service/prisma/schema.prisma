@@ -25,6 +25,10 @@ model Notification {
   @@index([type], map: "notifications_idx_type")
   @@index([is_read], map: "notifications_idx_is_read")
   @@index([user_id, is_read], map: "notifications_idx_user_read")
+  // Composite for the user notification list: filter by user_id, sort by
+  // created_at DESC. Without it, Postgres scans `[user_id, is_read]` and
+  // re-sorts the working set.
+  @@index([user_id, created_at(sort: Desc)], map: "notifications_idx_user_created")
   @@map("notifications")
 }
 

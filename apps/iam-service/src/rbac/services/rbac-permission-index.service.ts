@@ -14,6 +14,10 @@ export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy
   private readonly permIndexRefreshChannel = 'rbac:perm_index_refresh';
   private permissionIndexRefreshInFlight: Promise<void> | null = null;
   private prewarmTimer: NodeJS.Timeout | null = null;
+  // Persisted reference to the subscriber callback so onModuleDestroy can
+  // detach it via redis.unsubscribe(). Without this, the closure retains
+  // `this` and prevents GC of the IAM service during hot-reload.
+  private subscriberCallback: ((message: string) => void) | null = null;
 
   constructor(
     private readonly rbacRepo: RbacRepository,
@@ -23,19 +27,39 @@ export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy
   async onModuleInit(): Promise<void> {
     await this.ensurePermissionIndexes().catch(() => undefined);
     if (this.redis.isEnabled()) {
-      await this.redis.subscribe(this.permIndexRefreshChannel, (_message) => {
+      this.subscriberCallback = (_message) => {
         void this.refreshNow().catch(() => undefined);
-      });
+      };
+      await this.redis.subscribe(this.permIndexRefreshChannel, this.subscriberCallback);
     }
     this.prewarmTimer = setInterval(() => {
       void this.ensurePermissionIndexes().catch(() => undefined);
     }, this.prewarmIntervalMs);
+    // Don't keep the event loop alive solely for the prewarm timer.
+    this.prewarmTimer.unref?.();
   }
 
-  onModuleDestroy(): void {
+  /** Publish a permission-index refresh — call after creating/updating/deleting permissions or roles. */
+  async publishRefresh(): Promise<void> {
+    await this.refreshNow();
+    if (this.redis.isEnabled()) {
+      await this.redis
+        .publish(this.permIndexRefreshChannel, JSON.stringify({ at: Date.now() }))
+        .catch(() => undefined);
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
     if (this.prewarmTimer) {
       clearInterval(this.prewarmTimer);
       this.prewarmTimer = null;
+    }
+    if (this.subscriberCallback) {
+      // Detach so the closure doesn't pin `this` past module destruction.
+      await this.redis
+        .unsubscribe(this.permIndexRefreshChannel, this.subscriberCallback)
+        .catch(() => undefined);
+      this.subscriberCallback = null;
     }
   }
 

@@ -17,8 +17,8 @@ export class CertificateRepository {
     const where: Prisma.CertificateWhereInput = {};
     if (filter.search) {
       where.OR = [
-        { name: { contains: filter.search } },
-        { issued_by: { contains: filter.search } },
+        { name: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { issued_by: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -29,7 +29,7 @@ export class CertificateRepository {
   findMany(filter: CertificateFilter, options: { skip: number; take: number }) {
     return this.prisma.certificate.findMany({
       where: this.buildWhere(filter),
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

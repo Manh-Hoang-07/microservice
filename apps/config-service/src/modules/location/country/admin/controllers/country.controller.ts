@@ -12,6 +12,7 @@ import { CountryService } from '../services/country.service';
 import { Permission } from '@package/common';
 import { CreateCountryDto } from '../dtos/create-country.dto';
 import { UpdateCountryDto } from '../dtos/update-country.dto';
+import { ListCountriesAdminQueryDto } from '../dtos/list-country.query.dto';
 
 @Controller('admin/countries')
 export class AdminCountryController {
@@ -19,13 +20,13 @@ export class AdminCountryController {
 
   @Permission('country.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListCountriesAdminQueryDto) {
     return this.countryService.getList(query);
   }
 
   @Permission('country.manage')
   @Get('simple')
-  async getSimpleList(@Query() query: any) {
+  async getSimpleList(@Query() query: ListCountriesAdminQueryDto) {
     return this.countryService.getSimpleList(query);
   }
 

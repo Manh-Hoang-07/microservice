@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateCountryDto {
   @IsNotEmpty()
@@ -37,7 +37,6 @@ export class CreateCountryDto {
   flag_emoji?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(30)
+  @IsIn(['active', 'inactive'])
   status?: string;
 }

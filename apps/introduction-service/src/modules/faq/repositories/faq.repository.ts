@@ -16,8 +16,8 @@ export class FaqRepository {
     const where: Prisma.FaqWhereInput = {};
     if (filter.search) {
       where.OR = [
-        { question: { contains: filter.search } },
-        { answer: { contains: filter.search } },
+        { question: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { answer: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -27,7 +27,7 @@ export class FaqRepository {
   findMany(filter: FaqFilter, options: { skip: number; take: number }) {
     return this.prisma.faq.findMany({
       where: this.buildWhere(filter),
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

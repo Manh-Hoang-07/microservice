@@ -2,6 +2,8 @@ import {
   IsString,
   IsOptional,
   IsEmail,
+  IsUrl,
+  Matches,
   MaxLength,
   IsArray,
   IsBoolean,
@@ -9,6 +11,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+const NUMERIC_ID_RE = /^\d{1,20}$/;
 
 class ContactChannelDto {
   @IsString()
@@ -50,13 +54,13 @@ export class UpdateGeneralConfigDto {
   @IsOptional()
   site_description?: string;
 
-  @IsString()
   @IsOptional()
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
   @MaxLength(500)
   site_logo?: string;
 
-  @IsString()
   @IsOptional()
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
   @MaxLength(500)
   site_favicon?: string;
 
@@ -75,13 +79,19 @@ export class UpdateGeneralConfigDto {
   site_address?: string;
 
   @IsOptional()
-  site_country_id?: any;
+  @IsString()
+  @Matches(NUMERIC_ID_RE, { message: 'site_country_id must be numeric.' })
+  site_country_id?: string;
 
   @IsOptional()
-  site_province_id?: any;
+  @IsString()
+  @Matches(NUMERIC_ID_RE, { message: 'site_province_id must be numeric.' })
+  site_province_id?: string;
 
   @IsOptional()
-  site_ward_id?: any;
+  @IsString()
+  @Matches(NUMERIC_ID_RE, { message: 'site_ward_id must be numeric.' })
+  site_ward_id?: string;
 
   @IsString()
   @IsOptional()
@@ -127,13 +137,13 @@ export class UpdateGeneralConfigDto {
   @IsOptional()
   og_description?: string;
 
-  @IsString()
   @IsOptional()
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
   @MaxLength(500)
   og_image?: string;
 
-  @IsString()
   @IsOptional()
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
   @MaxLength(500)
   canonical_url?: string;
 

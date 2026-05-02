@@ -56,7 +56,7 @@ export class LoginService {
     }
 
     await this.accountLockoutService.reset(scope, identifier);
-    this.userRepo.updateLastLogin(user.id);
+    await this.userRepo.updateLastLogin(user.id);
 
     const userPk: PrimaryKey = user.id;
     const tokens = await this.tokenService.generateTokens(userPk, user.email!);
@@ -70,15 +70,31 @@ export class LoginService {
   }
 
   async logout(accessToken?: string, refreshToken?: string) {
+    let accessSub: string | undefined;
     if (accessToken) {
-      await this.tokenBlacklistService.add(accessToken, this.tokenService.getAccessTtlSec());
+      try {
+        const accessPayload = await this.tokenService.verifyAccessToken(accessToken);
+        // Reject refresh tokens presented as access tokens (cannot blacklist
+        // someone else's session via this endpoint).
+        if ((accessPayload as any)?.type === 'refresh') {
+          accessSub = undefined;
+        } else {
+          accessSub = accessPayload.sub as string | undefined;
+          await this.tokenBlacklistService.add(accessToken, this.tokenService.getAccessTtlSec());
+        }
+      } catch {
+        // Invalid access token — silently ignore; logout still tries refresh
+      }
     }
     if (refreshToken) {
       const decoded = await this.tokenService.decodeRefresh(refreshToken);
-      const sub = decoded?.sub as string | undefined;
+      const refreshSub = decoded?.sub as string | undefined;
       const jti = (decoded as any)?.jti as string | undefined;
-      if (sub && jti) {
-        await this.tokenService.revokeRefreshJti(BigInt(sub), jti);
+      // If both tokens were supplied, ensure they belong to the same subject
+      // before revoking — prevents using a stolen refresh-token to revoke
+      // someone else's session via a forged access-token.
+      if (refreshSub && jti && (!accessSub || accessSub === refreshSub)) {
+        await this.tokenService.revokeRefreshJti(BigInt(refreshSub), jti);
       }
     }
     return null;

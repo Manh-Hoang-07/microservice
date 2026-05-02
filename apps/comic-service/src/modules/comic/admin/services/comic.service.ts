@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from 'src/generated/prisma';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -26,7 +27,7 @@ export class AdminComicService {
   }
 
   async getSimpleList(query: any = {}) {
-    const limit = Math.max(Number(query.limit) || 50, 1);
+    const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
     const filter = this.buildFilter(query);
     const data = await this.comicRepo.findSimpleMany(filter, limit);
     return { data };
@@ -38,26 +39,56 @@ export class AdminComicService {
     return this.transform(comic);
   }
 
+  /**
+   * Transactional create: comic + Stats + categoryLinks land atomically.
+   * Previously these were 3 separate Prisma calls; a crash between them
+   * left orphans. The slug pre-check also raced with concurrent creates
+   * and surfaced raw `P2002` to the client — now caught and translated to
+   * 400 with one retry on the unique-slug collision.
+   */
   async create(dto: CreateComicDto) {
-    const slug = await SlugHelper.uniqueSlug(dto.title, {
-      findOne: (filter: any) => this.comicRepo.findBySlugSimple(filter.slug),
-    });
+    let attempt = 0;
+    while (true) {
+      const slug = await SlugHelper.uniqueSlug(dto.title, {
+        findOne: (filter: any) => this.comicRepo.findBySlugSimple(filter.slug),
+      });
 
-    const comic = await this.comicRepo.create({ ...dto, slug });
-    await this.comicRepo.createStats(comic.id);
-
-    if (dto.category_ids?.length) {
-      await this.comicRepo.syncCategories(comic.id, dto.category_ids);
+      try {
+        const created = await this.comicRepo.client.$transaction(async (tx) => {
+          const comic = await this.comicRepo.create({ ...dto, slug }, tx);
+          await this.comicRepo.createStats(comic.id, tx);
+          if (dto.category_ids?.length) {
+            await this.comicRepo.syncCategories(comic.id, dto.category_ids, tx);
+          }
+          return comic;
+        });
+        return this.getOne(created.id);
+      } catch (err) {
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2002' &&
+          attempt < 2
+        ) {
+          attempt++;
+          continue;
+        }
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+          throw new BadRequestException('Slug already in use');
+        }
+        throw err;
+      }
     }
-
-    return this.getOne(comic.id);
   }
 
   async update(id: any, dto: UpdateComicDto) {
-    await this.getOne(id);
+    const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
-    if (dto.title || dto.slug) {
+    // Only regenerate slug when title actually changed AND no explicit
+    // slug was supplied — previously every update with `title` silently
+    // rewrote the slug even on rename-to-self.
+    const titleChanged = dto.title !== undefined && dto.title !== (current as any).title;
+    if (dto.slug || titleChanged) {
       data.slug = await SlugHelper.uniqueSlug(
         dto.slug || dto.title || '',
         { findOne: (filter: any) => this.comicRepo.findBySlugSimple(filter.slug) },
@@ -65,10 +96,18 @@ export class AdminComicService {
       );
     }
 
-    await this.comicRepo.update(id, data);
-
-    if (dto.category_ids !== undefined) {
-      await this.comicRepo.syncCategories(id, dto.category_ids);
+    try {
+      await this.comicRepo.client.$transaction(async (tx) => {
+        await this.comicRepo.update(id, data, tx);
+        if (dto.category_ids !== undefined) {
+          await this.comicRepo.syncCategories(id, dto.category_ids, tx);
+        }
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new BadRequestException('Slug already in use');
+      }
+      throw err;
     }
 
     return this.getOne(id);

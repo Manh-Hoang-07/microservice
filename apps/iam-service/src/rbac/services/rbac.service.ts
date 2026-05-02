@@ -1,7 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { RbacCacheService } from './rbac-cache.service';
 import { RbacPermissionIndexService } from './rbac-permission-index.service';
 import { RbacRoleAssignmentService } from './rbac-role-assignment.service';
+import { RbacRepository } from '../repositories/rbac.repository';
+import { PERM } from '../constants/rbac.constants';
 import { RbacId, NullableRbacId } from '../types';
 
 function toAssignedSet(codes: Iterable<string>): Set<string> {
@@ -18,6 +21,8 @@ export class RbacService {
     private readonly rbacCache: RbacCacheService,
     private readonly permissionIndexService: RbacPermissionIndexService,
     private readonly roleAssignmentService: RbacRoleAssignmentService,
+    private readonly rbacRepo: RbacRepository,
+    private readonly i18n: I18nService,
   ) {}
 
   async hasPermissions(
@@ -60,8 +65,88 @@ export class RbacService {
     }
   }
 
-  async assignRoleToUser(userId: RbacId, roleId: RbacId, groupId: RbacId): Promise<void> {
+  /**
+   * Guard against privilege escalation: caller must already hold every
+   * permission contained in the role they want to grant. System-only
+   * permissions (e.g. `system.manage`) require the caller to hold them too.
+   */
+  async assertCallerCanGrantRole(
+    actorId: RbacId,
+    actorGroupId: NullableRbacId,
+    roleIds: bigint[],
+  ): Promise<void> {
+    if (!roleIds.length) return;
+    const targetCodes = await this.rbacRepo.getPermissionCodesForRoles(roleIds);
+    if (!targetCodes.size) return;
+
+    // System manage holders may grant anything.
+    const systemPerms = await this.getPermissions(actorId, null);
+    if (this.permissionIndexService.matchesAssigned(systemPerms, PERM.SYSTEM.MANAGE)) {
+      return;
+    }
+
+    // Otherwise, evaluate caller's effective permissions in BOTH the system
+    // scope and the target scope, then ensure every target code is granted.
+    const scopedPerms = await this.getPermissions(actorId, actorGroupId);
+    const callerEffective = new Set<string>([...systemPerms, ...scopedPerms]);
+
+    for (const code of targetCodes) {
+      // system.* requires system scope
+      if (code.startsWith('system.') && !this.permissionIndexService.matchesAssigned(systemPerms, code)) {
+        const lang = I18nContext.current()?.lang ?? 'en';
+        throw new ForbiddenException(
+          this.i18n.t('rbac.PRIVILEGE_ESCALATION_BLOCKED', { lang, args: { code } }) as string,
+        );
+      }
+      if (!this.permissionIndexService.matchesAssigned(callerEffective, code)) {
+        const lang = I18nContext.current()?.lang ?? 'en';
+        throw new ForbiddenException(
+          this.i18n.t('rbac.PRIVILEGE_ESCALATION_BLOCKED', { lang, args: { code } }) as string,
+        );
+      }
+    }
+  }
+
+  /** Variant of assertCallerCanGrantRole that takes raw permission codes. */
+  async assertCallerCanGrantPermissionCodes(
+    actorId: RbacId,
+    actorGroupId: NullableRbacId,
+    targetCodes: string[],
+  ): Promise<void> {
+    if (!targetCodes.length) return;
+
+    const systemPerms = await this.getPermissions(actorId, null);
+    if (this.permissionIndexService.matchesAssigned(systemPerms, PERM.SYSTEM.MANAGE)) return;
+
+    const scopedPerms = await this.getPermissions(actorId, actorGroupId);
+    const callerEffective = new Set<string>([...systemPerms, ...scopedPerms]);
+
+    for (const code of targetCodes) {
+      if (code.startsWith('system.') && !this.permissionIndexService.matchesAssigned(systemPerms, code)) {
+        const lang = I18nContext.current()?.lang ?? 'en';
+        throw new ForbiddenException(
+          this.i18n.t('rbac.PRIVILEGE_ESCALATION_BLOCKED', { lang, args: { code } }) as string,
+        );
+      }
+      if (!this.permissionIndexService.matchesAssigned(callerEffective, code)) {
+        const lang = I18nContext.current()?.lang ?? 'en';
+        throw new ForbiddenException(
+          this.i18n.t('rbac.PRIVILEGE_ESCALATION_BLOCKED', { lang, args: { code } }) as string,
+        );
+      }
+    }
+  }
+
+  async assignRoleToUser(
+    userId: RbacId,
+    roleId: RbacId,
+    groupId: RbacId,
+    actor: { id: RbacId; groupId: NullableRbacId },
+  ): Promise<void> {
+    await this.assertCallerCanGrantRole(actor.id, actor.groupId, [BigInt(String(roleId))]);
     await this.roleAssignmentService.assignRoleToUser(userId, roleId, groupId);
+    await this.rbacCache.bumpVersion();
+    await this.rbacCache.clearAllUserCaches(userId);
     await this.refreshPermissions(userId, groupId);
   }
 
@@ -69,9 +154,25 @@ export class RbacService {
     userId: RbacId,
     groupId: RbacId,
     roleIds: RbacId[],
+    actor: { id: RbacId; groupId: NullableRbacId },
     skipValidation = false,
   ): Promise<void> {
-    await this.roleAssignmentService.syncRolesInGroup(userId, groupId, roleIds, skipValidation);
+    const targetIds = roleIds.map((r) => BigInt(String(r)));
+    await this.assertCallerCanGrantRole(actor.id, actor.groupId, targetIds);
+    const { before } = await this.roleAssignmentService.syncRolesInGroup(
+      userId,
+      groupId,
+      roleIds,
+      skipValidation,
+    );
+    // Must also confirm the actor could remove every role the user had
+    // before — otherwise a low-priv actor could revoke a high-priv role
+    // by submitting a syncRoles call that omits it.
+    if (before.length) {
+      await this.assertCallerCanGrantRole(actor.id, actor.groupId, before);
+    }
+    await this.rbacCache.bumpVersion();
+    await this.rbacCache.clearAllUserCaches(userId);
     await this.refreshPermissions(userId, groupId);
   }
 

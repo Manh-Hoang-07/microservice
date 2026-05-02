@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminComicService } from '../services/comic.service';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
+import { ListComicsAdminQueryDto } from '../dtos/list-comics.query.dto';
 
 @Controller('admin/comics')
 export class AdminComicController {
@@ -10,13 +11,13 @@ export class AdminComicController {
 
   @Permission('comic.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListComicsAdminQueryDto) {
     return this.comicService.getList(query);
   }
 
   @Permission('comic.manage')
   @Get('simple')
-  async getSimpleList(@Query() query: any) {
+  async getSimpleList(@Query() query: ListComicsAdminQueryDto) {
     return this.comicService.getSimpleList(query);
   }
 

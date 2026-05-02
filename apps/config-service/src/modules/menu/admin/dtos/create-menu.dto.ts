@@ -6,12 +6,18 @@ import {
   IsEnum,
   IsNotEmpty,
   Length,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { MenuType } from '../../enums/menu-type.enum';
 import { BasicStatus } from '../../enums/basic-status.enum';
+
+// `Type(() => Boolean)` calls `Boolean('false')` which returns true. Use a
+// manual transform that recognises the string forms `true|false|1|0`.
+const toBool = ({ value }: { value: any }) =>
+  value === true || value === 'true' || value === '1' || value === 1;
 
 export class CreateMenuDto {
   @IsString()
@@ -48,7 +54,9 @@ export class CreateMenuDto {
   status?: BasicStatus;
 
   @IsOptional()
-  parent_id?: any;
+  @IsString()
+  @Matches(/^\d{1,20}$/, { message: 'parent_id must be numeric.' })
+  parent_id?: string;
 
   @IsOptional()
   @IsNumber()
@@ -58,12 +66,12 @@ export class CreateMenuDto {
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(toBool)
   is_public?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(toBool)
   show_in_menu?: boolean;
 
   @IsOptional()

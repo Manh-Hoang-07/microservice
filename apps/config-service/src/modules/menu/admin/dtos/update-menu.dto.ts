@@ -5,12 +5,16 @@ import {
   IsBoolean,
   IsEnum,
   Length,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { MenuType } from '../../enums/menu-type.enum';
 import { BasicStatus } from '../../enums/basic-status.enum';
+
+const toBool = ({ value }: { value: any }) =>
+  value === true || value === 'true' || value === '1' || value === 1;
 
 export class UpdateMenuDto {
   @IsOptional()
@@ -47,7 +51,9 @@ export class UpdateMenuDto {
   status?: BasicStatus;
 
   @IsOptional()
-  parent_id?: any;
+  @IsString()
+  @Matches(/^(\d{1,20})?$/, { message: 'parent_id must be numeric or empty.' })
+  parent_id?: string | null;
 
   @IsOptional()
   @IsNumber()
@@ -57,12 +63,12 @@ export class UpdateMenuDto {
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(toBool)
   is_public?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(toBool)
   show_in_menu?: boolean;
 
   @IsOptional()

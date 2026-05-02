@@ -7,6 +7,8 @@ function toPk(id: RbacId): bigint {
   return BigInt(String(id));
 }
 
+export const SYSTEM_CONTEXT_TYPE = 'system';
+
 @Injectable()
 export class RbacRepository {
   constructor(
@@ -33,7 +35,7 @@ export class RbacRepository {
     groupId: RbacId,
     roleIds: RbacId[],
     skipValidation = false,
-  ): Promise<void> {
+  ): Promise<{ before: bigint[]; after: bigint[] }> {
     const group = await this.prisma.group.findFirst({
       where: { id: toPk(groupId), status: 'active' },
     });
@@ -48,31 +50,61 @@ export class RbacRepository {
       await this.validateRolesForContext(normalizedRoleIds, group.context_id);
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      if (normalizedRoleIds.length > 0) {
-        await tx.userGroup.upsert({
-          where: { user_id_group_id: { user_id: toPk(userId), group_id: toPk(groupId) } },
-          create: { user_id: toPk(userId), group_id: toPk(groupId), joined_at: new Date() },
-          update: {},
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.userRoleAssignment.findMany({
+          where: { user_id: toPk(userId), group_id: toPk(groupId) },
+          select: { role_id: true },
         });
-      }
-      await tx.userRoleAssignment.deleteMany({
-        where: { user_id: toPk(userId), group_id: toPk(groupId) },
-      });
-      if (normalizedRoleIds.length > 0) {
-        await tx.userRoleAssignment.createMany({
-          data: normalizedRoleIds.map((rid) => ({
-            user_id: toPk(userId),
-            group_id: toPk(groupId),
-            role_id: toPk(rid),
-          })),
-          skipDuplicates: true,
+        const before = existing.map((e) => e.role_id);
+
+        if (normalizedRoleIds.length > 0) {
+          await tx.userGroup.upsert({
+            where: { user_id_group_id: { user_id: toPk(userId), group_id: toPk(groupId) } },
+            create: { user_id: toPk(userId), group_id: toPk(groupId), joined_at: new Date() },
+            update: {},
+          });
+        }
+        await tx.userRoleAssignment.deleteMany({
+          where: { user_id: toPk(userId), group_id: toPk(groupId) },
         });
-      }
-    });
+        if (normalizedRoleIds.length > 0) {
+          await tx.userRoleAssignment.createMany({
+            data: normalizedRoleIds.map((rid) => ({
+              user_id: toPk(userId),
+              group_id: toPk(groupId),
+              role_id: toPk(rid),
+            })),
+            skipDuplicates: true,
+          });
+        }
+        return { before, after: normalizedRoleIds.map((id) => toPk(id)) };
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 
+  /**
+   * Resolve the user's effective permission codes.
+   *
+   * Filters every layer that should silently revoke access:
+   *   - role.status active
+   *   - permission.status active
+   *   - group.status active
+   *   - context.status active
+   *   - system scope determined by context.type='system' (NOT group.code)
+   *
+   * Stale `user_role_assignments` produced when a role is later removed from
+   * a context are cleaned in {@link cleanupOrphanedAssignmentsForContext}; we
+   * intentionally do not re-validate role/context membership at read time
+   * because Prisma cannot express the correlated check efficiently.
+   */
   async getActivePermissionCodes(userId: RbacId, groupId: RbacId | null): Promise<string[]> {
+    const groupFilter =
+      groupId === null
+        ? { status: 'active', context: { type: SYSTEM_CONTEXT_TYPE, status: 'active' } }
+        : { id: toPk(groupId), status: 'active', context: { status: 'active' } };
+
     const rows = await this.prisma.roleHasPermission.findMany({
       where: {
         role: {
@@ -80,9 +112,7 @@ export class RbacRepository {
           user_role_assignments: {
             some: {
               user_id: toPk(userId),
-              ...(groupId === null
-                ? { group: { code: 'system' } }
-                : { group_id: toPk(groupId) }),
+              group: groupFilter,
             },
           },
         },
@@ -96,6 +126,48 @@ export class RbacRepository {
       if (typeof code === 'string' && code.length) out.add(code);
     }
     return Array.from(out);
+  }
+
+  /** Remove orphan assignments after a role is unsynced from a context. */
+  async cleanupOrphanedAssignmentsForContext(contextId: bigint, removedRoleIds: bigint[]) {
+    if (!removedRoleIds.length) return;
+    await this.prisma.userRoleAssignment.deleteMany({
+      where: {
+        role_id: { in: removedRoleIds },
+        group: { context_id: contextId },
+      },
+    });
+  }
+
+  /** Number of users currently holding a given permission via any role. */
+  async countUsersWithPermission(permissionCode: string): Promise<number> {
+    const rows = await this.prisma.userRoleAssignment.findMany({
+      where: {
+        role: {
+          status: 'active',
+          permissions: { some: { permission: { code: permissionCode, status: 'active' } } },
+        },
+        group: { status: 'active', context: { status: 'active' } },
+      },
+      select: { user_id: true },
+      distinct: ['user_id'],
+    });
+    return rows.length;
+  }
+
+  /** Permission codes contained in a given role (active permissions only). */
+  async getPermissionCodesForRoles(roleIds: bigint[]): Promise<Set<string>> {
+    if (!roleIds.length) return new Set();
+    const rows = await this.prisma.roleHasPermission.findMany({
+      where: { role_id: { in: roleIds }, permission: { status: 'active' } },
+      select: { permission: { select: { code: true } } },
+    });
+    const out = new Set<string>();
+    for (const r of rows as any[]) {
+      const code = r?.permission?.code;
+      if (typeof code === 'string' && code.length) out.add(code);
+    }
+    return out;
   }
 
   private async validateRolesForContext(roleIds: RbacId[], contextId: bigint): Promise<void> {

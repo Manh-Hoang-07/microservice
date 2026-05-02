@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { CountryRepository, CountryFilter } from '../../repositories/country.repository';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -53,6 +53,15 @@ export class CountryService {
 
   async delete(id: any) {
     await this.getOne(id);
+    // Schema FK is `onDelete: Restrict` for provinces.country — pre-check to
+    // produce a 409 instead of letting Prisma surface a 500 to the client.
+    const provinceCount = await this.countryRepo.countProvinces(id);
+    if (provinceCount > 0) {
+      const lang = I18nContext.current()?.lang ?? 'en';
+      throw new ConflictException(
+        this.i18n.t('location.COUNTRY_HAS_PROVINCES', { lang, args: { count: provinceCount } }),
+      );
+    }
     await this.countryRepo.delete(id);
     return true;
   }

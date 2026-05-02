@@ -1,39 +1,52 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../../../database/prisma.service';
 import { CreateContactDto } from '../../admin/dtos/create-contact.dto';
-import { ContactRepository } from '../../repositories/contact.repository';
 
 @Injectable()
 export class PublicContactService {
   private readonly logger = new Logger(PublicContactService.name);
 
   constructor(
-    private readonly contactRepo: ContactRepository,
+    private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
 
   async create(dto: CreateContactDto) {
-    const contact = await this.contactRepo.create({
-      name: dto.name,
-      email: dto.email,
-      phone: dto.phone,
-      message: dto.message,
-    });
+    const kafkaEnabled = !!this.config.get<boolean>('kafka.enabled');
 
-    if (this.config.get<boolean>('kafka.enabled')) {
-      try {
-        await this.contactRepo.createOutbox('contact.submitted', {
-          contact_id: Number(contact.id),
-          name: contact.name,
-          email: contact.email,
-          phone: contact.phone,
-          message: contact.message,
-          created_at: contact.created_at.toISOString(),
+    // Wrap contact insert + outbox in a single transaction. Previously the
+    // outbox write ran AFTER the contact insert and was wrapped in
+    // try/catch — a crash mid-way committed the contact row but lost the
+    // event, defeating the outbox pattern.
+    const contact = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.contact.create({
+        data: {
+          name: dto.name,
+          email: dto.email,
+          phone: dto.phone,
+          message: dto.message,
+        },
+      });
+
+      if (kafkaEnabled) {
+        await tx.outbox.create({
+          data: {
+            event_type: 'contact.submitted',
+            payload: {
+              // Stringify BigInt — payloads > 2^53 silently corrupt as Number.
+              contact_id: String(created.id),
+              name: created.name,
+              email: created.email,
+              phone: created.phone,
+              message: created.message,
+              created_at: created.created_at.toISOString(),
+            },
+          },
         });
-      } catch (err) {
-        this.logger.error('Failed to write contact.submitted to outbox', err);
       }
-    }
+      return created;
+    });
 
     return {
       success: true,

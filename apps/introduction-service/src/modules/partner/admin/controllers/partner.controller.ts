@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminPartnerService } from '../services/partner.service';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
+import { ListPartnerAdminQueryDto } from '../dtos/list-partner.query.dto';
 
 @Controller('admin/partners')
 export class AdminPartnerController {
@@ -10,7 +11,7 @@ export class AdminPartnerController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListPartnerAdminQueryDto) {
     return this.partnerService.getList(query);
   }
 

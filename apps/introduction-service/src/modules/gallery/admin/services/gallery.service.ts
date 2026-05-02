@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from 'src/generated/prisma';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -7,6 +8,13 @@ import { GalleryFilter, GalleryRepository } from '../../repositories/gallery.rep
 @Injectable()
 export class AdminGalleryService {
   constructor(private readonly galleryRepo: GalleryRepository) {}
+
+  private mapP2002(err: unknown): never {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      throw new BadRequestException('Slug already in use');
+    }
+    throw err;
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -37,15 +45,19 @@ export class AdminGalleryService {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.title, {
       findOne: (filter: any) => this.galleryRepo.findBySlug(filter.slug),
     });
-
-    return this.galleryRepo.create({ ...dto, slug, images: dto.images ?? [] });
+    try {
+      return await this.galleryRepo.create({ ...dto, slug, images: dto.images ?? [] });
+    } catch (err) {
+      this.mapP2002(err);
+    }
   }
 
   async update(id: any, dto: UpdateGalleryDto) {
-    await this.getOne(id);
+    const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
-    if (dto.title || dto.slug) {
+    const titleChanged = dto.title !== undefined && dto.title !== (current as any).title;
+    if (dto.slug || titleChanged) {
       data.slug = await SlugHelper.uniqueSlug(
         dto.slug || dto.title || '',
         { findOne: (filter: any) => this.galleryRepo.findBySlug(filter.slug) },
@@ -53,7 +65,11 @@ export class AdminGalleryService {
       );
     }
 
-    return this.galleryRepo.update(id, data);
+    try {
+      return await this.galleryRepo.update(id, data);
+    } catch (err) {
+      this.mapP2002(err);
+    }
   }
 
   async delete(id: any) {

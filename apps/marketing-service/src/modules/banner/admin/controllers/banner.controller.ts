@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminBannerService } from '../services/banner.service';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
+import { ListBannersAdminQueryDto } from '../dtos/list-banners.query.dto';
 
 @Controller('admin/banners')
 export class AdminBannerController {
@@ -10,7 +11,7 @@ export class AdminBannerController {
 
   @Permission('marketing.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListBannersAdminQueryDto) {
     return this.bannerService.getList(query);
   }
 

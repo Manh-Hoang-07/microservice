@@ -27,9 +27,12 @@ export class ComicClient implements OnModuleInit {
   private readonly timeout: number;
   private breaker!: CircuitBreakerPolicy;
 
+  private readonly internalSecret: string;
+
   constructor(private readonly config: ConfigService) {
     this.baseUrl = config.get<string>('gateway.comicServiceUrl', 'http://localhost:3001/api');
     this.timeout = config.get<number>('gateway.serviceTimeoutMs', 5000);
+    this.internalSecret = config.get<string>('gateway.internalApiSecret', '');
   }
 
   onModuleInit() {
@@ -138,9 +141,14 @@ export class ComicClient implements OnModuleInit {
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
     try {
+      const headers: Record<string, string> = { Accept: 'application/json' };
+      // Server-side internal secret only — never forward client-supplied
+      // `x-internal-secret` headers.
+      if (this.internalSecret) headers['x-internal-secret'] = this.internalSecret;
+
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { Accept: 'application/json' },
+        headers,
       });
 
       if (!res.ok) {

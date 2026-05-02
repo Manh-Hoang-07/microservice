@@ -45,4 +45,12 @@ export class PermissionRepository {
   delete(id: PrimaryKey) {
     return this.prisma.permission.delete({ where: { id } });
   }
+
+  async getParentId(id: bigint): Promise<bigint | null> {
+    const row = await this.prisma.permission.findUnique({
+      where: { id },
+      select: { parent_id: true },
+    });
+    return row?.parent_id ?? null;
+  }
 }

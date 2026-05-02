@@ -6,22 +6,34 @@ import * as jose from 'jose';
 export class JwksService implements OnModuleInit {
   private privateKey: CryptoKey | null = null;
   private publicKey: CryptoKey | null = null;
-  private kid = 'auth-key-1';
+  // `kid` is derived from a SHA-256 thumbprint of the public key (RFC 7638)
+  // so a key rotation produces a different kid automatically. The previous
+  // hardcoded `auth-key-1` made rotation impossible — old tokens validated
+  // against the new key and vice versa during rollover.
+  private kid = '';
 
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit() {
     const privatePem = this.config.get<string>('jwt.privateKeyPem');
     const publicPem = this.config.get<string>('jwt.publicKeyPem');
+    const nodeEnv = this.config.get<string>('app.nodeEnv') || process.env.NODE_ENV;
 
     if (privatePem && publicPem) {
       this.privateKey = await jose.importPKCS8(privatePem, 'RS256');
       this.publicKey = await jose.importSPKI(publicPem, 'RS256');
+    } else if (nodeEnv === 'production') {
+      throw new Error(
+        'JWT_PRIVATE_KEY_PEM and JWT_PUBLIC_KEY_PEM must be configured in production. Refusing to boot with ephemeral keys.',
+      );
     } else {
       const { privateKey, publicKey } = await jose.generateKeyPair('RS256');
       this.privateKey = privateKey;
       this.publicKey = publicKey;
     }
+
+    const jwk = await jose.exportJWK(this.publicKey!);
+    this.kid = await jose.calculateJwkThumbprint(jwk);
   }
 
   hasKeys(): boolean {

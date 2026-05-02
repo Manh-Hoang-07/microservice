@@ -20,9 +20,27 @@ export class ViewCronService {
     if (!locked) return;
 
     try {
-      const buffer = await this.redis.hgetall('post:views:buffer');
+      // Atomic snapshot-then-clear: rename the live buffer to a temp key
+      // FIRST, then read+upsert from the temp key. The previous flow read
+      // the live key, upserted, then HDEL each entry — meaning any view
+      // increments arriving DURING the flush were silently deleted with the
+      // entry, double-counting on a crash and losing counts on a clean run.
+      // RENAME is atomic; if the source key didn't exist the call throws,
+      // which we swallow because "no buffer" is a normal state.
+      const snapshotKey = `post:views:buffer:flush:${Date.now()}`;
+      try {
+        await this.redis.rename('post:views:buffer', snapshotKey);
+      } catch {
+        // No buffer to flush.
+        return;
+      }
+
+      const buffer = await this.redis.hgetall(snapshotKey);
       const entries = Object.entries(buffer);
-      if (!entries.length) return;
+      if (!entries.length) {
+        await this.redis.del(snapshotKey);
+        return;
+      }
 
       this.logger.log(`Flushing ${entries.length} post view counts`);
 
@@ -30,18 +48,30 @@ export class ViewCronService {
       today.setHours(0, 0, 0, 0);
 
       for (const [postIdStr, countStr] of entries) {
-        const postId = BigInt(postIdStr);
+        let postId: bigint;
+        try {
+          postId = BigInt(postIdStr);
+        } catch {
+          this.logger.warn(`Skipping invalid post id in view buffer: ${postIdStr}`);
+          continue;
+        }
         const count = parseInt(countStr, 10);
         if (isNaN(count) || count <= 0) continue;
 
         try {
           await this.statsRepo.upsertStats(postId, count);
           await this.statsRepo.upsertDailyStats(postId, today, count);
-          await this.redis.hdel('post:views:buffer', postIdStr);
         } catch (err) {
+          // On failure, restore unflushed entries to the live buffer so we
+          // retry next tick instead of losing the count permanently.
           this.logger.error(`Failed to flush views for post ${postIdStr}`, err);
+          await this.redis
+            .hincrby('post:views:buffer', postIdStr, count)
+            .catch(() => undefined);
         }
       }
+
+      await this.redis.del(snapshotKey);
     } catch (err) {
       this.logger.error('View buffer flush error', err);
     } finally {

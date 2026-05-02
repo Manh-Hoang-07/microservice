@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from 'src/generated/prisma';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -7,6 +8,13 @@ import { ProjectFilter, ProjectRepository } from '../../repositories/project.rep
 @Injectable()
 export class AdminProjectService {
   constructor(private readonly projectRepo: ProjectRepository) {}
+
+  private mapP2002(err: unknown): never {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      throw new BadRequestException('Slug already in use');
+    }
+    throw err;
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -37,15 +45,21 @@ export class AdminProjectService {
     const slug = await SlugHelper.uniqueSlug(dto.slug || dto.name, {
       findOne: (filter: any) => this.projectRepo.findBySlug(filter.slug),
     });
-
-    return this.projectRepo.create({ ...dto, slug, images: dto.images ?? [] });
+    try {
+      return await this.projectRepo.create({ ...dto, slug, images: dto.images ?? [] });
+    } catch (err) {
+      // Concurrent create raced our slug check → friendly 400 instead of 500.
+      this.mapP2002(err);
+    }
   }
 
   async update(id: any, dto: UpdateProjectDto) {
-    await this.getOne(id);
+    const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
-    if (dto.name || dto.slug) {
+    // Only regenerate slug when the source actually changed.
+    const nameChanged = dto.name !== undefined && dto.name !== (current as any).name;
+    if (dto.slug || nameChanged) {
       data.slug = await SlugHelper.uniqueSlug(
         dto.slug || dto.name || '',
         { findOne: (filter: any) => this.projectRepo.findBySlug(filter.slug) },
@@ -53,7 +67,11 @@ export class AdminProjectService {
       );
     }
 
-    return this.projectRepo.update(id, data);
+    try {
+      return await this.projectRepo.update(id, data);
+    } catch (err) {
+      this.mapP2002(err);
+    }
   }
 
   async delete(id: any) {

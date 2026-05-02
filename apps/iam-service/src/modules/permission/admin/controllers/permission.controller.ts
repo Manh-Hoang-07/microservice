@@ -4,6 +4,7 @@ import { toPrimaryKey } from 'src/types';
 import { PermissionService } from '../services/permission.service';
 import { CreatePermissionDto } from '../dtos/create-permission.dto';
 import { UpdatePermissionDto } from '../dtos/update-permission.dto';
+import { ListPermissionsAdminQueryDto } from '../dtos/list-permission.query.dto';
 
 @Controller('permissions')
 export class PermissionController {
@@ -11,7 +12,7 @@ export class PermissionController {
 
   @Permission('permission.manage')
   @Get()
-  getList(@Query() query: any) {
+  getList(@Query() query: ListPermissionsAdminQueryDto) {
     return this.service.getList(query);
   }
 

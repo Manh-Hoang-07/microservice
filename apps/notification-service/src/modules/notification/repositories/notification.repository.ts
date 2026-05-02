@@ -34,7 +34,14 @@ export class NotificationRepository {
   private buildWhere(filter: NotificationFilter): Prisma.NotificationWhereInput {
     const where: Prisma.NotificationWhereInput = {};
     if (filter.id !== undefined) where.id = filter.id;
-    if (filter.user_id !== undefined) where.user_id = BigInt(filter.user_id);
+    if (filter.user_id !== undefined) {
+      // BigInt(non-numeric) throws SyntaxError → 500. Validate the input
+      // before conversion and surface bad values as a 400 at the service layer.
+      if (!/^\d{1,20}$/.test(String(filter.user_id))) {
+        throw new Error('user_id must be a positive integer');
+      }
+      where.user_id = BigInt(filter.user_id);
+    }
     if (filter.type !== undefined) where.type = filter.type;
     if (filter.status !== undefined) where.status = filter.status;
     if (filter.is_read !== undefined) where.is_read = filter.is_read;

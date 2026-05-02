@@ -12,6 +12,7 @@ import { ProvinceService } from '../services/province.service';
 import { Permission } from '@package/common';
 import { CreateProvinceDto } from '../dtos/create-province.dto';
 import { UpdateProvinceDto } from '../dtos/update-province.dto';
+import { ListProvincesAdminQueryDto } from '../dtos/list-province.query.dto';
 
 @Controller('admin/provinces')
 export class AdminProvinceController {
@@ -19,13 +20,13 @@ export class AdminProvinceController {
 
   @Permission('province.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListProvincesAdminQueryDto) {
     return this.provinceService.getList(query);
   }
 
   @Permission('province.manage')
   @Get('simple')
-  async getSimpleList(@Query() query: any) {
+  async getSimpleList(@Query() query: ListProvincesAdminQueryDto) {
     return this.provinceService.getSimpleList(query);
   }
 

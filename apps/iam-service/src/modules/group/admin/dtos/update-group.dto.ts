@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength, IsIn } from 'class-validator';
+import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdateGroupDto {
   @IsOptional()
@@ -8,6 +8,7 @@ export class UpdateGroupDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   description?: string;
 
   @IsOptional()
@@ -16,5 +17,6 @@ export class UpdateGroupDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^(\d{1,20})?$/, { message: 'owner_id must be numeric or empty.' })
   owner_id?: string | null;
 }

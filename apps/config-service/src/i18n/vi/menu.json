@@ -1,4 +1,6 @@
 {
   "NOT_FOUND": "Không tìm thấy menu.",
-  "CODE_EXISTS": "Mã menu đã tồn tại."
+  "CODE_EXISTS": "Mã menu đã tồn tại.",
+  "PARENT_NOT_FOUND": "Menu cha không tồn tại.",
+  "CYCLE_DETECTED": "Cha mới sẽ tạo vòng lặp trong cây menu."
 }

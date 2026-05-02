@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength, IsIn } from 'class-validator';
+import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdatePermissionDto {
   @IsOptional()
@@ -12,5 +12,6 @@ export class UpdatePermissionDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^(\d{1,20})?$/, { message: 'parent_id must be numeric or empty.' })
   parent_id?: string | null;
 }

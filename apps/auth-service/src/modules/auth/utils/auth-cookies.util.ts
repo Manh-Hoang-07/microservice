@@ -1,16 +1,23 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { CookieOptions, Request, Response } from 'express';
 
 export const ACCESS_COOKIE = 'auth_token';
 export const REFRESH_COOKIE = 'auth_refresh_token';
-export const REFRESH_COOKIE_PATH = '/api/auth/refresh';
 
-function cookieOptions(req: Request, maxAgeMs: number, isProd: boolean): CookieOptions {
+/** Build the refresh-cookie path from the runtime global prefix. */
+export function buildRefreshCookiePath(): string {
+  const prefix = (process.env.GLOBAL_PREFIX || 'api').replace(/^\/+|\/+$/g, '');
+  return `/${prefix}/auth/refresh`;
+}
+
+function cookieOptions(_req: Request, maxAgeMs: number, isProd: boolean): CookieOptions {
+  // Do NOT set `domain` for localhost — modern browsers reject `domain=localhost`.
+  // Leaving it undefined scopes the cookie to the current host, which is correct.
   return {
     maxAge: maxAgeMs,
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'strict' : 'lax',
-    domain: req.hostname === 'localhost' ? 'localhost' : undefined,
     path: '/',
   };
 }
@@ -26,14 +33,18 @@ export function setAuthCookies(
   res.cookie(ACCESS_COOKIE, accessToken, cookieOptions(req, ttl.accessMs, isProd));
   res.cookie(REFRESH_COOKIE, refreshToken, {
     ...cookieOptions(req, ttl.refreshMs, isProd),
-    path: REFRESH_COOKIE_PATH,
+    path: buildRefreshCookiePath(),
   });
 }
 
 export function clearAuthCookies(req: Request, res: Response, isProd: boolean): void {
   const opts = cookieOptions(req, 0, isProd);
   res.clearCookie(ACCESS_COOKIE, { ...opts, maxAge: undefined });
-  res.clearCookie(REFRESH_COOKIE, { ...opts, maxAge: undefined, path: REFRESH_COOKIE_PATH });
+  res.clearCookie(REFRESH_COOKIE, {
+    ...opts,
+    maxAge: undefined,
+    path: buildRefreshCookiePath(),
+  });
 }
 
 export function extractBearer(authHeader?: string): string | undefined {
@@ -44,6 +55,6 @@ export function extractBearer(authHeader?: string): string | undefined {
 export function requireUserId(req: Request): string {
   const user = (req as any).user;
   const sub = user?.sub ?? user?.id;
-  if (!sub) throw new Error('Authenticated user missing from request');
+  if (!sub) throw new UnauthorizedException('Authentication required');
   return String(sub);
 }

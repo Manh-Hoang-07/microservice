@@ -25,7 +25,9 @@ export class MenuService {
     const options = parseQueryOptions(query);
 
     const filter: MenuFilter = {};
-    if (query.search) filter.search = query.search;
+    // Accept both `q` (DTO field) and `search` (legacy)
+    const search = query.q ?? query.search;
+    if (search) filter.search = search;
     if (query.status) filter.status = query.status;
     if (query.type) filter.type = query.type;
     if (query.parent_id !== undefined) filter.parent_id = query.parent_id;
@@ -60,7 +62,19 @@ export class MenuService {
     if (dto.code && (await this.menuRepo.findByCode(dto.code))) {
       throw new BadRequestException(this.t('menu.CODE_EXISTS'));
     }
-    return this.menuRepo.create(dto);
+    if (dto.parent_id) {
+      const parent = await this.menuRepo.findById(dto.parent_id);
+      if (!parent) throw new BadRequestException(this.t('menu.PARENT_NOT_FOUND'));
+    }
+    try {
+      return await this.menuRepo.create(dto);
+    } catch (err: any) {
+      // P2002 = unique-constraint race (concurrent create with same code).
+      if (err?.code === 'P2002') {
+        throw new BadRequestException(this.t('menu.CODE_EXISTS'));
+      }
+      throw err;
+    }
   }
 
   async createWithUser(dto: any, userId?: any) {
@@ -75,7 +89,19 @@ export class MenuService {
         throw new BadRequestException(this.t('menu.CODE_EXISTS'));
       }
     }
-    return this.menuRepo.update(id, dto);
+    if (dto.parent_id !== undefined && dto.parent_id !== null && dto.parent_id !== '') {
+      await this.assertNoCycle(id, dto.parent_id);
+      const parent = await this.menuRepo.findById(dto.parent_id);
+      if (!parent) throw new BadRequestException(this.t('menu.PARENT_NOT_FOUND'));
+    }
+    try {
+      return await this.menuRepo.update(id, dto);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new BadRequestException(this.t('menu.CODE_EXISTS'));
+      }
+      throw err;
+    }
   }
 
   async updateById(id: any, dto: any, userId?: any) {
@@ -94,11 +120,39 @@ export class MenuService {
     return buildMenuTree(menus);
   }
 
-  async getPublicMenuTree(userId?: any): Promise<MenuTreeItem[]> {
+  /**
+   * Public menu tree. Drops orphan children whose ancestor chain was filtered
+   * out (no orphan promotion to root). For authenticated callers, gates
+   * non-public entries against the caller's permission set; absence of a
+   * permission set is treated as anonymous.
+   */
+  async getPublicMenuTree(userPermissions?: Set<string>): Promise<MenuTreeItem[]> {
     const dbFilter: MenuFilter = { status: 'active', group: 'client' };
     const allMenus = await this.menuRepo.findAllWithChildren(dbFilter);
-    const menus = allMenus.filter((m: any) => m.show_in_menu);
-    const filtered = filterPublicMenus(menus, userId);
+    const visible = allMenus.filter((m: any) => m.show_in_menu);
+    const filtered = filterPublicMenus(visible, userPermissions);
     return buildMenuTree(filtered);
+  }
+
+  /**
+   * Reject parent_id pointing at the menu itself or any of its descendants —
+   * doing so would create an infinite loop in tree traversal.
+   */
+  private async assertNoCycle(menuId: any, candidateParentId: any): Promise<void> {
+    if (String(menuId) === String(candidateParentId)) {
+      throw new BadRequestException(this.t('menu.CYCLE_DETECTED'));
+    }
+    const visited = new Set<string>();
+    let current: any = candidateParentId;
+    while (current != null) {
+      const key = String(current);
+      if (visited.has(key)) break;
+      visited.add(key);
+      if (key === String(menuId)) {
+        throw new BadRequestException(this.t('menu.CYCLE_DETECTED'));
+      }
+      const node: any = await this.menuRepo.findById(current);
+      current = node?.parent_id ?? null;
+    }
   }
 }

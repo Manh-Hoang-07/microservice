@@ -2,6 +2,7 @@ import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/
 import { Permission } from '@package/common';
 import { UserBookmarkService } from '../services/bookmarks.service';
 import { CreateBookmarkDto } from '../dtos/create-bookmark.dto';
+import { ListBookmarksQueryDto } from '../dtos/list-bookmarks.query.dto';
 
 @Controller('user/bookmarks')
 export class UserBookmarkController {
@@ -9,7 +10,7 @@ export class UserBookmarkController {
 
   @Permission('user')
   @Get()
-  async getList(@Req() req: any, @Query() query: any) {
+  async getList(@Req() req: any, @Query() query: ListBookmarksQueryDto) {
     return this.bookmarkService.getList(req.user.sub, query);
   }
 

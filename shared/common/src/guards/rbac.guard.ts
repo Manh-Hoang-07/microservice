@@ -30,7 +30,17 @@ export class RbacGuard implements CanActivate {
     if (!user?.sub) throw new UnauthorizedException('Authentication required');
 
     const iamUrl = this.config.get<string>('IAM_INTERNAL_URL');
-    if (!iamUrl) return true; // dev mode: skip rbac check
+    if (!iamUrl) {
+      // Fail-closed in production: a missing IAM_INTERNAL_URL means RBAC
+      // cannot be evaluated, so reject the request rather than silently
+      // promoting every authenticated user to admin. Outside production we
+      // skip the check so local dev / tests don't need IAM running.
+      const env = this.config.get<string>('NODE_ENV') ?? process.env.NODE_ENV;
+      if (env === 'production') {
+        throw new ForbiddenException('Permission service not configured');
+      }
+      return true;
+    }
 
     const secret =
       this.config.get<string>('INTERNAL_API_SECRET') ||

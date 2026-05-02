@@ -5,6 +5,7 @@ import { RoleService } from '../services/role.service';
 import { CreateRoleDto } from '../dtos/create-role.dto';
 import { UpdateRoleDto } from '../dtos/update-role.dto';
 import { SyncPermissionsDto } from '../dtos/sync-permissions.dto';
+import { ListRolesAdminQueryDto } from '../dtos/list-role.query.dto';
 
 @Controller('roles')
 export class RoleController {
@@ -12,7 +13,7 @@ export class RoleController {
 
   @Permission('role.manage')
   @Get()
-  getList(@Query() query: any) {
+  getList(@Query() query: ListRolesAdminQueryDto) {
     return this.service.getList(query);
   }
 
@@ -42,7 +43,10 @@ export class RoleController {
 
   @Permission('role.manage')
   @Put(':id/permissions')
-  syncPermissions(@Param('id') id: string, @Body() dto: SyncPermissionsDto) {
-    return this.service.syncPermissions(toPrimaryKey(id), dto);
+  syncPermissions(@Param('id') id: string, @Body() dto: SyncPermissionsDto, @Req() req: any) {
+    return this.service.syncPermissions(toPrimaryKey(id), dto, {
+      id: String(req?.user?.sub ?? req?.user?.id ?? ''),
+      groupId: (req?.headers?.['x-group-id'] as string | undefined) ?? null,
+    });
   }
 }

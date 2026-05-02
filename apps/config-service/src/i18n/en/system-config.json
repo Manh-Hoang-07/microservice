@@ -1,4 +1,9 @@
 {
   "EMAIL_UPDATE_FAILED": "Failed to update email config.",
-  "GENERAL_UPDATE_FAILED": "Failed to create or update general config."
+  "GENERAL_UPDATE_FAILED": "Failed to create or update general config.",
+  "EMAIL_SMTP_HOST_REQUIRED": "smtp_host is required.",
+  "EMAIL_SMTP_USERNAME_REQUIRED": "smtp_username is required.",
+  "EMAIL_SMTP_PASSWORD_REQUIRED": "smtp_password is required.",
+  "EMAIL_FROM_EMAIL_REQUIRED": "from_email is required.",
+  "EMAIL_FROM_NAME_REQUIRED": "from_name is required."
 }

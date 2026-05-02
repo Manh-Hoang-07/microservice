@@ -21,10 +21,11 @@ export class ProjectRepository {
   private buildWhere(filter: ProjectFilter): Prisma.ProjectWhereInput {
     const where: Prisma.ProjectWhereInput = {};
     if (filter.search) {
+      const search = filter.search.slice(0, 100);
       where.OR = [
-        { name: { contains: filter.search } },
-        { slug: { contains: filter.search } },
-        { client_name: { contains: filter.search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
+        { client_name: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.status !== undefined) {
@@ -35,11 +36,14 @@ export class ProjectRepository {
     return where;
   }
 
+  // Don't bake `testimonials` into list queries — they're only needed on
+  // detail. Including eagerly returned every testimonial × N projects per
+  // page (payload bloat + perf foot-gun).
   findMany(filter: ProjectFilter, options: { skip: number; take: number }) {
     return this.prisma.project.findMany({
       where: this.buildWhere(filter),
-      include: { testimonials: true },
-      orderBy: { sort_order: 'asc' },
+      // Tie-break by id so duplicate sort_order is deterministic across pages.
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });
@@ -48,8 +52,7 @@ export class ProjectRepository {
   findManyPublic(filter: ProjectFilter, options: { skip: number; take: number }) {
     return this.prisma.project.findMany({
       where: this.buildWhere(filter),
-      include: PUBLIC_INCLUDE,
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

@@ -24,7 +24,10 @@ export class AuthOutboxCronService implements OnModuleInit {
     });
   }
 
-  @Cron('*/5 * * * * *')
+  // Relay every 30 seconds (was every 5s). The faster cadence produced
+  // ~12 idle queries/min per service × 5 services = 60 idle queries/min on
+  // every DB. Bump if/when traffic actually stalls events at this interval.
+  @Cron('*/30 * * * * *')
   async relayOutbox() {
     await this.outboxRelay.relay(TABLE_NAME, TOPIC_MAP);
   }

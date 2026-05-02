@@ -17,8 +17,8 @@ export class PartnerRepository {
     const where: Prisma.PartnerWhereInput = {};
     if (filter.search) {
       where.OR = [
-        { name: { contains: filter.search } },
-        { description: { contains: filter.search } },
+        { name: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { description: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -29,7 +29,7 @@ export class PartnerRepository {
   findMany(filter: PartnerFilter, options: { skip: number; take: number }) {
     return this.prisma.partner.findMany({
       where: this.buildWhere(filter),
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

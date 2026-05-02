@@ -22,18 +22,18 @@ export class GeneralConfigService {
     const bigIntFields = ['site_country_id', 'site_province_id', 'site_ward_id'];
     const payload = buildConfigPayload(dto, bigIntFields, userId, existing);
 
-    let result: any;
-    if (!existing) {
-      result = await this.generalConfigRepo.create({
+    // Atomic upsert avoids the race in which two concurrent first-writes
+    // both pass `existing == null` and create duplicate config rows.
+    const result = await this.generalConfigRepo.upsert(
+      {
         ...payload,
         site_name: payload.site_name || 'My Website',
         timezone: payload.timezone || 'Asia/Ho_Chi_Minh',
         locale: payload.locale || 'vi',
         currency: payload.currency || 'VND',
-      });
-    } else {
-      result = await this.generalConfigRepo.update(existing.id, payload);
-    }
+      },
+      payload,
+    );
 
     if (!result) {
       const lang = I18nContext.current()?.lang ?? 'en';

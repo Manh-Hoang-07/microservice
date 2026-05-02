@@ -3,6 +3,33 @@ import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
+type Tx = Prisma.TransactionClient | PrismaService;
+
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'title',
+  'slug',
+  'description',
+  'cover_image',
+  'author',
+  'status',
+  'is_featured',
+]);
+
+const SORTABLE_TOP_LEVEL: ReadonlySet<string> = new Set([
+  'title',
+  'created_at',
+  'updated_at',
+  'last_chapter_updated_at',
+  'is_featured',
+]);
+
+const SORTABLE_STATS: ReadonlySet<string> = new Set([
+  'view_count',
+  'follow_count',
+  'rating_count',
+  'rating_sum',
+]);
+
 export interface ComicFilter {
   search?: string;
   status?: string | string[];
@@ -62,10 +89,13 @@ export class ComicRepository {
   private buildWhere(filter: ComicFilter): Prisma.ComicWhereInput {
     const where: Prisma.ComicWhereInput = {};
     if (filter.search) {
+      // Cap search length and use insensitive mode — Postgres `contains`
+      // is case-sensitive by default and unbounded length is a DoS vector.
+      const search = filter.search.slice(0, 100);
       where.OR = [
-        { title: { contains: filter.search } },
-        { slug: { contains: filter.search } },
-        { author: { contains: filter.search } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
+        { author: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.status !== undefined) {
@@ -83,11 +113,17 @@ export class ComicRepository {
   private buildOrderBy(sort?: string): Prisma.ComicOrderByWithRelationInput {
     if (!sort) return { updated_at: 'desc' };
     const [field, dirRaw] = sort.split(':');
+    if (!field) return { updated_at: 'desc' };
     const dir: 'asc' | 'desc' = dirRaw?.toLowerCase() === 'asc' ? 'asc' : 'desc';
-    if (['view_count', 'follow_count', 'rating_count', 'rating_sum'].includes(field)) {
+    // Allowlist sortable columns. Without it `?sort=foo:bar` made Prisma
+    // throw at runtime — 500 on a public endpoint, fingerprintable.
+    if (SORTABLE_STATS.has(field)) {
       return { stats: { [field]: dir } } as Prisma.ComicOrderByWithRelationInput;
     }
-    return { [field]: dir } as Prisma.ComicOrderByWithRelationInput;
+    if (SORTABLE_TOP_LEVEL.has(field)) {
+      return { [field]: dir } as Prisma.ComicOrderByWithRelationInput;
+    }
+    return { updated_at: 'desc' };
   }
 
   findMany(filter: ComicFilter, options: { skip: number; take: number }) {
@@ -149,14 +185,19 @@ export class ComicRepository {
     return this.prisma.comic.findUnique({ where: { slug } });
   }
 
-  create(data: Record<string, any>) {
-    return this.prisma.comic.create({
+  /** Direct Prisma access for service-level transactions. */
+  get client(): PrismaService {
+    return this.prisma;
+  }
+
+  create(data: Record<string, any>, tx: Tx = this.prisma) {
+    return tx.comic.create({
       data: this.normalizePayload(data) as Prisma.ComicUncheckedCreateInput,
     });
   }
 
-  update(id: any, data: Record<string, any>) {
-    return this.prisma.comic.update({
+  update(id: any, data: Record<string, any>, tx: Tx = this.prisma) {
+    return tx.comic.update({
       where: { id: toPrimaryKey(id) },
       data: this.normalizePayload(data) as Prisma.ComicUncheckedUpdateInput,
     });
@@ -166,19 +207,20 @@ export class ComicRepository {
     return this.prisma.comic.delete({ where: { id: toPrimaryKey(id) } });
   }
 
-  createStats(comicId: any) {
-    return this.prisma.stats.create({ data: { comic_id: toPrimaryKey(comicId) } });
+  createStats(comicId: any, tx: Tx = this.prisma) {
+    return tx.stats.create({ data: { comic_id: toPrimaryKey(comicId) } });
   }
 
-  async syncCategories(comicId: any, categoryIds: any[]) {
+  async syncCategories(comicId: any, categoryIds: any[], tx: Tx = this.prisma) {
     const cid = toPrimaryKey(comicId);
-    await this.prisma.comicCategory.deleteMany({ where: { comic_id: cid } });
+    await tx.comicCategory.deleteMany({ where: { comic_id: cid } });
     if (categoryIds.length > 0) {
-      await this.prisma.comicCategory.createMany({
+      await tx.comicCategory.createMany({
         data: categoryIds.map((catId) => ({
           comic_id: cid,
           category_id: toPrimaryKey(catId),
         })),
+        skipDuplicates: true,
       });
     }
   }
@@ -210,13 +252,12 @@ export class ComicRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
-    delete payload.category_ids;
-    const bigIntFields = ['created_user_id', 'updated_user_id', 'group_id', 'last_chapter_id'];
-    for (const field of bigIntFields) {
-      const value = payload[field];
-      if (value === undefined) continue;
-      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
+    // Strict allowlist: drop everything outside ALLOWED_FIELDS. Defeats
+    // mass-assignment via spread (e.g. attacker setting `view_count` or
+    // `last_chapter_id` from JSON body).
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
     }
     return payload;
   }

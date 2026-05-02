@@ -1,12 +1,30 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { CategoryFilter, CategoryRepository } from '../../repositories/category.repository';
 
 @Injectable()
 export class AdminCategoryService {
   constructor(private readonly categoryRepo: CategoryRepository) {}
+
+  private async assertNoCycle(categoryId: any, candidateParentId: any): Promise<void> {
+    if (String(categoryId) === String(candidateParentId)) {
+      throw new BadRequestException('Category cannot be its own parent');
+    }
+    const visited = new Set<string>();
+    let current: bigint | null = toPrimaryKey(candidateParentId);
+    while (current != null) {
+      const key = String(current);
+      if (visited.has(key)) break;
+      visited.add(key);
+      if (key === String(categoryId)) {
+        throw new BadRequestException('Setting this parent would create a category cycle');
+      }
+      current = await this.categoryRepo.getParentId(current);
+    }
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -39,6 +57,12 @@ export class AdminCategoryService {
     const slug = await SlugHelper.uniqueSlug(dto.name, {
       findOne: (filter: any) => this.categoryRepo.findBySlug(filter.slug),
     });
+    if ((dto as any).parent_id) {
+      // Refuse pointing at a non-existent parent at create-time. Cycles
+      // can't exist yet because the new node has no descendants.
+      const parent = await this.categoryRepo.findById((dto as any).parent_id);
+      if (!parent) throw new BadRequestException('Parent category not found');
+    }
 
     return this.categoryRepo.create({ ...dto, slug });
   }
@@ -53,6 +77,9 @@ export class AdminCategoryService {
         { findOne: (filter: any) => this.categoryRepo.findBySlug(filter.slug) },
         id,
       );
+    }
+    if ((dto as any).parent_id) {
+      await this.assertNoCycle(id, (dto as any).parent_id);
     }
 
     return this.categoryRepo.update(id, data);

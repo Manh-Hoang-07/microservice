@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminFaqService } from '../services/faq.service';
 import { CreateFaqDto } from '../dtos/create-faq.dto';
 import { UpdateFaqDto } from '../dtos/update-faq.dto';
+import { ListFaqAdminQueryDto } from '../dtos/list-faq.query.dto';
 
 @Controller('admin/faqs')
 export class AdminFaqController {
@@ -10,7 +11,7 @@ export class AdminFaqController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListFaqAdminQueryDto) {
     return this.faqService.getList(query);
   }
 

@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@package/common';
 import { PublicAboutService } from '../services/about.service';
+import { ListAboutPublicQueryDto } from '../../admin/dtos/list-about.query.dto';
 
 @Controller('public/about-sections')
 export class PublicAboutController {
@@ -8,7 +9,7 @@ export class PublicAboutController {
 
   @Public()
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListAboutPublicQueryDto) {
     return this.aboutService.getList(query);
   }
 

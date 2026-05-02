@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminChapterService } from '../services/chapter.service';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
+import { ListChaptersAdminQueryDto } from '../dtos/list-chapters.query.dto';
 
 @Controller('admin/chapters')
 export class AdminChapterController {
@@ -10,13 +11,13 @@ export class AdminChapterController {
 
   @Permission('comic.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListChaptersAdminQueryDto) {
     return this.chapterService.getList(query);
   }
 
   @Permission('comic.manage')
   @Get('simple')
-  async getSimpleList(@Query() query: any) {
+  async getSimpleList(@Query() query: ListChaptersAdminQueryDto) {
     return this.chapterService.getSimpleList(query);
   }
 

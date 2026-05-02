@@ -1,8 +1,17 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateWardDto {
   @IsNotEmpty()
-  province_id: any;
+  @IsString()
+  @Matches(/^\d{1,20}$/, { message: 'province_id must be numeric.' })
+  province_id: string;
 
   @IsNotEmpty()
   @IsString()
@@ -20,7 +29,6 @@ export class CreateWardDto {
   code: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(30)
+  @IsIn(['active', 'inactive'])
   status?: string;
 }

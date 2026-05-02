@@ -17,9 +17,9 @@ export class StaffRepository {
     const where: Prisma.StaffWhereInput = {};
     if (filter.search) {
       where.OR = [
-        { name: { contains: filter.search } },
-        { position: { contains: filter.search } },
-        { department: { contains: filter.search } },
+        { name: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { position: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
+        { department: { contains: filter.search.slice(0, 100), mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -30,7 +30,7 @@ export class StaffRepository {
   findMany(filter: StaffFilter, options: { skip: number; take: number }) {
     return this.prisma.staff.findMany({
       where: this.buildWhere(filter),
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });

@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminProjectService } from '../services/project.service';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
+import { ListProjectAdminQueryDto } from '../dtos/list-project.query.dto';
 
 @Controller('admin/projects')
 export class AdminProjectController {
@@ -10,7 +11,7 @@ export class AdminProjectController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListProjectAdminQueryDto) {
     return this.projectService.getList(query);
   }
 

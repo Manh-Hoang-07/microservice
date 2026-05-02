@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -9,9 +10,12 @@ import {
   UploadResult,
 } from '../interfaces/upload-strategy.interface';
 
+const ALLOWED_FILENAME_RE = /^[A-Za-z0-9._-]+$/;
+
 @Injectable()
 export class LocalStorageStrategy implements IUploadStrategy {
   private readonly destination: string;
+  private readonly destinationResolved: string;
   private readonly baseUrl: string;
 
   constructor(
@@ -20,7 +24,8 @@ export class LocalStorageStrategy implements IUploadStrategy {
   ) {
     const storageConfig = this.configService.get('storage.local');
     this.destination = storageConfig.destination;
-    this.baseUrl = storageConfig.baseUrl;
+    this.destinationResolved = path.resolve(this.destination);
+    this.baseUrl = (storageConfig.baseUrl || '').replace(/\/$/, '');
   }
 
   private fileNotFound(filename: string): NotFoundException {
@@ -31,64 +36,88 @@ export class LocalStorageStrategy implements IUploadStrategy {
   }
 
   private ensureDirectoryExists(): void {
-    try {
-      if (!fs.existsSync(this.destination)) {
-        fs.mkdirSync(this.destination, { recursive: true });
-      }
-    } catch (error: any) {
-      console.warn(
-        `[LocalStorageStrategy] Could not create local storage directory at ${this.destination}: ${error.message}`,
-      );
+    if (!fs.existsSync(this.destination)) {
+      fs.mkdirSync(this.destination, { recursive: true });
     }
   }
 
+  /**
+   * Resolve the requested filename inside the destination directory and
+   * verify the resolved path doesn't escape it. Defends against `..`,
+   * absolute paths, and symlink games even though the controller already
+   * pattern-checks the input.
+   */
+  private safePath(filename: string): string {
+    if (!filename || !ALLOWED_FILENAME_RE.test(filename) || filename.includes('..')) {
+      throw this.fileNotFound(filename);
+    }
+    const candidate = path.resolve(this.destinationResolved, filename);
+    if (
+      candidate !== this.destinationResolved &&
+      !candidate.startsWith(this.destinationResolved + path.sep)
+    ) {
+      throw this.fileNotFound(filename);
+    }
+    return candidate;
+  }
+
   private buildUrl(filename: string): string {
-    const baseUrl = this.baseUrl.endsWith('/')
-      ? this.baseUrl.slice(0, -1)
-      : this.baseUrl;
-    return `${baseUrl}/${filename}`;
+    return `${this.baseUrl}/${filename}`;
+  }
+
+  private safeExtension(originalName: string): string {
+    const ext = path.extname(originalName).toLowerCase();
+    if (!ext || !/^\.[a-z0-9]{1,10}$/.test(ext)) return '';
+    return ext;
   }
 
   async upload(file: any): Promise<UploadResult> {
     this.ensureDirectoryExists();
-    // Tạo tên file unique
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const ext = path.extname(file.originalname);
-    const filename = `${timestamp}-${randomString}${ext}`;
-
-    // Đường dẫn đầy đủ để lưu file
-    const filePath = path.join(this.destination, filename);
-
-    // Lưu file bằng Stream để tránh chặn Event Loop (Async)
-    await new Promise<void>((resolve, reject) => {
-      const writeStream = fs.createWriteStream(filePath);
-      writeStream.on('finish', () => resolve());
-      writeStream.on('error', (err) => reject(err));
-      writeStream.write(file.buffer);
-      writeStream.end();
-    });
-
-    // Tạo URL để truy cập file (đảm bảo baseUrl không có trailing slash)
-    const url = this.buildUrl(filename);
-
-    return {
-      path: filePath,
-      url,
-      filename,
-      size: file.size,
-      mimetype: file.mimetype,
-    };
+    const ext = this.safeExtension(file.originalname || '');
+    // UUID-based filename + 'wx' flag: collision-safe write that fails if
+    // the path already exists. Math.random was enumerable and 13-char
+    // base36 was within bruteforce range when narrowed by timestamp.
+    let attempt = 0;
+    while (attempt < 3) {
+      const filename = `${Date.now()}-${randomUUID()}${ext}`;
+      const filePath = this.safePath(filename);
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const stream = fs.createWriteStream(filePath, { flags: 'wx' });
+          stream.on('finish', () => resolve());
+          stream.on('error', reject);
+          stream.write(file.buffer);
+          stream.end();
+        });
+        return {
+          path: filePath,
+          url: this.buildUrl(filename),
+          filename,
+          size: file.size,
+          mimetype: file.mimetype,
+        };
+      } catch (err: any) {
+        if (err?.code === 'EEXIST') {
+          attempt++;
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new InternalServerErrorException('Could not allocate a unique filename');
   }
 
   async download(
     filename: string,
   ): Promise<{ stream: NodeJS.ReadableStream; metadata: FileMetadata }> {
-    const filePath = path.join(this.destination, filename);
-    if (!fs.existsSync(filePath)) {
-      throw this.fileNotFound(filename);
+    const filePath = this.safePath(filename);
+    let stat: fs.Stats;
+    try {
+      stat = await fs.promises.stat(filePath);
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') throw this.fileNotFound(filename);
+      throw err;
     }
-    const stat = await fs.promises.stat(filePath);
     const metadata: FileMetadata = {
       filename,
       size: stat.size,
@@ -101,11 +130,13 @@ export class LocalStorageStrategy implements IUploadStrategy {
   }
 
   async delete(filename: string): Promise<void> {
-    const filePath = path.join(this.destination, filename);
-    if (!fs.existsSync(filePath)) {
-      throw this.fileNotFound(filename);
+    const filePath = this.safePath(filename);
+    try {
+      await fs.promises.unlink(filePath);
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') throw this.fileNotFound(filename);
+      throw err;
     }
-    await fs.promises.unlink(filePath);
   }
 
   async list(prefix?: string, limit = 50): Promise<FileMetadata[]> {
@@ -117,6 +148,9 @@ export class LocalStorageStrategy implements IUploadStrategy {
 
     const metadataList: FileMetadata[] = [];
     for (const name of filtered) {
+      // Skip anything that doesn't match our generated naming scheme to
+      // avoid leaking system files that happen to live in the directory.
+      if (!ALLOWED_FILENAME_RE.test(name)) continue;
       const filePath = path.join(this.destination, name);
       try {
         const stat = await fs.promises.stat(filePath);
@@ -130,11 +164,10 @@ export class LocalStorageStrategy implements IUploadStrategy {
           });
         }
       } catch {
-        // Skip entries that can't be stat'd
+        // skip
       }
     }
 
-    // Sort by creation time descending (newest first)
     metadataList.sort(
       (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
     );
@@ -142,17 +175,25 @@ export class LocalStorageStrategy implements IUploadStrategy {
     return metadataList.slice(0, limit);
   }
 
-  exists(filename: string): Promise<boolean> {
-    const filePath = path.join(this.destination, filename);
-    return Promise.resolve(fs.existsSync(filePath));
+  async exists(filename: string): Promise<boolean> {
+    try {
+      const filePath = this.safePath(filename);
+      await fs.promises.access(filePath, fs.constants.F_OK);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async getMetadata(filename: string): Promise<FileMetadata> {
-    const filePath = path.join(this.destination, filename);
-    if (!fs.existsSync(filePath)) {
-      throw this.fileNotFound(filename);
+    const filePath = this.safePath(filename);
+    let stat: fs.Stats;
+    try {
+      stat = await fs.promises.stat(filePath);
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') throw this.fileNotFound(filename);
+      throw err;
     }
-    const stat = await fs.promises.stat(filePath);
     return {
       filename,
       size: stat.size,

@@ -3,6 +3,7 @@ import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { GroupRepository } from '../../repositories/group.repository';
+import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
 import { CreateGroupDto } from '../dtos/create-group.dto';
 import { UpdateGroupDto } from '../dtos/update-group.dto';
 import { AddMemberDto } from '../dtos/add-member.dto';
@@ -11,6 +12,7 @@ import { AddMemberDto } from '../dtos/add-member.dto';
 export class GroupService {
   constructor(
     private readonly repo: GroupRepository,
+    private readonly rbacCache: RbacCacheService,
     private readonly i18n: I18nService,
   ) {}
 
@@ -63,12 +65,17 @@ export class GroupService {
     if ('owner_id' in dto) {
       data.owner_id = dto.owner_id ? BigInt(dto.owner_id) : null;
     }
-    return this.repo.update(id, data);
+    const result = await this.repo.update(id, data);
+    if (dto.status !== undefined) {
+      await this.rbacCache.bumpVersion();
+    }
+    return result;
   }
 
   async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.repo.delete(id);
+    await this.rbacCache.bumpVersion();
     return { deleted: true };
   }
 
@@ -85,12 +92,14 @@ export class GroupService {
   async addMember(id: PrimaryKey, dto: AddMemberDto) {
     await this.getOne(id);
     await this.repo.addMember(id, BigInt(dto.userId));
+    await this.rbacCache.clearAllUserCaches(dto.userId);
     return { added: true };
   }
 
   async removeMember(id: PrimaryKey, userId: string) {
     await this.getOne(id);
     await this.repo.removeMember(id, BigInt(userId));
+    await this.rbacCache.clearAllUserCaches(userId);
     return { removed: true };
   }
 }

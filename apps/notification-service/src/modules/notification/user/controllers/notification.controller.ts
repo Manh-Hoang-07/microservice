@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Param, Query, Req } from '@nestjs/common';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserNotificationService } from '../services/notification.service';
+import { ListNotificationsUserQueryDto } from '../dtos/list-notifications.query.dto';
 
 @Controller('user/notifications')
 export class UserNotificationController {
@@ -9,7 +10,7 @@ export class UserNotificationController {
 
   @Permission('user')
   @Get()
-  getList(@Req() req: any, @Query() query: any) {
+  getList(@Req() req: any, @Query() query: ListNotificationsUserQueryDto) {
     return this.notifService.getList(String(req.user.sub), query);
   }
 

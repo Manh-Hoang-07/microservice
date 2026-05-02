@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -6,16 +7,18 @@ import {
   HttpCode,
   HttpStatus,
   InternalServerErrorException,
+  Logger,
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { Response, Request } from 'express';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import { AuthGuard } from '@nestjs/passport';
+import { GoogleOAuthGuard } from '../guards/google-oauth.guard';
 import { AuthService } from '../services/auth.service';
 import { TokenService } from '../services/token.service';
 import { LoginDto } from '../dto/login.dto';
@@ -36,6 +39,8 @@ import {
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
@@ -117,7 +122,7 @@ export class AuthController {
     const refreshToken = dto.refreshToken || (req.cookies?.[REFRESH_COOKIE] as string | undefined);
     if (!refreshToken) {
       const lang = I18nContext.current()?.lang ?? 'en';
-      throw new InternalServerErrorException(
+      throw new UnauthorizedException(
         this.i18n.t('auth.REFRESH_TOKEN_REQUIRED', { lang }),
       );
     }
@@ -166,26 +171,33 @@ export class AuthController {
 
   @Public()
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleOAuthGuard)
   async googleAuth() {
     // Guard redirects to Google
   }
 
   @Public()
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleOAuthGuard)
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const frontendUrl = this.configService.get<string>('googleOAuth.frontendUrl');
     if (!frontendUrl) throw new InternalServerErrorException('GOOGLE_FRONTEND_URL not configured');
 
-    const profile = req.user as any;
-    const result = await this.authService.handleGoogleAuth(profile);
-
-    if (!result?.token) {
-      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    try {
+      const profile = req.user as any;
+      const result = await this.authService.handleGoogleAuth(profile);
+      if (!result?.token) {
+        return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      }
+      this.writeAuthCookies(req, res, result.token, result.refreshToken);
+      return res.redirect(`${frontendUrl}/auth/google/success`);
+    } catch (err) {
+      this.logger.warn(`Google OAuth callback failed: ${(err as Error).message}`);
+      const code =
+        err instanceof BadRequestException ? 'bad_request'
+          : err instanceof UnauthorizedException ? 'unauthorized'
+          : 'auth_failed';
+      return res.redirect(`${frontendUrl}/login?error=${code}`);
     }
-
-    this.writeAuthCookies(req, res, result.token, result.refreshToken);
-    return res.redirect(`${frontendUrl}/auth/google/success`);
   }
 }

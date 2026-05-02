@@ -15,8 +15,8 @@ export class RbacRoleAssignmentService {
     groupId: RbacId,
     roleIds: RbacId[],
     skipValidation = false,
-  ): Promise<void> {
-    await this.rbacRepo.syncRolesInGroup(userId, groupId, roleIds, skipValidation);
+  ): Promise<{ before: bigint[]; after: bigint[] }> {
+    return this.rbacRepo.syncRolesInGroup(userId, groupId, roleIds, skipValidation);
   }
 
   async getActivePermissionCodes(userId: RbacId, groupId: RbacId | null): Promise<string[]> {

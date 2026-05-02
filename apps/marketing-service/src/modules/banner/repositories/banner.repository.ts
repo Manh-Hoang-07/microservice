@@ -22,9 +22,10 @@ export class BannerRepository {
   private buildWhere(filter: BannerFilter): Prisma.BannerWhereInput {
     const where: Prisma.BannerWhereInput = {};
     if (filter.search) {
+      const search = filter.search.slice(0, 100);
       where.OR = [
-        { title: { contains: filter.search } },
-        { subtitle: { contains: filter.search } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { subtitle: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status;
@@ -43,7 +44,8 @@ export class BannerRepository {
     return this.prisma.banner.findMany({
       where: this.buildWhere(filter),
       include: { location: true },
-      orderBy: { sort_order: 'asc' },
+      // Tie-break by id so duplicate sort_order is deterministic across pages.
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });
@@ -53,7 +55,7 @@ export class BannerRepository {
     return this.prisma.banner.findMany({
       where: this.buildWhere(filter),
       include: PUBLIC_INCLUDE,
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });
@@ -88,7 +90,31 @@ export class BannerRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
+    // Allowlist: defeat mass-assignment via spread on update path. The
+    // controller passes UpdateBannerDto = PartialType(CreateBannerDto)
+    // straight in; without this allowlist any future column added to
+    // schema (e.g. `view_count`) becomes client-controllable.
+    const ALLOWED: ReadonlySet<string> = new Set([
+      'title',
+      'subtitle',
+      'image',
+      'mobile_image',
+      'link',
+      'link_target',
+      'description',
+      'button_text',
+      'button_color',
+      'text_color',
+      'location_id',
+      'sort_order',
+      'status',
+      'start_date',
+      'end_date',
+    ]);
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED.has(key)) payload[key] = data[key];
+    }
     if (payload.location_id !== undefined && payload.location_id !== null) {
       payload.location_id = toPrimaryKey(payload.location_id);
     }

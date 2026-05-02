@@ -1,20 +1,29 @@
 import {
-  IsString,
-  IsOptional,
+  IsBoolean,
   IsEmail,
   IsInt,
-  IsBoolean,
-  MaxLength,
-  MinLength,
-  Min,
+  IsOptional,
+  IsString,
+  Matches,
   Max,
+  MaxLength,
+  Min,
+  MinLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+
+const toBool = ({ value }: { value: any }) =>
+  value === true || value === 'true' || value === '1' || value === 1;
+
+// Valid SMTP host: hostname or IP, no protocol/path. Blocks SSRF tricks like
+// embedded URLs and rejects obvious metadata endpoints in user input.
+const SMTP_HOST_RE = /^(?!169\.254\.|0\.|127\.|10\.|192\.168\.)[A-Za-z0-9._-]{1,253}$/;
 
 export class UpdateEmailConfigDto {
   @IsString()
   @IsOptional()
   @MaxLength(255)
+  @Matches(SMTP_HOST_RE, { message: 'smtp_host must be a public hostname.' })
   smtp_host?: string;
 
   @IsInt()
@@ -26,7 +35,7 @@ export class UpdateEmailConfigDto {
 
   @IsBoolean()
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(toBool)
   smtp_secure?: boolean;
 
   @IsString()

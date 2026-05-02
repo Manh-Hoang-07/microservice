@@ -99,7 +99,15 @@
       "Bash(taskkill //PID 15996 //F)",
       "Bash(node .refactor-swagger.js)",
       "Bash(git checkout *)",
-      "Bash(npm -w apps/web-api-service run build)"
+      "Bash(npm -w apps/web-api-service run build)",
+      "Bash(grep -rn \"Cron\\('\\\\\\\\*/5 \\\\\\\\* \\\\\\\\* \\\\\\\\* \\\\\\\\* \\\\\\\\*'\\)\" apps/ shared/)",
+      "Bash(grep -E \"\\\\.\\(js|d\\\\.ts|js\\\\.map|d\\\\.ts\\\\.map\\)$\")",
+      "Bash(xargs ls *)",
+      "Bash(grep -E \"^\\(auth-service@|comic-platform@|npm$|prisma$\\)\")",
+      "Bash(awk -F/ '{print $1\"/\"$2\"/\"$3\"/\"$4}')",
+      "Bash(npm audit *)",
+      "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{const j=JSON.parse\\(d\\); console.log\\('Total vulns:', JSON.stringify\\(j.metadata?.vulnerabilities||{}\\)\\)}catch\\(e\\){console.log\\('parse err',e.message\\)}}\\)\")",
+      "Bash(awk '{print $1}')"
     ]
   }
 }

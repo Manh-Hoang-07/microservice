@@ -12,6 +12,7 @@ import { WardService } from '../services/ward.service';
 import { Permission } from '@package/common';
 import { CreateWardDto } from '../dtos/create-ward.dto';
 import { UpdateWardDto } from '../dtos/update-ward.dto';
+import { ListWardsAdminQueryDto } from '../dtos/list-ward.query.dto';
 
 @Controller('admin/wards')
 export class AdminWardController {
@@ -19,13 +20,13 @@ export class AdminWardController {
 
   @Permission('ward.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListWardsAdminQueryDto) {
     return this.wardService.getList(query);
   }
 
   @Permission('ward.manage')
   @Get('simple')
-  async getSimpleList(@Query() query: any) {
+  async getSimpleList(@Query() query: ListWardsAdminQueryDto) {
     return this.wardService.getSimpleList(query);
   }
 

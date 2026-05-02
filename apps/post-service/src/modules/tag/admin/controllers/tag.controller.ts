@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminTagService } from '../services/tag.service';
 import { CreateTagDto } from '../dtos/create-tag.dto';
 import { UpdateTagDto } from '../dtos/update-tag.dto';
+import { ListTagsAdminQueryDto } from '../dtos/list-tags.query.dto';
 
 @Controller('admin/post-tags')
 export class AdminTagController {
@@ -10,7 +11,7 @@ export class AdminTagController {
 
   @Permission('post.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListTagsAdminQueryDto) {
     return this.tagService.getList(query);
   }
 

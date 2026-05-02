@@ -1,13 +1,24 @@
 import { MenuTreeItem } from '../interfaces/menu-tree-item.interface';
 
+interface MenuTreeItemWithSort extends MenuTreeItem {
+  __sort_order: number;
+}
+
+/**
+ * Build a tree from a flat list. Stash `sort_order` on each tree item so
+ * sortTree compares in O(n log n) rather than rescanning the source array
+ * on every comparator call. Orphaned children (parent_id points outside
+ * the input set, e.g. parent was filtered out) are dropped, NOT promoted
+ * to roots — promoting them used to leak filtered-out subtrees up to the
+ * top level of the public menu.
+ */
 export function buildMenuTree(menus: any[]): MenuTreeItem[] {
-  const menuMap = new Map<any, MenuTreeItem>();
-  const rootMenus: MenuTreeItem[] = [];
+  const menuMap = new Map<string, MenuTreeItemWithSort>();
+  const rootMenus: MenuTreeItemWithSort[] = [];
 
   menus.forEach((menu) => {
-    const id = menu.id;
-    menuMap.set(id, {
-      id,
+    menuMap.set(String(menu.id), {
+      id: menu.id,
       code: menu.code,
       name: menu.name,
       path: menu.path,
@@ -17,30 +28,27 @@ export function buildMenuTree(menus: any[]): MenuTreeItem[] {
       is_public: !!menu.is_public,
       children: [],
       allowed: true,
-    } as MenuTreeItem);
+      __sort_order: typeof menu.sort_order === 'number' ? menu.sort_order : 0,
+    });
   });
 
   menus.forEach((menu) => {
-    const item = menuMap.get(menu.id)!;
-    const parentId = menu.parent_id;
+    const item = menuMap.get(String(menu.id))!;
+    const parentId = menu.parent_id != null ? String(menu.parent_id) : null;
 
-    if (parentId && menuMap.has(parentId)) {
-      menuMap.get(parentId)!.children!.push(item);
-    } else {
+    if (parentId == null) {
       rootMenus.push(item);
+    } else if (menuMap.has(parentId)) {
+      menuMap.get(parentId)!.children!.push(item);
     }
+    // else: parent missing (filtered out / deleted) → drop the orphan
   });
 
-  const sortTree = (items: MenuTreeItem[]) => {
-    items.sort((a, b) => {
-      const menuA = menus.find((m) => String(m.id) === String(a.id));
-      const menuB = menus.find((m) => String(m.id) === String(b.id));
-      return (menuA?.sort_order || 0) - (menuB?.sort_order || 0);
-    });
+  const sortTree = (items: MenuTreeItemWithSort[]) => {
+    items.sort((a, b) => a.__sort_order - b.__sort_order);
     items.forEach((item) => {
-      if (item.children?.length) {
-        sortTree(item.children);
-      }
+      if (item.children?.length) sortTree(item.children as MenuTreeItemWithSort[]);
+      delete (item as any).__sort_order;
     });
   };
 
@@ -48,10 +56,18 @@ export function buildMenuTree(menus: any[]): MenuTreeItem[] {
   return rootMenus;
 }
 
-export function filterPublicMenus(menus: any[], userId?: any): any[] {
+/**
+ * Pre-tree filter for the public endpoint. Anonymous users may only see
+ * `is_public=true` menus. Authenticated callers still need their permission
+ * codes checked — granting any logged-in user access to admin menus was a
+ * permission leak.
+ */
+export function filterPublicMenus(menus: any[], userPermissions?: Set<string>): any[] {
   return menus.filter((menu) => {
     if (menu.is_public) return true;
-    if (userId) return true;
-    return false;
+    if (!userPermissions) return false;
+    // No permission code on a non-public menu → not visible.
+    if (!menu.required_permission_code) return false;
+    return userPermissions.has(menu.required_permission_code);
   });
 }

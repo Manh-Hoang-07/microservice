@@ -15,10 +15,19 @@ export class CountryRepository {
 
   private buildWhere(filter: CountryFilter): Prisma.CountryWhereInput {
     const where: Prisma.CountryWhereInput = {};
-    if (filter.name) where.name = { contains: filter.name };
+    if (filter.name) where.name = { contains: filter.name, mode: 'insensitive' };
     if (filter.code) where.code = filter.code;
     if (filter.status) where.status = filter.status;
     return where;
+  }
+
+  countProvinces(countryId: any) {
+    return this.prisma.province.count({ where: { country_id: this.toBig(countryId) } });
+  }
+
+  private toBig(id: any): bigint {
+    if (typeof id === 'bigint') return id;
+    return BigInt(String(id));
   }
 
   findMany(filter: CountryFilter, options: { skip: number; take: number }) {

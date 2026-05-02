@@ -36,14 +36,54 @@ export class ReadingHistoryRepository {
     return this.prisma.readingHistory.count({ where: this.buildWhere(filter) });
   }
 
-  upsert(userId: any, comicId: any, chapterId: any) {
+  /**
+   * Track furthest chapter a user has read for a comic. Two parallel reads
+   * of different chapters used to race — the loser by SQL order overwrote
+   * the winner. We compare `chapter_index` inside a transaction so the
+   * pointer only moves forward (or stays put on re-reads of earlier
+   * chapters).
+   */
+  async upsert(userId: any, comicId: any, chapterId: any) {
     const uid = toPrimaryKey(userId);
     const cid = toPrimaryKey(comicId);
     const chid = toPrimaryKey(chapterId);
-    return this.prisma.readingHistory.upsert({
-      where: { user_id_comic_id: { user_id: uid, comic_id: cid } },
-      create: { user_id: uid, comic_id: cid, chapter_id: chid },
-      update: { chapter_id: chid },
+
+    return this.prisma.$transaction(async (tx) => {
+      const incoming = await tx.chapter.findUnique({
+        where: { id: chid },
+        select: { chapter_index: true, comic_id: true },
+      });
+      if (!incoming || incoming.comic_id !== cid) {
+        throw new Error('Chapter does not belong to comic');
+      }
+
+      const existing = await tx.readingHistory.findUnique({
+        where: { user_id_comic_id: { user_id: uid, comic_id: cid } },
+        include: { chapter: { select: { chapter_index: true } } },
+      });
+
+      if (!existing) {
+        return tx.readingHistory.create({
+          data: { user_id: uid, comic_id: cid, chapter_id: chid },
+        });
+      }
+
+      if (existing.chapter_id === chid) {
+        return tx.readingHistory.update({
+          where: { user_id_comic_id: { user_id: uid, comic_id: cid } },
+          data: { updated_at: new Date() },
+        });
+      }
+
+      const incomingIdx = incoming.chapter_index ?? 0;
+      const existingIdx = existing.chapter?.chapter_index ?? 0;
+      if (incomingIdx >= existingIdx) {
+        return tx.readingHistory.update({
+          where: { user_id_comic_id: { user_id: uid, comic_id: cid } },
+          data: { chapter_id: chid },
+        });
+      }
+      return existing;
     });
   }
 

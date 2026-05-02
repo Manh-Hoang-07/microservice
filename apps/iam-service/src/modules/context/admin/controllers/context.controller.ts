@@ -5,6 +5,7 @@ import { ContextService } from '../services/context.service';
 import { CreateContextDto } from '../dtos/create-context.dto';
 import { UpdateContextDto } from '../dtos/update-context.dto';
 import { SyncRolesDto } from '../dtos/sync-roles.dto';
+import { ListContextsAdminQueryDto } from '../dtos/list-context.query.dto';
 
 @Controller('contexts')
 export class ContextController {
@@ -12,7 +13,7 @@ export class ContextController {
 
   @Permission('context.manage')
   @Get()
-  getList(@Query() query: any) {
+  getList(@Query() query: ListContextsAdminQueryDto) {
     return this.service.getList(query);
   }
 

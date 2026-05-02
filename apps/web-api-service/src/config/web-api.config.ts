@@ -7,6 +7,10 @@ export default registerAs('gateway', () => ({
   redisUrl: process.env.GATEWAY_REDIS_URL || '',
   serviceTimeoutMs: parseInt(process.env.SERVICE_TIMEOUT_MS || '5000', 10),
   jwksUrl: process.env.AUTH_JWKS_URL || '',
+  // Server-side internal secret used when calling upstream `/public/*`. NEVER
+  // forward an attacker-supplied `x-internal-secret` header — populate from
+  // env only.
+  internalApiSecret: process.env.INTERNAL_API_SECRET || '',
   corsOrigins: process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
     : ['*'],

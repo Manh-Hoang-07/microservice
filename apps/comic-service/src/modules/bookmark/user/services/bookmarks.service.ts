@@ -23,7 +23,9 @@ export class UserBookmarkService {
   }
 
   async create(userId: any, dto: CreateBookmarkDto) {
-    return this.bookmarkRepo.create({
+    // Upsert — double-tap is idempotent now that Bookmark has a unique
+    // constraint on (user_id, chapter_id, page_number).
+    return this.bookmarkRepo.upsert({
       user_id: userId,
       chapter_id: dto.chapter_id,
       page_number: dto.page_number,

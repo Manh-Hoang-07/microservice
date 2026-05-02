@@ -1,6 +1,7 @@
 import { Controller, Get, Delete, Param, Query } from '@nestjs/common';
 import { Permission } from '@package/common';
 import { AdminReviewService } from '../services/reviews.service';
+import { ListReviewsAdminQueryDto } from '../dtos/list-reviews.query.dto';
 
 @Controller('admin/reviews')
 export class AdminReviewController {
@@ -8,7 +9,7 @@ export class AdminReviewController {
 
   @Permission('comic.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListReviewsAdminQueryDto) {
     return this.reviewService.getList(query);
   }
 

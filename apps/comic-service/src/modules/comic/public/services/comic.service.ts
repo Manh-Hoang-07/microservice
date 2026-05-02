@@ -40,15 +40,25 @@ export class PublicComicService {
     return this.transform(comic);
   }
 
-  async getChaptersBySlug(slug: string, query: any = {}) {
+  async getChaptersBySlug(slug: string, query: any = {}, requesterKey?: string) {
     const comic = await this.comicRepo.findIdBySlug(slug, PUBLIC_COMIC_STATUSES);
     if (!comic) throw new NotFoundException('Comic not found');
 
-    if (this.redis.isEnabled()) {
-      await this.redis.hincrby('comic:views:buffer', comic.id.toString(), 1);
+    // View-counter dedup: same requester (user id or IP) counts at most once
+    // every 5 min per comic. Without this a single bot inflates view_count
+    // arbitrarily by replaying GET. Skip increment if we can't identify the
+    // requester at all to keep the counter honest.
+    if (this.redis.isEnabled() && requesterKey) {
+      const dedupKey = `comic:view:seen:${comic.id}:${requesterKey}`;
+      const acquired = await this.redis.setnx(dedupKey, '1', 300);
+      if (acquired) {
+        await this.redis.hincrby('comic:views:buffer', comic.id.toString(), 1);
+      }
     }
 
-    const options = parseQueryOptions({ ...query, limit: query.limit ?? 10000 });
+    // Hard cap chapter list at 200 per page (was effectively unbounded with
+    // `limit: query.limit ?? 10000` — trivial DoS).
+    const options = parseQueryOptions(query, { defaultTake: 50, maxTake: 200 });
 
     const [data, total] = await Promise.all([
       this.comicRepo.findPublicChapters(comic.id, options),

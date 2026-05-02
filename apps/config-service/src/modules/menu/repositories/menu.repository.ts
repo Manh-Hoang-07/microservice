@@ -39,9 +39,10 @@ export class MenuRepository {
   private buildWhere(filter: MenuFilter): Prisma.MenuWhereInput {
     const where: Prisma.MenuWhereInput = {};
     if (filter.search) {
+      // Postgres `contains` is case-sensitive by default — use insensitive mode.
       where.OR = [
-        { name: { contains: filter.search } },
-        { code: { contains: filter.search } },
+        { name: { contains: filter.search, mode: 'insensitive' } },
+        { code: { contains: filter.search, mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status as any;
@@ -58,7 +59,9 @@ export class MenuRepository {
     return this.prisma.menu.findMany({
       where: this.buildWhere(filter),
       select: DEFAULT_SELECT,
-      orderBy: { sort_order: 'asc' },
+      // Tie-break by id so duplicate sort_order doesn't make pagination
+      // non-deterministic (skipping/duplicating rows across pages).
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
       skip: options.skip,
       take: options.take,
     });
@@ -86,7 +89,7 @@ export class MenuRepository {
     return this.prisma.menu.findMany({
       where: this.buildWhere(filter),
       select: DEFAULT_SELECT,
-      orderBy: { sort_order: 'asc' },
+      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
     }) as any;
   }
 

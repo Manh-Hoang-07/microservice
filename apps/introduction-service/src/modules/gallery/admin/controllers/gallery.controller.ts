@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminGalleryService } from '../services/gallery.service';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
+import { ListGalleryAdminQueryDto } from '../dtos/list-gallery.query.dto';
 
 @Controller('admin/galleries')
 export class AdminGalleryController {
@@ -10,7 +11,7 @@ export class AdminGalleryController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListGalleryAdminQueryDto) {
     return this.galleryService.getList(query);
   }
 

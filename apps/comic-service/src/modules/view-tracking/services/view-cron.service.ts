@@ -20,9 +20,26 @@ export class ViewCronService {
     if (!locked) return;
 
     try {
-      const buffer = await this.redis.hgetall('comic:views:buffer');
+      // Atomic snapshot-then-clear: rename the live buffer to a temp key
+      // BEFORE reading. The previous flow read the live key, upserted, then
+      // HDEL each entry — meaning every increment arriving DURING the
+      // flush was silently deleted with the entry, double-counting on a
+      // crash and losing counts on a clean run. RENAME is atomic; if the
+      // source key didn't exist the call throws, swallowed as "no buffer".
+      const snapshotKey = `comic:views:buffer:flush:${Date.now()}`;
+      try {
+        await this.redis.rename('comic:views:buffer', snapshotKey);
+      } catch {
+        // No buffer to flush.
+        return;
+      }
+
+      const buffer = await this.redis.hgetall(snapshotKey);
       const entries = Object.entries(buffer);
-      if (!entries.length) return;
+      if (!entries.length) {
+        await this.redis.del(snapshotKey);
+        return;
+      }
 
       this.logger.log(`Flushing ${entries.length} comic view counts`);
 
@@ -30,18 +47,30 @@ export class ViewCronService {
       today.setHours(0, 0, 0, 0);
 
       for (const [comicIdStr, countStr] of entries) {
-        const comicId = BigInt(comicIdStr);
+        let comicId: bigint;
+        try {
+          comicId = BigInt(comicIdStr);
+        } catch {
+          this.logger.warn(`Skipping invalid comic id in view buffer: ${comicIdStr}`);
+          continue;
+        }
         const count = parseInt(countStr, 10);
         if (isNaN(count) || count <= 0) continue;
 
         try {
           await this.viewRepo.upsertStats(comicId, count);
           await this.viewRepo.upsertDailyStats(comicId, today, count);
-          await this.redis.hdel('comic:views:buffer', comicIdStr);
         } catch (err) {
+          // On failure, restore the unflushed entries to the live buffer
+          // so the next tick retries instead of losing the count forever.
           this.logger.error(`Failed to flush views for comic ${comicIdStr}`, err);
+          await this.redis
+            .hincrby('comic:views:buffer', comicIdStr, count)
+            .catch(() => undefined);
         }
       }
+
+      await this.redis.del(snapshotKey);
     } catch (err) {
       this.logger.error('View buffer flush error', err);
     } finally {

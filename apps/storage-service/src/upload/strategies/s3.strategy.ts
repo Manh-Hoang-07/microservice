@@ -11,12 +11,18 @@ import {
   HeadObjectCommandOutput,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
 import {
   FileMetadata,
   IUploadStrategy,
   UploadResult,
 } from '../interfaces/upload-strategy.interface';
+
+function safeExtension(originalName: string): string {
+  const ext = path.extname(originalName || '').toLowerCase();
+  return /^\.[a-z0-9]{1,10}$/.test(ext) ? ext : '';
+}
 
 @Injectable()
 export class S3StorageStrategy implements IUploadStrategy {
@@ -72,18 +78,19 @@ export class S3StorageStrategy implements IUploadStrategy {
       );
     }
 
-    // Tạo tên file unique
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const ext = path.extname(file.originalname);
-    const filename = `${timestamp}-${randomString}${ext}`;
+    // UUID-based filename — Math.random was enumerable.
+    const ext = safeExtension(file.originalname);
+    const filename = `${Date.now()}-${randomUUID()}${ext}`;
 
-    // Upload lên S3/MinIO
+    // ContentType is forced to octet-stream + Content-Disposition: attachment
+    // so any polyglot (HTML/SVG/JS smuggled past validation) cannot be
+    // executed when fetched directly from the bucket origin.
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: filename,
       Body: file.buffer,
-      ContentType: file.mimetype,
+      ContentType: 'application/octet-stream',
+      ContentDisposition: `attachment; filename="${filename}"`,
     });
 
     try {

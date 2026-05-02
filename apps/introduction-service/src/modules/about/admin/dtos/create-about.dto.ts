@@ -1,11 +1,16 @@
 import {
-  IsString,
-  IsOptional,
   IsEnum,
   IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { AboutSectionType } from '../../enums/about-section-type.enum';
+import { BasicStatus } from '../../../../common/enums/status.enum';
+
+const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateAboutDto {
   @IsString()
@@ -19,15 +24,17 @@ export class CreateAboutDto {
 
   @IsOptional()
   @IsString()
+  // Capped because it's stored as TEXT and rendered into pages.
+  @MaxLength(20_000)
   content?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl(URL_OPTS, { message: 'image must be an http(s) URL.' })
   @MaxLength(500)
   image?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl(URL_OPTS, { message: 'video_url must be an http(s) URL.' })
   @MaxLength(500)
   video_url?: string;
 
@@ -36,10 +43,11 @@ export class CreateAboutDto {
   section_type?: AboutSectionType;
 
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   sort_order?: number;
 }

@@ -41,6 +41,9 @@ export class CommentRepository {
         replies: {
           where: { status: 'visible' },
           orderBy: { created_at: 'asc' },
+          // Cap replies per parent so a hot thread can't return megabytes
+          // per request (the include used to be unbounded).
+          take: 50,
         },
       },
       orderBy: { created_at: 'desc' },
@@ -79,8 +82,16 @@ export class CommentRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
-    const bigIntFields = ['post_id', 'parent_id', 'user_id', 'created_user_id', 'updated_user_id'];
+    // Strict allowlist — defeat mass-assignment via spread.
+    const ALLOWED: ReadonlySet<string> = new Set([
+      'post_id', 'parent_id', 'user_id', 'content', 'status',
+      'guest_name', 'guest_email',
+    ]);
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED.has(key)) payload[key] = data[key];
+    }
+    const bigIntFields = ['post_id', 'parent_id', 'user_id'];
     for (const field of bigIntFields) {
       const value = payload[field];
       if (value === undefined) continue;

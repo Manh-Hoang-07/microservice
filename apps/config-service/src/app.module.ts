@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { join } from 'path';
 import { createAppConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
-import { JwtGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
 import { DatabaseModule } from './database/database.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { MenuModule } from './modules/menu/menu.module';
@@ -31,6 +32,7 @@ import { LocationModule } from './modules/location/location.module';
         AcceptLanguageResolver,
       ],
     }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
     HealthModule.register('config-service'),
     SystemConfigModule,
@@ -42,10 +44,21 @@ import { LocationModule } from './modules/location/location.module';
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
+    // Bound abuse before any auth work runs.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new JwtGuard(reflector, config),
+      inject: [Reflector, ConfigService],
+    },
+    // RBAC must follow JwtGuard. Without this guard, `@Permission(...)`
+    // decorators are decoration-only and any authenticated user can call
+    // admin endpoints (incl. SMTP credentials, menu admin, location admin).
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService) =>
+        new RbacGuard(reflector, config),
       inject: [Reflector, ConfigService],
     },
   ],

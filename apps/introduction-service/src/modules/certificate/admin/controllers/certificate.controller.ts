@@ -3,6 +3,7 @@ import { Permission } from '@package/common';
 import { AdminCertificateService } from '../services/certificate.service';
 import { CreateCertificateDto } from '../dtos/create-certificate.dto';
 import { UpdateCertificateDto } from '../dtos/update-certificate.dto';
+import { ListCertificateAdminQueryDto } from '../dtos/list-certificate.query.dto';
 
 @Controller('admin/certificates')
 export class AdminCertificateController {
@@ -10,7 +11,7 @@ export class AdminCertificateController {
 
   @Permission('introduction.manage')
   @Get()
-  async getList(@Query() query: any) {
+  async getList(@Query() query: ListCertificateAdminQueryDto) {
     return this.certificateService.getList(query);
   }
 

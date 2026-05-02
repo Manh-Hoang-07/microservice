@@ -14,6 +14,6 @@ import { RbacRepository } from './repositories/rbac.repository';
     RbacPermissionIndexService,
     RbacRoleAssignmentService,
   ],
-  exports: [RbacService, RbacCacheService],
+  exports: [RbacService, RbacCacheService, RbacRepository, RbacPermissionIndexService],
 })
 export class RbacModule {}

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Param, Query, Req } from '@nestjs/common';
 import { Permission } from '@package/common';
 import { UserFollowService } from '../services/follows.service';
+import { ListFollowsQueryDto } from '../dtos/list-follows.query.dto';
 
 @Controller('user')
 export class UserFollowController {
@@ -8,7 +9,7 @@ export class UserFollowController {
 
   @Permission('user')
   @Get('follows')
-  async getList(@Req() req: any, @Query() query: any) {
+  async getList(@Req() req: any, @Query() query: ListFollowsQueryDto) {
     return this.followService.getList(req.user.sub, query);
   }
 

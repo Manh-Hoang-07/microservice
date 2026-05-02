@@ -1,7 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as path from 'path';
@@ -17,6 +17,7 @@ import { SecurityModule } from './security/security.module';
 import { JwksModule } from './jwks/jwks.module';
 import { JwksService } from './jwks/services/jwks.service';
 import { AuthJwtGuard } from './guards/auth-jwt.guard';
+import { TokenBlacklistService } from './security/services/token-blacklist.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { GlobalExceptionFilter, HealthModule } from '@package/common';
 import { InternalModule } from './internal/internal.module';
@@ -64,6 +65,11 @@ import { KafkaModule } from './kafka/kafka.module';
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
+    // Throttler MUST run before AuthJwtGuard so per-route `@Throttle()`
+    // decorators on /auth/login, /auth/refresh, /auth/forgot-password,
+    // /auth/register/send-otp actually bound brute-force attempts. Without
+    // this, every `@Throttle({...})` is just metadata.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_GUARD,
       useFactory: (
@@ -71,8 +77,9 @@ import { KafkaModule } from './kafka/kafka.module';
         config: ConfigService,
         jwksService: JwksService,
         i18n: I18nService,
-      ) => new AuthJwtGuard(reflector, config, jwksService, i18n),
-      inject: [Reflector, ConfigService, JwksService, I18nService],
+        blacklist: TokenBlacklistService,
+      ) => new AuthJwtGuard(reflector, config, jwksService, i18n, blacklist),
+      inject: [Reflector, ConfigService, JwksService, I18nService, TokenBlacklistService],
     },
   ],
 })

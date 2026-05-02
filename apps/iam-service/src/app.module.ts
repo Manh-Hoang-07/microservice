@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
@@ -67,6 +67,11 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
+    // ThrottlerGuard MUST be in APP_GUARD chain — without it, the
+    // ThrottlerModule.forRoot() rate limit never applies. This was a
+    // regression from the round-1 fixes: post/comic/marketing/intro/notif
+    // were wired but iam was not.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>

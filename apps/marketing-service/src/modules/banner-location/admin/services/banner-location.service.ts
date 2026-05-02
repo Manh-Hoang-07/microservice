@@ -1,12 +1,21 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from 'src/generated/prisma';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
+import { ChangeStatusDto } from '../dtos/change-status.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { BannerLocationFilter, BannerLocationRepository } from '../../repositories/banner-location.repository';
 
 @Injectable()
 export class AdminBannerLocationService {
   constructor(private readonly locationRepo: BannerLocationRepository) {}
+
+  private mapP2002(err: unknown): never {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      throw new ConflictException('Banner location code already exists');
+    }
+    throw err;
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -34,12 +43,17 @@ export class AdminBannerLocationService {
     const existing = await this.locationRepo.findByCode(dto.code);
     if (existing) throw new ConflictException('Banner location code already exists');
 
-    return this.locationRepo.create({
-      code: dto.code,
-      name: dto.name,
-      description: dto.description,
-      status: dto.status || 'active',
-    });
+    try {
+      return await this.locationRepo.create({
+        code: dto.code,
+        name: dto.name,
+        description: dto.description,
+        status: dto.status || 'active',
+      });
+    } catch (err) {
+      // Concurrent creates raced our `findByCode` check.
+      this.mapP2002(err);
+    }
   }
 
   async update(id: any, dto: UpdateBannerLocationDto) {
@@ -50,7 +64,11 @@ export class AdminBannerLocationService {
       if (existing) throw new ConflictException('Banner location code already exists');
     }
 
-    return this.locationRepo.update(id, dto);
+    try {
+      return await this.locationRepo.update(id, dto);
+    } catch (err) {
+      this.mapP2002(err);
+    }
   }
 
   async delete(id: any) {
@@ -59,8 +77,8 @@ export class AdminBannerLocationService {
     return { success: true };
   }
 
-  async changeStatus(id: any, status: string) {
+  async changeStatus(id: any, dto: ChangeStatusDto) {
     await this.getOne(id);
-    return this.locationRepo.update(id, { status });
+    return this.locationRepo.update(id, { status: dto.status });
   }
 }

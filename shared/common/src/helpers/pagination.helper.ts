@@ -26,13 +26,34 @@ export function createPaginationMeta(options: QueryOptions, total: number): Pagi
   };
 }
 
-export function parseQueryOptions(query: any): QueryOptions {
-  const page = Math.max(Number(query.page) || 1, 1);
-  const take = Math.max(Number(query.limit) || 10, 1);
+/**
+ * Default cap for `take` so a single request can never DoS the DB by
+ * issuing `?limit=1000000`. Services that legitimately need a higher cap
+ * pass an explicit `maxTake` to {@link parseQueryOptions}.
+ */
+export const DEFAULT_MAX_TAKE = 100;
+export const MAX_PAGE = 10_000;
+
+export function parseQueryOptions(
+  query: any,
+  options: { maxTake?: number; defaultTake?: number } = {},
+): QueryOptions {
+  const maxTake = options.maxTake ?? DEFAULT_MAX_TAKE;
+  const defaultTake = options.defaultTake ?? 10;
+  const rawPage = Number(query?.page);
+  const rawLimit = Number(query?.limit);
+  const page = Math.min(
+    Math.max(Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1, 1),
+    MAX_PAGE,
+  );
+  const take = Math.min(
+    Math.max(Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : defaultTake, 1),
+    maxTake,
+  );
   const skip = (page - 1) * take;
-  const sortBy: string | undefined = query.sort_by || undefined;
+  const sortBy: string | undefined = query?.sort_by || undefined;
   const order: 'asc' | 'desc' | undefined =
-    query.order === 'asc' || query.order === 'desc' ? query.order : undefined;
+    query?.order === 'asc' || query?.order === 'desc' ? query.order : undefined;
   return { page, skip, take, sortBy, order };
 }
 

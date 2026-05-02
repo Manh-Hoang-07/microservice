@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { UserRepository } from '../repositories/user.repository';
@@ -19,6 +20,7 @@ export class PasswordService {
     private readonly accountLockoutService: AttemptLimiterService,
     private readonly tokenService: TokenService,
     private readonly i18n: I18nService,
+    private readonly config: ConfigService,
   ) {}
 
   private t(key: string): string {
@@ -26,10 +28,14 @@ export class PasswordService {
     return this.i18n.t(key, { lang }) as string;
   }
 
+  /**
+   * Always returns success to prevent email enumeration. Sends OTP only if
+   * the account exists and is active.
+   */
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
     const email = dto.email.toLowerCase();
     const user = await this.userRepo.findByEmail(email);
-    if (user) {
+    if (user && user.status === 'active') {
       await this.otpService.sendForgotPasswordOtp(email);
     }
   }
@@ -47,12 +53,25 @@ export class PasswordService {
     }
 
     const user = await this.userRepo.findByEmail(email);
-    if (!user) {
+    if (!user || user.status !== 'active') {
       throw new BadRequestException(this.t('auth.INVALID_OTP'));
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    await this.userRepo.update(user.id, { password: hashedPassword });
+    const rounds = Number(this.config.get('BCRYPT_ROUNDS') ?? 12);
+    const hashedPassword = await bcrypt.hash(dto.password, rounds);
+
+    await this.userRepo.client.$transaction(async (tx) => {
+      await this.userRepo.update(user.id, { password: hashedPassword }, tx);
+      await this.userRepo.enqueueOutboxEvent(
+        'user.password.reset',
+        {
+          user_id: String(user.id),
+          email: user.email,
+          occurred_at: new Date().toISOString(),
+        },
+        tx,
+      );
+    });
 
     await this.tokenService.revokeAllUserSessions(user.id);
     await this.accountLockoutService.reset('auth:login', email);

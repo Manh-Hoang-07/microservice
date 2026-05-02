@@ -37,6 +37,8 @@ model Project {
   @@index([status], map: "projects_idx_status")
   @@index([featured], map: "projects_idx_featured")
   @@index([sort_order], map: "projects_idx_sort_order")
+  // Composite for public list: filter status='active', sort by sort_order.
+  @@index([status, sort_order], map: "projects_idx_status_sort_order")
   @@map("projects")
 }
 
@@ -57,6 +59,7 @@ model AboutSection {
   @@index([section_type], map: "about_sections_idx_section_type")
   @@index([status], map: "about_sections_idx_status")
   @@index([sort_order], map: "about_sections_idx_sort_order")
+  @@index([status, sort_order], map: "about_sections_idx_status_sort_order")
   @@map("about_sections")
 }
 
@@ -80,6 +83,7 @@ model Staff {
   @@index([status], map: "staff_idx_status")
   @@index([department], map: "staff_idx_department")
   @@index([sort_order], map: "staff_idx_sort_order")
+  @@index([status, sort_order], map: "staff_idx_status_sort_order")
   @@map("staff")
 }
 
@@ -104,6 +108,7 @@ model Testimonial {
   @@index([featured], map: "testimonials_idx_featured")
   @@index([status], map: "testimonials_idx_status")
   @@index([sort_order], map: "testimonials_idx_sort_order")
+  @@index([status, sort_order], map: "testimonials_idx_status_sort_order")
   @@map("testimonials")
 }
 
@@ -122,6 +127,7 @@ model Partner {
   @@index([type], map: "partners_idx_type")
   @@index([status], map: "partners_idx_status")
   @@index([sort_order], map: "partners_idx_sort_order")
+  @@index([status, sort_order], map: "partners_idx_status_sort_order")
   @@map("partners")
 }
 
@@ -142,6 +148,7 @@ model Gallery {
   @@index([featured], map: "galleries_idx_featured")
   @@index([status], map: "galleries_idx_status")
   @@index([sort_order], map: "galleries_idx_sort_order")
+  @@index([status, sort_order], map: "galleries_idx_status_sort_order")
   @@map("galleries")
 }
 
@@ -163,6 +170,7 @@ model Certificate {
   @@index([type], map: "certificates_idx_type")
   @@index([status], map: "certificates_idx_status")
   @@index([sort_order], map: "certificates_idx_sort_order")
+  @@index([status, sort_order], map: "certificates_idx_status_sort_order")
   @@map("certificates")
 }
 
@@ -179,5 +187,6 @@ model Faq {
 
   @@index([status], map: "faqs_idx_status")
   @@index([sort_order], map: "faqs_idx_sort_order")
+  @@index([status, sort_order], map: "faqs_idx_status_sort_order")
   @@map("faqs")
 }

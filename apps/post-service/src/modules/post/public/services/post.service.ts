@@ -41,12 +41,20 @@ export class PublicPostService {
     };
   }
 
-  async getBySlug(slug: string) {
+  async getBySlug(slug: string, requesterKey?: string) {
     const post = await this.postRepo.findBySlug(slug, PUBLIC_POST_STATUSES);
     if (!post) throw new NotFoundException('Post not found');
 
-    if (this.redis.isEnabled()) {
-      await this.redis.hincrby('post:views:buffer', post.id.toString(), 1);
+    // View-counter dedup: same requester (user id or IP) counts at most once
+    // every 5 min per post. Without this, a single bot inflates view_count
+    // arbitrarily by replaying GET. Skip the increment when we can't
+    // identify the requester rather than running unbounded.
+    if (this.redis.isEnabled() && requesterKey) {
+      const dedupKey = `post:view:seen:${post.id}:${requesterKey}`;
+      const acquired = await this.redis.setnx(dedupKey, '1', 300);
+      if (acquired) {
+        await this.redis.hincrby('post:views:buffer', post.id.toString(), 1);
+      }
     }
 
     return this.transform(post);

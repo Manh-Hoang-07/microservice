@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '@package/redis';
 import { decodeAssignedCodes, encodeAssignedCodes } from './rbac-assigned-codes.codec';
@@ -7,41 +7,65 @@ import { RbacId, NullableRbacId } from '../types';
 const LEGACY_ASSIGNED_BITMAP_PREFIX = 'b64:v1:' as const;
 
 @Injectable()
-export class RbacCacheService implements OnModuleInit {
+export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
   private readonly ttlSeconds: number;
   private readonly invalidationChannel = 'rbac:invalidation';
   private readonly versionKey = 'rbac:meta';
   private readonly versionField = 'version';
   private version = 1;
   private versionLastFetch = 0;
-  private readonly versionTtlMs = 30_000;
+  private readonly versionTtlMs: number;
+  private subscriberCallback: ((message: string) => void) | null = null;
 
   constructor(
     private readonly redis: RedisService,
     private readonly configService: ConfigService,
   ) {
     this.ttlSeconds = Number(this.configService.get('RBAC_CACHE_TTL') || 86400);
+    // Default 2s — short enough that a missed pubsub message leaves the
+    // window of stale auth small, long enough to avoid pummeling Redis.
+    this.versionTtlMs = Number(
+      this.configService.get('RBAC_CACHE_VERSION_TTL_MS') || 2000,
+    );
   }
 
   async onModuleInit() {
     if (this.redis.isEnabled()) {
       await this.ensureVersion().catch(() => undefined);
-      await this.redis.subscribe(this.invalidationChannel, (message) => {
+      this.subscriberCallback = (message) => {
         try {
-          const { version } = JSON.parse(message);
-          if (typeof version === 'number' && Number.isFinite(version) && version > 0) {
+          const { type, version } = JSON.parse(message);
+          if (
+            type === 'clear_all' &&
+            typeof version === 'number' &&
+            Number.isFinite(version) &&
+            version > 0
+          ) {
             this.version = version;
             this.versionLastFetch = Date.now();
           }
         } catch {
           // intentionally empty
         }
-      });
+      };
+      await this.redis.subscribe(this.invalidationChannel, this.subscriberCallback);
     }
   }
 
-  private trackedKeysSet(userId: RbacId): string {
-    return `rbac:u:${userId}:keys`;
+  async onModuleDestroy() {
+    // Detach the subscriber so its closure doesn't pin `this` across
+    // hot-reload tests / multi-tenant module destruction.
+    if (this.subscriberCallback) {
+      await this.redis
+        .unsubscribe(this.invalidationChannel, this.subscriberCallback)
+        .catch(() => undefined);
+      this.subscriberCallback = null;
+    }
+  }
+
+  /** Tracked-keys set is namespaced per version so old generations expire on their own. */
+  private trackedKeysSet(userId: RbacId, version: number): string {
+    return `rbac:v${version}:u:${userId}:keys`;
   }
 
   private async ensureVersion(): Promise<number> {
@@ -65,8 +89,8 @@ export class RbacCacheService implements OnModuleInit {
     userId: RbacId,
     groupId: NullableRbacId,
   ): Promise<{ codes: string[]; cached: boolean }> {
-    const key = await this.buildCacheKey(userId, groupId);
     if (!this.redis.isEnabled()) return { codes: [], cached: false };
+    const key = await this.buildCacheKey(userId, groupId);
     const raw = await this.redis.get(key);
     if (raw) {
       if (typeof raw === 'string' && raw.startsWith(LEGACY_ASSIGNED_BITMAP_PREFIX)) {
@@ -81,42 +105,66 @@ export class RbacCacheService implements OnModuleInit {
   }
 
   async setPermissions(userId: RbacId, groupId: NullableRbacId, codes: string[]) {
-    const key = await this.buildCacheKey(userId, groupId);
     if (!this.redis.isEnabled()) return;
-    await this.redis.set(key, encodeAssignedCodes(codes), this.ttlSeconds);
-    await this.redis.sadd(this.trackedKeysSet(userId), key);
-    await this.redis.publish(
-      this.invalidationChannel,
-      JSON.stringify({ type: 'specific_key', key, version: this.version }),
-    );
+    const v = await this.ensureVersion();
+    const key =
+      groupId === null
+        ? `rbac:v${v}:u:${userId}:g:system`
+        : `rbac:v${v}:u:${userId}:g:${groupId}`;
+    await this.redis.multi([
+      ['SET', key, encodeAssignedCodes(codes), 'EX', this.ttlSeconds],
+      ['SADD', this.trackedKeysSet(userId, v), key],
+      ['EXPIRE', this.trackedKeysSet(userId, v), this.ttlSeconds],
+    ]);
   }
 
   async clearUserCache(userId: RbacId, groupId: NullableRbacId) {
+    if (!this.redis.isEnabled()) return;
     const key = await this.buildCacheKey(userId, groupId);
     await this.redis.del(key);
   }
 
+  /**
+   * Atomically rename the tracked-set so any concurrent setPermissions cannot
+   * leak entries past the clear; then unlink the snapshot's keys in bulk.
+   */
   async clearAllUserCaches(userId: RbacId) {
     if (!this.redis.isEnabled()) return;
-    const trackedSet = this.trackedKeysSet(userId);
-    const keys = await this.redis.smembers(trackedSet);
-    for (const k of keys) await this.redis.del(k);
-    await this.redis.del(trackedSet);
+    const v = await this.ensureVersion();
+    const trackedSet = this.trackedKeysSet(userId, v);
+    const snapshotKey = `${trackedSet}:clear:${Date.now()}`;
+    try {
+      await this.redis.multi([['RENAME', trackedSet, snapshotKey]]);
+    } catch {
+      // No tracked entries — nothing to clear.
+      await this.redis.publish(
+        this.invalidationChannel,
+        JSON.stringify({ type: 'user_all', userId: String(userId) }),
+      );
+      return;
+    }
+    const keys = await this.redis.smembers(snapshotKey);
+    if (keys.length) await this.redis.deleteMany(keys);
+    await this.redis.del(snapshotKey);
     await this.redis.publish(
       this.invalidationChannel,
-      JSON.stringify({ type: 'user_all', userId }),
+      JSON.stringify({ type: 'user_all', userId: String(userId) }),
     );
   }
 
+  /**
+   * Cache version bump — every read computes its key under the new version,
+   * so any concurrent stale write lands on the previous generation key
+   * (orphaned, TTL'd out).
+   */
   async bumpVersion(): Promise<void> {
-    if (this.redis.isEnabled()) {
-      const next = await this.redis.hincrby(this.versionKey, this.versionField, 1);
-      this.version = Number(next) > 0 ? Number(next) : this.version + 1;
-      this.versionLastFetch = Date.now();
-      await this.redis.publish(
-        this.invalidationChannel,
-        JSON.stringify({ type: 'clear_all', version: this.version }),
-      );
-    }
+    if (!this.redis.isEnabled()) return;
+    const next = await this.redis.hincrby(this.versionKey, this.versionField, 1);
+    this.version = Number(next) > 0 ? Number(next) : this.version + 1;
+    this.versionLastFetch = Date.now();
+    await this.redis.publish(
+      this.invalidationChannel,
+      JSON.stringify({ type: 'clear_all', version: this.version }),
+    );
   }
 }
