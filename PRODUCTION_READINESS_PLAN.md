@@ -1,8 +1,37 @@
 # Kế hoạch đưa hệ thống lên Production
 
-> **Trạng thái hiện tại**: Demo chạy được — code quality khá, nhưng operational readiness yếu.
+> **Trạng thái hiện tại**: Phase 0–3 đã thực hiện ở mức khả thi từ máy dev. Cần thực thi/verify trên môi trường thật trước khi go-live.
 > **Mục tiêu**: Đẩy hệ thống lên production an toàn, có khả năng vận hành ổn định.
 > **Ước tính tổng**: ~2–3 tuần cho 1 dev full-time, hoặc 4–5 tuần part-time.
+
+## Tiến độ hiện tại (đã làm)
+
+- ✅ **Phase 0**: dọn repo, .gitignore, .env.example coverage, audit baseline
+- ✅ **Phase 1.1**: shared/* build sang dist, generic Dockerfile multi-stage tại [Dockerfile.service](infrastructure/docker/Dockerfile.service), 10 Dockerfile rời đã xóa
+- ✅ **Phase 1.2**: hardcoded `secret` / `change-me` trong [docker-compose.yml](docker-compose.yml) thay bằng `${VAR:?required}`
+- ✅ **Phase 1.3**: migration auto qua [entrypoint.sh](infrastructure/docker/entrypoint.sh) (chạy `prisma migrate deploy` trước khi start)
+- ✅ **Phase 1.4**: CI ([ci.yml](.github/workflows/ci.yml)) build matrix Docker; deploy ([deploy.yml](.github/workflows/deploy.yml)) có `npm ci`, migrate, health-check, auto-rollback
+- ✅ **Phase 1.5**: graceful shutdown — `OnApplicationShutdown` ở Kafka consumer, in-flight drain, dlq producer disconnect
+- ✅ **Phase 1.6**: JWT key rotation với `kid` + `JWT_*_KEY_PEM_PREVIOUS` cho rotation window
+- ✅ **Phase 2.1**: structured JSON logging ở production qua [JsonLogger](shared/bootstrap/src/json-logger.ts) (auto-correlate với OTel trace_id)
+- ✅ **Phase 2.2**: health/ready endpoints — đã có sẵn ở mọi service
+- ✅ **Phase 2.3**: DLQ cho Kafka (`<topic>.dlq` với envelope error metadata) sau N attempts
+- ✅ **Phase 2.5**: rate limit per-endpoint — đã có
+- ✅ **Phase 2.6**: connection pooling — `?connection_limit=5&pool_timeout=30` trong DATABASE_URL
+- ✅ **Phase 2.7**: secrets management — fail-fast trong compose, [check-env.sh](scripts/check-env.sh) pre-flight, `.env.docker.example` sạch
+- ✅ **Phase 2.8**: K8s templates ở [infrastructure/k8s/](infrastructure/k8s/) (Deployment + Service + PDB + HPA)
+- ✅ **Phase 3.1**: Prometheus + Alertmanager configs templates ở [infrastructure/monitoring/](infrastructure/monitoring/)
+- ✅ **Phase 3.2**: backup script [backup-databases.sh](scripts/backup-databases.sh)
+- ✅ **Phase 4 prep**: [RUNBOOK.md](docs/RUNBOOK.md), [MIGRATIONS.md](docs/MIGRATIONS.md)
+
+## Còn lại (cần thực hiện trên môi trường thật)
+
+- ⏳ **Phase 2.4** Idempotency cross-replica: chuyển LRU dedup → Redis-based (SET NX EX). Hiện đang per-process — chấp nhận được khi 1 replica.
+- ⏳ **Phase 3.1** wire `@willsoto/nestjs-prometheus` vào AppModule mỗi service để expose `/api/metrics` (Prometheus config đã sẵn)
+- ⏳ **Phase 3.3** load test với k6/Artillery — yêu cầu môi trường staging
+- ⏳ **Phase 3.4** OpenAPI/Swagger re-add — user đã bỏ intentionally; nếu cần lại, thêm `@nestjs/swagger` + setup ở bootstrap
+- ⏳ **Phase 3.5** security review (OWASP ZAP, npm audit fix) — yêu cầu môi trường live
+- ⏳ **Phase 4** deploy + verify trên staging/production — yêu cầu cluster thật
 
 ---
 

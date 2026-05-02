@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import helmet from 'helmet';
+import { JsonLogger } from './json-logger';
 
 // Permitted set of inbound `x-request-id` header values. Anything outside
 // this character class is replaced with a fresh uuid to defeat header
@@ -28,11 +29,13 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
   // ±7-hour drift on every login/audit/notification timestamp.
   process.env.TZ = 'UTC';
 
+  const serviceName = process.env.SERVICE_NAME ?? options.serviceName;
+
   const app = await NestFactory.create<NestExpressApplication>(options.module, {
     bufferLogs: true,
+    logger: new JsonLogger(serviceName),
   });
 
-  const serviceName = process.env.SERVICE_NAME ?? options.serviceName;
   const port = parseInt(process.env.PORT ?? String(options.defaultPort), 10);
   const prefix = process.env.GLOBAL_PREFIX ?? 'api';
   const isProd = process.env.NODE_ENV === 'production';

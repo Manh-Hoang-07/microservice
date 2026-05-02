@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: comic-platform-config
+  namespace: comic-platform
+data:
+  NODE_ENV: "production"
+  APP_TIMEZONE: "Asia/Ho_Chi_Minh"
+  GLOBAL_PREFIX: "api"
+  CORS_ENABLED: "true"
+  # Replace with real frontend origin(s) before applying
+  CORS_ORIGINS: "https://example.com"
+
+  # Internal service URLs (DNS = <service-name>.<namespace>.svc.cluster.local)
+  AUTH_JWKS_URL: "http://auth-service.comic-platform.svc.cluster.local:3002/.well-known/jwks.json"
+  IAM_INTERNAL_URL: "http://iam-service.comic-platform.svc.cluster.local:3008/api"
+  CONFIG_INTERNAL_URL: "http://config-service.comic-platform.svc.cluster.local:3005/api"
+  COMIC_SERVICE_URL: "http://comic-service.comic-platform.svc.cluster.local:3001/api"
+  POST_SERVICE_URL: "http://post-service.comic-platform.svc.cluster.local:3007/api"
+
+  KAFKA_BROKERS: "kafka.comic-platform.svc.cluster.local:9092"
+  EVENT_DRIVER: "kafka"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger-collector.observability.svc.cluster.local:4318"
+
+  JWT_EXPIRES_IN: "1h"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  JWT_ISSUER: "auth-service"
+  JWT_AUDIENCE: "comic-platform"
+
+  SECURITY_ATTEMPT_MAX: "5"
+  SECURITY_ATTEMPT_WINDOW_SECONDS: "900"
+  SECURITY_ATTEMPT_LOCKOUT_SECONDS: "1800"
+  OTP_TTL_SECONDS: "300"
+  BCRYPT_ROUNDS: "12"
+
+  RBAC_CACHE_TTL: "86400"

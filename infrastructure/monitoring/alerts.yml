@@ -1,0 +1,66 @@
+groups:
+  - name: comic-platform-availability
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="comic-platform"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Service {{ $labels.instance }} is DOWN"
+          description: "{{ $labels.instance }} has not responded for 2 minutes."
+
+      - alert: HighErrorRate
+        expr: |
+          sum by (instance) (rate(http_requests_total{status=~"5.."}[5m]))
+          / sum by (instance) (rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }}: 5xx error rate > 5% for 5m"
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum by (instance, le)
+            (rate(http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }}: p95 latency > 1s for 10m"
+
+  - name: comic-platform-kafka
+    interval: 30s
+    rules:
+      - alert: KafkaDLQGrowing
+        expr: increase(kafka_dlq_messages_total[5m]) > 50
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.topic }} DLQ growing fast (>50 msgs / 5m)"
+
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumergroup_lag > 1000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Consumer group {{ $labels.consumergroup }} is {{ $value }} messages behind"
+
+  - name: comic-platform-database
+    interval: 30s
+    rules:
+      - alert: PostgresConnectionsExhausted
+        expr: |
+          pg_stat_activity_count / on(instance) pg_settings_max_connections > 0.8
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }}: >80% Postgres connections in use"
+
+      - alert: DiskAlmostFull
+        expr: |
+          node_filesystem_avail_bytes{mountpoint="/"}
+          / node_filesystem_size_bytes{mountpoint="/"} < 0.15
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }}: disk usage > 85%"

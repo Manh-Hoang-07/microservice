@@ -1,22 +1,47 @@
-node_modules
-dist
-coverage
+**/node_modules
+**/dist
+**/coverage
+**/.nyc_output
+**/*.tsbuildinfo
+**/src/generated
+
+# Env files: skip everything except *.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.docker.example
+
+# Git / VCS
 .git
+.gitignore
 .github
+
+# Editor / OS
 .vscode
+.idea
 .cursor
+.DS_Store
+Thumbs.db
 
-logs
-tmp
-*.log
-
-.env
-.env.*
-!.env.example
-!.env.docker.example
-
+# Logs
+**/*.log
+**/logs
+**/tmp
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Local-only
+.claude
+.agent
+docker-compose.yml
+DOCKER.md
+README.md
+PRODUCTION_READINESS_PLAN.md
+storage/comics
 storage/uploads
+
+# Compiled prisma config artifacts
+**/prisma.config.js
+**/prisma.config.js.map
+**/prisma.config.d.ts

@@ -60,7 +60,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: auth_db
     ports:
       - "5433:5432"
@@ -78,7 +78,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: comic_db
     ports:
       - "5434:5432"
@@ -96,7 +96,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: notification_db
     ports:
       - "5435:5432"
@@ -114,7 +114,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: config_db
     ports:
       - "5436:5432"
@@ -132,7 +132,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: post_db
     ports:
       - "5438:5432"
@@ -150,7 +150,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: introduction_db
     ports:
       - "5439:5432"
@@ -168,7 +168,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: marketing_db
     ports:
       - "5440:5432"
@@ -186,7 +186,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: iam_db
     ports:
       - "5441:5432"
@@ -319,7 +319,11 @@ services:
   # ══ Storage Service (:3003) ═══════════════════════════════════════════════════
   storage-service:
     build:
-      context: ./apps/storage-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: storage-service
+        SERVICE_PORT: "3003"
     container_name: comic-storage-service
     restart: unless-stopped
     environment:
@@ -349,7 +353,11 @@ services:
   # ══ Auth Service (:3002) ══════════════════════════════════════════════════════
   auth-service:
     build:
-      context: ./apps/auth-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: auth-service
+        SERVICE_PORT: "3002"
     container_name: comic-auth-service
     restart: unless-stopped
     depends_on:
@@ -361,7 +369,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3002
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@auth-db:5432/auth_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@auth-db:5432/auth_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://auth-redis:6379
       JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM:-}
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM:-}
@@ -380,7 +388,7 @@ services:
       MAIL_FROM: ${MAIL_FROM:-}
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
-      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (>=32 chars)}
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
@@ -389,7 +397,11 @@ services:
   # ══ Config Service (:3005) ════════════════════════════════════════════════════
   config-service:
     build:
-      context: ./apps/config-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: config-service
+        SERVICE_PORT: "3005"
     container_name: comic-config-service
     restart: unless-stopped
     depends_on:
@@ -399,9 +411,9 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3005
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@config-db:5432/config_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@config-db:5432/config_db?connection_limit=5&pool_timeout=30
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
-      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (>=32 chars)}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3005:3005"
@@ -409,7 +421,11 @@ services:
   # ══ Web API Service (:3006) — aggregator for FE (homepage, search) ═══════════
   web-api-service:
     build:
-      context: ./apps/web-api-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: web-api-service
+        SERVICE_PORT: "3006"
     container_name: comic-web-api-service
     restart: unless-stopped
     depends_on:
@@ -431,7 +447,11 @@ services:
   # ══ Comic Service (:3001) ═════════════════════════════════════════════════��═
   comic-service:
     build:
-      context: ./apps/comic-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: comic-service
+        SERVICE_PORT: "3001"
     container_name: comic-comic-service
     restart: unless-stopped
     depends_on:
@@ -445,7 +465,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3001
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@comic-db:5432/comic_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@comic-db:5432/comic_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://comic-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -457,7 +477,11 @@ services:
   # ══ Notification Service (:3004) ═══════════════════════════════════════════
   notification-service:
     build:
-      context: ./apps/notification-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: notification-service
+        SERVICE_PORT: "3004"
     container_name: comic-notification-service
     restart: unless-stopped
     depends_on:
@@ -471,7 +495,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3004
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@notification-db:5432/notification_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@notification-db:5432/notification_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://notification-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -488,7 +512,11 @@ services:
   # ══ Post Service (:3007) ═════════════════════════════════════════════════
   post-service:
     build:
-      context: ./apps/post-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: post-service
+        SERVICE_PORT: "3007"
     container_name: comic-post-service
     restart: unless-stopped
     depends_on:
@@ -502,7 +530,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3007
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@post-db:5432/post_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@post-db:5432/post_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://post-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -514,7 +542,11 @@ services:
   # ══ Introduction Service (:3010) ═══════════════════════════════════════════
   introduction-service:
     build:
-      context: ./apps/introduction-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: introduction-service
+        SERVICE_PORT: "3010"
     container_name: comic-introduction-service
     restart: unless-stopped
     depends_on:
@@ -524,7 +556,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3010
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@introduction-db:5432/introduction_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@introduction-db:5432/introduction_db?connection_limit=5&pool_timeout=30
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
@@ -533,7 +565,11 @@ services:
   # ══ Marketing Service (:3009) ══════════════════════════════════════════════
   marketing-service:
     build:
-      context: ./apps/marketing-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: marketing-service
+        SERVICE_PORT: "3009"
     container_name: comic-marketing-service
     restart: unless-stopped
     depends_on:
@@ -545,7 +581,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3009
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@marketing-db:5432/marketing_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@marketing-db:5432/marketing_db?connection_limit=5&pool_timeout=30
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
@@ -556,7 +592,11 @@ services:
   # ══ IAM Service (:3008) ════════════════════════════════════════════════════
   iam-service:
     build:
-      context: ./apps/iam-service
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: iam-service
+        SERVICE_PORT: "3008"
     container_name: comic-iam-service
     restart: unless-stopped
     depends_on:
@@ -568,11 +608,11 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3008
       GLOBAL_PREFIX: api
-      DATABASE_URL: postgresql://postgres:secret@iam-db:5432/iam_db
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@iam-db:5432/iam_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://iam-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/api/.well-known/jwks.json
       RBAC_CACHE_TTL: ${RBAC_CACHE_TTL:-86400}
-      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (>=32 chars)}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3008:3008"

@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Kafka, Consumer, EachMessagePayload, KafkaConfig } from 'kafkajs';
+import { Kafka, Consumer, EachMessagePayload, KafkaConfig, Producer } from 'kafkajs';
 import { KafkaHandler } from '../handlers/kafka-handler.interface';
 import { ChapterPublishedHandler } from '../handlers/chapter-published.handler';
 import { CommentCreatedHandler } from '../handlers/comment-created.handler';
@@ -36,12 +36,22 @@ class LruSet {
   }
 }
 
+// Max times a single message is retried before being shipped to the DLQ.
+// kafkajs default `retry.retries` (8) controls broker-side retries; this
+// counter governs handler-side retries within a single replica.
+const MAX_HANDLER_ATTEMPTS = 5;
+const DLQ_TOPIC_SUFFIX = '.dlq';
+
 @Injectable()
-export class KafkaService implements OnModuleInit, OnModuleDestroy {
+export class KafkaService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(KafkaService.name);
   private consumer: Consumer | null = null;
+  private dlqProducer: Producer | null = null;
   private handlers!: Map<string, KafkaHandler>;
   private readonly seen = new LruSet(DEDUP_LRU_SIZE);
+  private readonly attempts = new Map<string, number>();
+  private inFlight = 0;
+  private shuttingDown = false;
 
   constructor(
     private readonly config: ConfigService,
@@ -89,6 +99,11 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     });
     await this.consumer.connect();
 
+    // Dedicated producer for DLQ messages. Lazy-created on first failure to
+    // avoid the connect cost when nothing fails.
+    this.dlqProducer = kafka.producer({ allowAutoTopicCreation: true });
+    await this.dlqProducer.connect();
+
     for (const topic of this.handlers.keys()) {
       await this.consumer.subscribe({ topic, fromBeginning: false });
     }
@@ -98,8 +113,33 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async onModuleDestroy() {
-    await this.consumer?.disconnect().catch(() => undefined);
+  async onApplicationShutdown(signal?: string) {
+    this.shuttingDown = true;
+    this.logger.log(`Kafka consumer shutting down (signal=${signal ?? 'unknown'}, in-flight=${this.inFlight})`);
+    if (!this.consumer) return;
+    try {
+      await this.consumer.stop();
+    } catch (err) {
+      this.logger.warn(`consumer.stop() failed: ${(err as Error).message}`);
+    }
+    const drainStart = Date.now();
+    while (this.inFlight > 0 && Date.now() - drainStart < 25_000) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (this.inFlight > 0) {
+      this.logger.warn(`shutdown timeout: ${this.inFlight} in-flight messages will not commit`);
+    }
+    try {
+      await this.consumer.disconnect();
+    } catch (err) {
+      this.logger.warn(`consumer.disconnect() failed: ${(err as Error).message}`);
+    }
+    this.consumer = null;
+
+    if (this.dlqProducer) {
+      try { await this.dlqProducer.disconnect(); } catch { /* swallow */ }
+      this.dlqProducer = null;
+    }
   }
 
   /**
@@ -115,6 +155,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
    *   idempotency keys (Bull job id from event_id) are still required.
    */
   private async dispatch({ topic, partition, message }: EachMessagePayload): Promise<void> {
+    if (this.shuttingDown) return;
     if (!message.value) return;
     if (message.value.length > MAX_PAYLOAD_BYTES) {
       this.logger.warn(`Skipping oversize message on ${topic} (${message.value.length}B)`);
@@ -138,14 +179,69 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     }
     this.seen.add(dedupKey);
 
+    this.inFlight++;
     try {
       await handler.handle(payload);
+      this.attempts.delete(dedupKey);
     } catch (err) {
+      const attempt = (this.attempts.get(dedupKey) ?? 0) + 1;
+      this.attempts.set(dedupKey, attempt);
       this.logger.error(
-        `Handler ${topic} failed at offset ${message.offset}: ${(err as Error).message}`,
+        `Handler ${topic} failed at offset ${message.offset} (attempt ${attempt}/${MAX_HANDLER_ATTEMPTS}): ${(err as Error).message}`,
         (err as Error).stack,
       );
+
+      if (attempt >= MAX_HANDLER_ATTEMPTS) {
+        await this.shipToDlq(topic, partition, message, payload, err as Error);
+        this.attempts.delete(dedupKey);
+        // Returning normally lets kafkajs commit the offset so we don't
+        // re-process this poison pill on next rebalance.
+        return;
+      }
+
+      // Re-throw so kafkajs withholds the commit and re-delivers the message.
       throw err;
+    } finally {
+      this.inFlight--;
+    }
+  }
+
+  /**
+   * Send a permanently-failed message to <topic>.dlq with diagnostic envelope.
+   * Logged-and-swallowed: if the DLQ publish itself fails we'd rather drop the
+   * poison pill than block the partition forever.
+   */
+  private async shipToDlq(
+    topic: string,
+    partition: number,
+    message: EachMessagePayload['message'],
+    payload: any,
+    err: Error,
+  ): Promise<void> {
+    const dlqTopic = `${topic}${DLQ_TOPIC_SUFFIX}`;
+    if (!this.dlqProducer) {
+      this.logger.error(`DLQ producer not initialised — DROPPING poison message ${topic}@${message.offset}`);
+      return;
+    }
+    const envelope = {
+      original_topic: topic,
+      partition,
+      offset: message.offset,
+      original_key: message.key?.toString(),
+      original_payload: payload,
+      error: { name: err.name, message: err.message, stack: err.stack },
+      failed_at: new Date().toISOString(),
+    };
+    try {
+      await this.dlqProducer.send({
+        topic: dlqTopic,
+        messages: [{ key: message.key ?? undefined, value: JSON.stringify(envelope) }],
+      });
+      this.logger.warn(`Poison message ${topic}@${message.offset} → ${dlqTopic}`);
+    } catch (dlqErr) {
+      this.logger.error(
+        `DLQ publish to ${dlqTopic} failed — dropping ${topic}@${message.offset}: ${(dlqErr as Error).message}`,
+      );
     }
   }
 }

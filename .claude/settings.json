@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 5 node apps/auth-service/dist/main.js)",
+      "Bash(cat shared/circuit-breaker/tsconfig.json)",
+      "Bash(cat shared/shared-types/tsconfig.json)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/typescript/package.json'\\).version\\)\")",
+      "Bash(npm -w shared/shared-types run build)",
+      "Bash(timeout 6 node apps/auth-service/dist/main.js)",
+      "Bash(timeout 6 node -r tsconfig-paths/register apps/auth-service/dist/main.js)",
+      "Bash(timeout 6 node -r tsconfig-paths/register dist/main.js)",
+      "Bash(node -e 'const p=require\\('\\\\''./__TRACKED_VAR__'\\\\''\\);console.log\\('\\\\''__TRACKED_VAR__:'\\\\'',p.devDependencies?.['\\\\''tsconfig-paths'\\\\'']||'\\\\''-'\\\\'','\\\\'' | dep:'\\\\'', p.dependencies?.['\\\\''tsconfig-paths'\\\\'']||'\\\\''-'\\\\''\\)')",
+      "Bash(npm -w shared/bootstrap run build)"
+    ]
+  }
+}

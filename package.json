@@ -9,6 +9,7 @@
     "apps/*"
   ],
   "scripts": {
+    "build:shared": "npm -w shared/shared-types run build && npm -w shared/circuit-breaker run build && npm -w shared/config run build && npm -w shared/redis run build && npm -w shared/kafka-client run build && npm -w shared/tracing run build && npm -w shared/common run build && npm -w shared/bootstrap run build",
     "build:auth": "npm -w apps/auth-service run build",
     "build:comic": "npm -w apps/comic-service run build",
     "build:config": "npm -w apps/config-service run build",
@@ -19,7 +20,8 @@
     "build:notification": "npm -w apps/notification-service run build",
     "build:post": "npm -w apps/post-service run build",
     "build:storage": "npm -w apps/storage-service run build",
-    "build": "npm run build:auth && npm run build:comic && npm run build:config && npm run build:web-api && npm run build:iam && npm run build:introduction && npm run build:marketing && npm run build:notification && npm run build:post && npm run build:storage",
+    "build:apps": "npm run build:auth && npm run build:comic && npm run build:config && npm run build:web-api && npm run build:iam && npm run build:introduction && npm run build:marketing && npm run build:notification && npm run build:post && npm run build:storage",
+    "build": "npm run build:shared && npm run build:apps",
     "start:auth": "npm -w apps/auth-service run start",
     "start:comic": "npm -w apps/comic-service run start",
     "start:config": "npm -w apps/config-service run start",
