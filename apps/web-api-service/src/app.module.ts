@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
@@ -23,6 +24,7 @@ import { GatewaySearchModule } from './search/search.module';
     ClientsModule,
     CacheModule,
     HealthModule.register('web-api-service'),
+    MetricsModule,
     GatewayHomepageModule,
     GatewaySearchModule,
   ],

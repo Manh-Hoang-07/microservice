@@ -98,13 +98,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.hset(key, field, value);
   }
 
+  /**
+   * Atomic set-if-not-exists with optional TTL. Single Redis round trip via
+   * `SET key value [EX ttl] NX` — safer than `SETNX` + `EXPIRE` because a
+   * crash between the two commands would have left the key without a TTL,
+   * making the lock permanent.
+   */
   async setnx(key: string, value: string, ttlSeconds?: number): Promise<boolean> {
     if (!this.client) return false;
-    const result = await this.client.setnx(key, value);
-    if (result === 1 && ttlSeconds) {
-      await this.client.expire(key, ttlSeconds);
-    }
-    return result === 1;
+    const result = ttlSeconds
+      ? await this.client.set(key, value, 'EX', ttlSeconds, 'NX')
+      : await this.client.set(key, value, 'NX');
+    return result === 'OK';
   }
 
   async expire(key: string, seconds: number): Promise<void> {

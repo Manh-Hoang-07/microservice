@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -13,6 +14,7 @@ import {
   GlobalExceptionFilter,
   BigIntSerializationInterceptor,
   HealthModule,
+  AuditModule,
 } from '@package/common';
 import { RedisModule } from '@package/redis';
 import { envValidationSchema } from './config/env.validation';
@@ -55,6 +57,8 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
     RedisModule,
     RbacModule,
     HealthModule.register('iam-service'),
+    MetricsModule,
+    AuditModule,
     InternalModule,
     PermissionModule,
     RoleModule,

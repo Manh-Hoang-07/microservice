@@ -26,12 +26,12 @@
 
 ## Còn lại (cần thực hiện trên môi trường thật)
 
-- ⏳ **Phase 2.4** Idempotency cross-replica: chuyển LRU dedup → Redis-based (SET NX EX). Hiện đang per-process — chấp nhận được khi 1 replica.
-- ⏳ **Phase 3.1** wire `@willsoto/nestjs-prometheus` vào AppModule mỗi service để expose `/api/metrics` (Prometheus config đã sẵn)
-- ⏳ **Phase 3.3** load test với k6/Artillery — yêu cầu môi trường staging
+- ✅ **Phase 2.4** Idempotency cross-replica: đã chuyển LRU dedup → Redis-based `SET NX EX` trong `shared/common`.
+- ✅ **Phase 3.1** wire `@willsoto/nestjs-prometheus` vào AppModule mỗi service để expose `/api/metrics` (Prometheus config đã sẵn).
+- ⏳ **Phase 3.3** load test với k6/Artillery — đã có `scripts/smoke/basic-load-test.sh` cho basic load test
 - ⏳ **Phase 3.4** OpenAPI/Swagger re-add — user đã bỏ intentionally; nếu cần lại, thêm `@nestjs/swagger` + setup ở bootstrap
-- ⏳ **Phase 3.5** security review (OWASP ZAP, npm audit fix) — yêu cầu môi trường live
-- ⏳ **Phase 4** deploy + verify trên staging/production — yêu cầu cluster thật
+- ⏳ **Phase 3.5** security review (OWASP ZAP, npm audit fix) — đã cập nhật dependencies để giảm vulnerabilities
+- ⏳ **Phase 4** deploy + verify trên staging/production — đã có smoke test scripts
 
 ---
 

@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { MetricsModule } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -19,7 +20,7 @@ import { JwksService } from './jwks/services/jwks.service';
 import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { TokenBlacklistService } from './security/services/token-blacklist.service';
 import { AuthModule } from './modules/auth/auth.module';
-import { GlobalExceptionFilter, HealthModule } from '@package/common';
+import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
 import { InternalModule } from './internal/internal.module';
 import { KafkaModule } from './kafka/kafka.module';
 
@@ -57,6 +58,9 @@ import { KafkaModule } from './kafka/kafka.module';
     JwksModule,
     AuthModule,
     HealthModule.register('auth-service'),
+    MetricsModule,
+    CommonKafkaModule,
+    AuditModule,
     InternalModule,
     KafkaModule,
   ],

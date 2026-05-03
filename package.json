@@ -9,6 +9,8 @@
     "apps/*"
   ],
   "scripts": {
+    "postinstall": "npm run build:shared --if-present",
+    "prestart": "npm run build:shared",
     "build:shared": "npm -w shared/shared-types run build && npm -w shared/circuit-breaker run build && npm -w shared/config run build && npm -w shared/redis run build && npm -w shared/kafka-client run build && npm -w shared/tracing run build && npm -w shared/common run build && npm -w shared/bootstrap run build",
     "build:auth": "npm -w apps/auth-service run build",
     "build:comic": "npm -w apps/comic-service run build",
@@ -22,6 +24,9 @@
     "build:storage": "npm -w apps/storage-service run build",
     "build:apps": "npm run build:auth && npm run build:comic && npm run build:config && npm run build:web-api && npm run build:iam && npm run build:introduction && npm run build:marketing && npm run build:notification && npm run build:post && npm run build:storage",
     "build": "npm run build:shared && npm run build:apps",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "start:auth": "npm -w apps/auth-service run start",
     "start:comic": "npm -w apps/comic-service run start",
     "start:config": "npm -w apps/config-service run start",
@@ -45,10 +50,19 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose build",
+    "docker:infra": "docker compose up -d zookeeper kafka kafka-ui auth-db comic-db notification-db config-db post-db introduction-db marketing-db iam-db auth-redis comic-redis notification-redis post-redis web-api-redis iam-redis jaeger",
+    "docker:infra:down": "docker compose stop zookeeper kafka kafka-ui auth-db comic-db notification-db config-db post-db introduction-db marketing-db iam-db auth-redis comic-redis notification-redis post-redis web-api-redis iam-redis jaeger",
     "nginx:up": "docker compose --profile dev up -d nginx-dev",
-    "nginx:down": "docker compose --profile dev rm -sf nginx-dev"
+    "nginx:down": "docker compose --profile dev rm -sf nginx-dev",
+    "production:check": "./scripts/production-ready-check.sh",
+    "production:ready": "./scripts/make-production-ready.sh"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@swc/core": "^1.15.33",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "concurrently": "^9.2.1",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9"
   }
 }

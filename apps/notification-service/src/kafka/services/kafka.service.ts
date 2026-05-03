@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Kafka, Consumer, EachMessagePayload, KafkaConfig, Producer } from 'kafkajs';
+import { IdempotencyService } from '@package/common';
 import { KafkaHandler } from '../handlers/kafka-handler.interface';
 import { ChapterPublishedHandler } from '../handlers/chapter-published.handler';
 import { CommentCreatedHandler } from '../handlers/comment-created.handler';
@@ -55,6 +56,7 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
 
   constructor(
     private readonly config: ConfigService,
+    private readonly idempotency: IdempotencyService,
     private readonly chapterPublished: ChapterPublishedHandler,
     private readonly commentCreated: CommentCreatedHandler,
     private readonly userFollowed: UserFollowedHandler,
@@ -162,6 +164,8 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
       return;
     }
 
+    // In-process LRU first (cheap fast-path for the same replica re-receiving
+    // a message during a brief redelivery).
     const dedupKey = `${topic}:${partition}:${message.offset}`;
     if (this.seen.has(dedupKey)) return;
 
@@ -178,6 +182,20 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
       return;
     }
     this.seen.add(dedupKey);
+
+    // Cross-replica dedup: claim ownership of the event by id (or fall back
+    // to the topic+offset fingerprint when payload has no business id). The
+    // first replica to call SET NX EX wins; siblings short-circuit. Falls
+    // open when Redis is down so we don't stall message processing.
+    const eventId =
+      payload?.id?.toString() ||
+      payload?.event_id?.toString() ||
+      `${partition}:${message.offset}`;
+    const claimed = await this.idempotency.claim(topic, eventId);
+    if (!claimed) {
+      this.logger.debug(`Skip ${topic}:${eventId} — already claimed by peer`);
+      return;
+    }
 
     this.inFlight++;
     try {

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
@@ -32,6 +33,7 @@ import { UploadModule } from './upload/upload.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     UploadModule,
     HealthModule.register('storage-service'),
+    MetricsModule,
   ],
   providers: [
     {

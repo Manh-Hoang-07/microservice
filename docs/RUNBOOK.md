@@ -20,24 +20,24 @@ This runbook is the on-call cheat sheet. Keep it current.
 ## Health endpoints
 
 Every service exposes:
-- `GET /api/health` — liveness (process is up)
-- `GET /api/health/live` — alias
-- `GET /api/health/ready` — readiness (DB + Redis reachable)
+- `GET /api/v1/health` — liveness (process is up)
+- `GET /api/v1/health/live` — alias
+- `GET /api/v1/health/ready` — readiness (DB + Redis reachable)
 
-LB / k8s probes hit `/api/health/ready`. A `503` means the service is alive
+LB / k8s probes hit `/api/v1/health/ready`. A `503` means the service is alive
 but cannot serve traffic — usually DB or Redis is down.
 
 ## Quick triage
 
 ### "Service unreachable from frontend"
-1. `curl http://<host>:<port>/api/health` → if 200, app is up; problem is upstream (Nginx, DNS)
-2. `curl http://<host>:<port>/api/health/ready` → if 503, check DB/Redis connectivity
+1. `curl http://<host>:<port>/api/v1/health` → if 200, app is up; problem is upstream (Nginx, DNS)
+2. `curl http://<host>:<port>/api/v1/health/ready` → if 503, check DB/Redis connectivity
 3. Check pm2 / `kubectl get pods -n comic-platform` → look for CrashLoopBackOff
 4. Tail logs: `pm2 logs <service>` or `kubectl logs deploy/<service>`
 
 ### "Logins failing"
 - Likely auth-service or its DB. Check:
-  - `curl auth-service:3002/api/health/ready`
+  - `curl auth-service:3002/api/v1/health/ready`
   - `psql` to `auth-db`: any locks / dead tuples?
   - Throttler triggering? Logs show `ThrottlerException`
   - Google OAuth: `GOOGLE_CLIENT_ID` set? Callback URL matches the one in Google Console?
@@ -65,7 +65,7 @@ but cannot serve traffic — usually DB or Redis is down.
    - `npm ci && npm run build:shared && npm run prisma:generate && npm run build:apps`
    - `prisma migrate deploy` per service that has a schema
    - `pm2 reload ecosystem.config.js --update-env`
-   - Health check `auth-service:3002/api/health` → auto-rollback to previous SHA if fail
+   - Health check `auth-service:3002/api/v1/health` → auto-rollback to previous SHA if fail
 
 ### Manual rollback (last resort)
 ```bash
@@ -118,6 +118,91 @@ See `infrastructure/k8s/README.md`. Image build: `docker build -f infrastructure
 ### Rotate INTERNAL_API_SECRET
 - Multi-key not implemented yet — this is a single-secret rotation, expect a brief 5xx burst when secrets are out of sync between services.
 - Mitigation: rotate during low traffic. Update all 10 services concurrently.
+
+## SMTP credentials — encrypt-at-rest plan
+
+Currently config-service stores SMTP host/user/password in `config_db` as
+plaintext columns. That's adequate for a single-tenant deploy with disk
+encryption but it is NOT defense in depth.
+
+**Short-term mitigation** (zero code change): set the underlying volume to
+encrypted (LUKS / EBS-encrypted / GCE customer-managed encryption keys) and
+restrict `psql` access. Document who has direct DB read access.
+
+**Better** (small code change): encrypt the SMTP password column with
+`pgcrypto`. Migration sketch:
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+ALTER TABLE email_config ADD COLUMN password_encrypted bytea;
+UPDATE email_config SET password_encrypted = pgp_sym_encrypt(password, current_setting('app.smtp_key'));
+ALTER TABLE email_config DROP COLUMN password;
+```
+Set `app.smtp_key` from a secrets manager at boot via `ALTER SYSTEM` or
+session-level `SET LOCAL`. Update `EmailConfigRepository` to read with
+`pgp_sym_decrypt(password_encrypted, current_setting('app.smtp_key'))`.
+
+**Best** (eliminates DB exposure): move SMTP creds out of `config_db`
+entirely. Store them in Vault / AWS Secrets Manager and have
+notification-service read directly. The `config-service` then only stores
+non-sensitive metadata (which sender alias, rate limit, etc.).
+
+## Dev / prod parity
+
+The dev startup runs services with `ts-node` (`npm run start`). Production
+runs compiled output (`node dist/main.js` via the Dockerfile or pm2 with
+`-r tsconfig-paths/register`).
+
+Bugs that surface only at compile time (type errors that ts-node-transpile
+silently ignores, decorator metadata reflection, path resolution) won't
+appear in dev. Two mitigations:
+
+1. **CI runs `npm run build`** on every PR (already wired in
+   `.github/workflows/ci.yml`). Compile-only bugs fail there before merge.
+2. **Optionally run dev as compiled** for higher fidelity:
+   ```bash
+   npm run build && \
+     pm2 start ecosystem.config.js
+   ```
+   Slower iteration, but matches prod exactly. Recommended before any
+   high-risk merge.
+
+## End-to-end smoke test
+
+After ANY non-trivial change (Dockerfile, JWT keys, Kafka, idempotency,
+CORS, etc.) the smoke path below MUST pass before merging to master.
+
+```bash
+# 1. Bring up infra
+docker compose --env-file .env.docker up -d zookeeper kafka kafka-ui \
+  auth-db comic-db notification-db config-db post-db introduction-db \
+  marketing-db iam-db auth-redis comic-redis notification-redis post-redis \
+  web-api-redis iam-redis jaeger
+
+# 2. Wait for healthchecks
+docker compose ps | grep -v healthy && echo "Some service unhealthy" && exit 1
+
+# 3. Bring up the apps
+docker compose --env-file .env.docker up -d --build
+
+# 4. Verify each service responds on /api/v1/health
+for port in 3001 3002 3003 3004 3005 3006 3007 3008 3009 3010; do
+  curl -fsS "http://localhost:$port/api/v1/health" >/dev/null \
+    && echo "✓ :$port" || echo "✗ :$port"
+done
+
+# 5. Verify metrics endpoint exposed
+curl -s http://localhost:3002/api/v1/metrics | grep -q app_http_requests_total \
+  && echo "✓ metrics" || echo "✗ metrics"
+
+# 6. Verify JWKS endpoint (NOT prefixed with /api/v1)
+curl -fsS http://localhost:3002/.well-known/jwks.json | jq .keys[0].kid
+
+# 7. Verify service health, metrics, and JWKS
+bash scripts/smoke/service-health.sh
+
+# 8. Tear down
+docker compose down
+```
 
 ## Incident response checklist
 

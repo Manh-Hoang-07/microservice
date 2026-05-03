@@ -1,12 +1,26 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Kafka, Producer } from 'kafkajs';
+import { IdempotencyService } from './idempotency.service';
 
 export interface OutboxRelayOptions {
   clientId: string;
   tableName: string;
   topicMap: Record<string, string>;
 }
+
+// Allowlist of outbox table names. Add new entries here when a new service
+// wires up outbox publishing. We use $queryRawUnsafe with the table name
+// interpolated into the SQL — this allowlist is the only thing standing
+// between a stray refactor and a SQL-injection vector.
+const ALLOWED_TABLE_NAMES = new Set<string>([
+  'authOutbox',
+  'comicOutbox',
+  'postOutbox',
+  'marketingOutbox',
+  'iamOutbox',
+  'notificationOutbox',
+]);
 
 @Injectable()
 export class OutboxRelayService implements OnModuleDestroy {
@@ -17,6 +31,7 @@ export class OutboxRelayService implements OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService,
+    private readonly idempotency: IdempotencyService,
   ) {}
 
   async onModuleDestroy() {
@@ -82,14 +97,29 @@ export class OutboxRelayService implements OnModuleDestroy {
     if (this.shuttingDown) return;
     if (!this.producer || !this.prisma) return;
 
+    // Hard allowlist before any string interpolation reaches SQL. Defense in
+    // depth: the only callers today pass hardcoded strings, but a future
+    // refactor that accidentally accepts user input shouldn't become a SQLi.
+    if (!ALLOWED_TABLE_NAMES.has(tableName)) {
+      this.logger.error(`Refusing to relay from unknown table "${tableName}" — not in allowlist`);
+      return;
+    }
+
+    // Leader election: only one replica per cron interval should poll the
+    // outbox. SKIP LOCKED would let the others run safely but waste DB calls
+    // and produce noisier logs. TTL = 45s (cron is every 30s, 1.5x slack so
+    // a slow tick doesn't release the lock mid-run).
+    const acquired = await this.idempotency.tryLeaderLock(`outbox-relay:${tableName}`, 45);
+    if (!acquired) return;
+
     let claimed: any[] = [];
     try {
       claimed = await this.prisma.$transaction(async (tx: any) => {
         // Postgres-only: SKIP LOCKED makes concurrent relays cooperative.
-        // Quote the table name defensively in case it's mixed-case.
+        // tableName has been allowlisted above so the interpolation is safe.
         const rows: any[] = await tx.$queryRawUnsafe(
           `SELECT id, event_type, payload
-             FROM "${tableName.replace(/"/g, '')}"
+             FROM "${tableName}"
             WHERE published = false
             ORDER BY created_at ASC
             LIMIT 100
@@ -115,21 +145,43 @@ export class OutboxRelayService implements OnModuleDestroy {
       const topic = topicMap[event.event_type];
       if (!topic) continue;
 
+      // Cross-replica idempotency: even though SKIP LOCKED prevents two
+      // replicas from claiming the same outbox row, a recovery path that
+      // re-publishes from the dead-letter table (or a hand-run script) could
+      // re-publish event_id. Redis NX claim makes that a true no-op rather
+      // than a duplicate Kafka send.
+      const eventIdStr = String(event.id);
+      const claim = await this.idempotency.claim(`outbox:${topic}`, eventIdStr);
+      if (!claim) {
+        this.logger.debug(`Outbox event ${event.id} → ${topic} already claimed elsewhere`);
+        continue;
+      }
+
       try {
         const payload = event.payload as any;
         const key =
           payload?.comic_id?.toString() ||
           payload?.post_id?.toString() ||
           payload?.user_id?.toString() ||
-          String(event.id);
+          eventIdStr;
 
         await this.producer.send({
           topic,
-          messages: [{ key, value: JSON.stringify(event.payload) }],
+          messages: [{
+            key,
+            value: JSON.stringify(event.payload),
+            // Attach event_id to the message header so downstream consumers
+            // can use it for their own idempotency claims (matches the
+            // payload?.id || payload?.event_id lookup in KafkaService).
+            headers: { 'event-id': eventIdStr },
+          }],
         });
       } catch (err) {
+        // Release the claim so a future relay tick CAN retry. Without this,
+        // Redis would hold the lock for 24h and the event would stay lost.
+        await this.idempotency.release(`outbox:${topic}`, eventIdStr);
         this.logger.error(
-          `Failed to publish event ${event.id} (${event.event_type}) — already marked published`,
+          `Failed to publish event ${event.id} (${event.event_type}) — already marked published in DB; claim released for retry`,
           err,
         );
       }

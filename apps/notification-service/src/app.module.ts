@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MetricsModule } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -11,7 +12,7 @@ import { RedisModule } from '@package/redis';
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { MailModule } from './modules/mail/mail.module';
-import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ContentTemplateModule } from './modules/content-template/content-template.module';
@@ -43,6 +44,8 @@ import { KafkaModule } from './kafka/kafka.module';
     RedisModule,
     MailModule,
     HealthModule.register('notification-service'),
+    MetricsModule,
+    CommonKafkaModule,
     NotificationModule,
     ContentTemplateModule,
     QueueModule,

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MetricsModule } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -8,7 +9,7 @@ import { createAppConfig, createKafkaConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
 
@@ -28,6 +29,8 @@ import { ContactModule } from './modules/contact/contact.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
     HealthModule.register('marketing-service'),
+    MetricsModule,
+    CommonKafkaModule,
     KafkaModule,
     BannerModule,
     BannerLocationModule,

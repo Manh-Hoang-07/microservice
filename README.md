@@ -44,6 +44,34 @@ npm run start:dev
 docker compose --env-file .env.docker up --build
 ```
 
+## 🚀 Production Deployment
+
+This project is **production-ready** with comprehensive monitoring, security, and operational features.
+
+### Quick Production Check
+```bash
+# Run production readiness check
+./scripts/production-ready-check.sh
+
+# Or run individual checks
+./scripts/check-env.sh                    # Environment validation
+./scripts/smoke/service-health.sh         # Health checks
+./scripts/smoke/basic-load-test.sh        # Load testing
+```
+
+### Production Features
+- ✅ **Health Checks**: `/api/v1/health`, `/api/v1/health/ready`
+- ✅ **Metrics**: Prometheus `/api/v1/metrics` on all services
+- ✅ **Structured Logging**: JSON logs with correlation IDs
+- ✅ **Graceful Shutdown**: Kafka consumer drain, connection cleanup
+- ✅ **Idempotency**: Cross-replica deduplication with Redis
+- ✅ **Security**: Rate limiting, CORS, JWT rotation, secrets management
+- ✅ **Monitoring**: K8s templates, Prometheus alerts, runbooks
+- ✅ **CI/CD**: Automated deployment with rollback
+
+### Deployment Guide
+See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for complete setup instructions.
+
 ## 🤖 AI Agent Integration
 
 This project is optimized for AI-assisted development. We use the `.agent/` directory to store project-specific context, rules, and workflows.

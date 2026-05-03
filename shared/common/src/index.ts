@@ -38,3 +38,10 @@ export { HealthController } from './health/health.controller';
 
 // Kafka outbox
 export { OutboxRelayService, OutboxRelayOptions } from './kafka/outbox-relay.service';
+export { IdempotencyService } from './kafka/idempotency.service';
+export { CommonKafkaModule } from './kafka/kafka-common.module';
+
+// Audit log
+export { AuditLog, AUDIT_LOG_KEY, AuditLogMeta } from './audit/audit-log.decorator';
+export { AuditLogInterceptor } from './audit/audit-log.interceptor';
+export { AuditModule } from './audit/audit.module';

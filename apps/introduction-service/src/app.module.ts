@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -31,6 +32,7 @@ import { FaqModule } from './modules/faq/faq.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
     HealthModule.register('introduction-service'),
+    MetricsModule,
     AboutModule,
     StaffModule,
     ProjectModule,

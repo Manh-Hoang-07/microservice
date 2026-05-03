@@ -48,7 +48,7 @@ jobs:
               if [ -f "apps/${svc}/prisma/schema.prisma" ]; then
                 echo "[deploy] migrating ${svc}"
                 npx --no prisma migrate deploy \
-                  --schema="apps/${svc}/prisma/schema.prisma" --skip-generate
+                  --schema="apps/${svc}/prisma/schema.prisma"
               fi
             done
 
@@ -57,7 +57,7 @@ jobs:
 
             # Health check + auto-rollback on failure
             sleep 8
-            if ! curl -fsS http://localhost:3002/api/health >/dev/null; then
+            if ! curl -fsS http://localhost:3002/api/v1/health >/dev/null; then
               echo "[deploy] health check FAILED — rolling back to ${BEFORE_SHA}"
               git reset --hard "${BEFORE_SHA}"
               npm ci --no-audit --no-fund

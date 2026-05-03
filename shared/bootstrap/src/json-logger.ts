@@ -54,20 +54,37 @@ export class JsonLogger extends ConsoleLogger {
   private writeJson(level: Level, message: any, context?: string, stack?: string) {
     const span = trace.getActiveSpan();
     const sc = span?.spanContext();
+    const { msg, errStack } = stringifyMessage(message);
     const record: Record<string, unknown> = {
       ts: new Date().toISOString(),
       level,
       service: this.serviceName,
       context: context ?? this.context,
-      msg: typeof message === 'string' ? message : safeJson(message),
+      msg,
     };
     if (sc?.traceId) record.trace_id = sc.traceId;
     if (sc?.spanId) record.span_id = sc.spanId;
-    if (stack) record.stack = stack;
+    // Prefer caller-provided stack; fall back to one captured from the Error.
+    const finalStack = stack ?? errStack;
+    if (finalStack) record.stack = finalStack;
     process.stdout.write(JSON.stringify(record) + '\n');
   }
 }
 
-function safeJson(v: unknown): string {
-  try { return JSON.stringify(v); } catch { return String(v); }
+/**
+ * Convert any logger argument into a {msg, errStack} pair.
+ *   - string  → { msg }
+ *   - Error   → { msg = err.message, errStack = err.stack }
+ *               (Error fields are non-enumerable so JSON.stringify(err) === '{}')
+ *   - object  → JSON.stringify with circular fallback
+ *   - other   → String(v)
+ */
+function stringifyMessage(v: unknown): { msg: string; errStack?: string } {
+  if (typeof v === 'string') return { msg: v };
+  if (v instanceof Error) return { msg: v.message || v.name, errStack: v.stack };
+  if (v && typeof v === 'object') {
+    try { return { msg: JSON.stringify(v) }; }
+    catch { return { msg: String(v) }; }
+  }
+  return { msg: String(v) };
 }
