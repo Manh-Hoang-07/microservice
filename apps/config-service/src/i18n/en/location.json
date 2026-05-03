@@ -1,0 +1,7 @@
+{
+  "COUNTRY_NOT_FOUND": "Country with ID {id} not found.",
+  "PROVINCE_NOT_FOUND": "Province with ID {id} not found.",
+  "WARD_NOT_FOUND": "Ward with ID {id} not found.",
+  "COUNTRY_HAS_PROVINCES": "Cannot delete: country still has {count} province(s).",
+  "PROVINCE_HAS_WARDS": "Cannot delete: province still has {count} ward(s)."
+}

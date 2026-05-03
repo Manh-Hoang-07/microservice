@@ -1,0 +1,9 @@
+{
+  "EMAIL_UPDATE_FAILED": "Cập nhật cấu hình email thất bại.",
+  "GENERAL_UPDATE_FAILED": "Tạo hoặc cập nhật cấu hình chung thất bại.",
+  "EMAIL_SMTP_HOST_REQUIRED": "smtp_host là bắt buộc.",
+  "EMAIL_SMTP_USERNAME_REQUIRED": "smtp_username là bắt buộc.",
+  "EMAIL_SMTP_PASSWORD_REQUIRED": "smtp_password là bắt buộc.",
+  "EMAIL_FROM_EMAIL_REQUIRED": "from_email là bắt buộc.",
+  "EMAIL_FROM_NAME_REQUIRED": "from_name là bắt buộc."
+}

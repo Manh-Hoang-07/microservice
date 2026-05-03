@@ -1,0 +1,69 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          command_timeout: 15m
+          script: |
+            set -euo pipefail
+            cd /var/www/thuelai2
+
+            BEFORE_SHA=$(git rev-parse HEAD)
+            echo "[deploy] before: ${BEFORE_SHA}"
+
+            git fetch --tags origin master
+            git reset --hard origin/master
+            AFTER_SHA=$(git rev-parse HEAD)
+            echo "[deploy] after:  ${AFTER_SHA}"
+
+            # Reproducible install — fails if package-lock.json is out of sync
+            npm ci --no-audit --no-fund
+
+            # Build shared first, then apps
+            npm run build:shared
+            npm run prisma:generate
+            npm run build:apps
+
+            # Apply DB migrations BEFORE restarting (idempotent)
+            for svc in auth-service comic-service config-service iam-service \
+                      introduction-service marketing-service notification-service post-service; do
+              if [ -f "apps/${svc}/prisma/schema.prisma" ]; then
+                echo "[deploy] migrating ${svc}"
+                npx --no prisma migrate deploy \
+                  --schema="apps/${svc}/prisma/schema.prisma"
+              fi
+            done
+
+            # Reload via pm2 (zero-downtime if cluster mode)
+            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js
+
+            # Health check + auto-rollback on failure
+            sleep 8
+            if ! curl -fsS http://localhost:3002/api/v1/health >/dev/null; then
+              echo "[deploy] health check FAILED — rolling back to ${BEFORE_SHA}"
+              git reset --hard "${BEFORE_SHA}"
+              npm ci --no-audit --no-fund
+              npm run build:shared && npm run build:apps
+              pm2 reload ecosystem.config.js --update-env
+              exit 1
+            fi
+
+            echo "[deploy] success — ${AFTER_SHA} live"

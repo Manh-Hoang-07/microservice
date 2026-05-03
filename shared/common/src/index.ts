@@ -1,0 +1,47 @@
+// Decorators
+export { Permission, Public, Internal, PERMS_KEY } from './decorators/permission.decorator';
+
+// Filters
+export { GlobalExceptionFilter } from './filters/global-exception.filter';
+
+// Guards
+export { JwtGuard } from './guards/jwt.guard';
+export { InternalGuard } from './guards/internal.guard';
+export { RbacGuard } from './guards/rbac.guard';
+
+// Interceptors
+export { BigIntSerializationInterceptor } from './interceptors/bigint-serialization.interceptor';
+
+// Helpers
+export { createPaginationMeta, parseQueryOptions, DEFAULT_MAX_TAKE, MAX_PAGE, type PaginationMeta, type QueryOptions } from './helpers/pagination.helper';
+
+// Shared DTOs
+export { BaseListQueryDto } from './dtos/base-list-query.dto';
+export { parseDurationToSeconds } from './helpers/duration.helper';
+export { SlugHelper } from './helpers/slug.helper';
+export { SanitizeHtmlPipe } from './pipes/sanitize-html.pipe';
+export { ParseBigIntPipe } from './pipes/parse-bigint.pipe';
+export { ImageValidator } from './validators/image-validator';
+
+// Database — PrismaService/DatabaseModule stay LOCAL in each service
+// because each service generates its own PrismaClient from its own schema.
+
+// Repository pattern
+export { PrismaRepository, PrismaDelegate, IPaginatedResult, IPaginationOptions, prepareQuery } from './repository/prisma.repository';
+
+// Base service
+export { BaseService, IRepository } from './services/base.service';
+
+// Health
+export { HealthModule } from './health/health.module';
+export { HealthController } from './health/health.controller';
+
+// Kafka outbox
+export { OutboxRelayService, OutboxRelayOptions } from './kafka/outbox-relay.service';
+export { IdempotencyService } from './kafka/idempotency.service';
+export { CommonKafkaModule } from './kafka/kafka-common.module';
+
+// Audit log
+export { AuditLog, AUDIT_LOG_KEY, AuditLogMeta } from './audit/audit-log.decorator';
+export { AuditLogInterceptor } from './audit/audit-log.interceptor';
+export { AuditModule } from './audit/audit.module';

@@ -1,0 +1,10 @@
+import { Module } from '@nestjs/common';
+import { UserReadingHistoryController } from './user/controllers/reading-history.controller';
+import { UserReadingHistoryService } from './user/services/reading-history.service';
+import { ReadingHistoryRepository } from './repositories/reading-history.repository';
+
+@Module({
+  controllers: [UserReadingHistoryController],
+  providers: [ReadingHistoryRepository, UserReadingHistoryService],
+})
+export class ReadingHistoryModule {}

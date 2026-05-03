@@ -1,0 +1,190 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@hono/node-server": {
+      "name": "@hono/node-server",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1116281,
+          "name": "@hono/node-server",
+          "dependency": "@hono/node-server",
+          "title": "@hono/node-server: Middleware bypass via repeated slashes in serveStatic",
+          "url": "https://github.com/advisories/GHSA-92pp-h63x-v22m",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-22"
+          ],
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "range": "<1.19.13"
+        }
+      ],
+      "effects": [
+        "@prisma/dev"
+      ],
+      "range": "<1.19.13",
+      "nodes": [
+        "node_modules/@hono/node-server"
+      ],
+      "fixAvailable": {
+        "name": "prisma",
+        "version": "6.19.3",
+        "isSemVerMajor": true
+      }
+    },
+    "@nestjs-modules/mailer": {
+      "name": "@nestjs-modules/mailer",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "preview-email"
+      ],
+      "effects": [],
+      "range": "1.4.0 - 1.11.2 || >=2.0.2",
+      "nodes": [
+        "node_modules/@nestjs-modules/mailer"
+      ],
+      "fixAvailable": true
+    },
+    "@nestjs/bull": {
+      "name": "@nestjs/bull",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "bull"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@nestjs/bull"
+      ],
+      "fixAvailable": false
+    },
+    "@prisma/dev": {
+      "name": "@prisma/dev",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@hono/node-server"
+      ],
+      "effects": [
+        "prisma"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@prisma/dev"
+      ],
+      "fixAvailable": {
+        "name": "prisma",
+        "version": "6.19.3",
+        "isSemVerMajor": true
+      }
+    },
+    "bull": {
+      "name": "bull",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "uuid"
+      ],
+      "effects": [
+        "@nestjs/bull"
+      ],
+      "range": ">=2.0.0",
+      "nodes": [
+        "node_modules/bull"
+      ],
+      "fixAvailable": false
+    },
+    "preview-email": {
+      "name": "preview-email",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "uuid"
+      ],
+      "effects": [
+        "@nestjs-modules/mailer"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/preview-email"
+      ],
+      "fixAvailable": true
+    },
+    "prisma": {
+      "name": "prisma",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "@prisma/dev"
+      ],
+      "effects": [],
+      "range": ">=6.20.0-dev.1",
+      "nodes": [
+        "node_modules/prisma"
+      ],
+      "fixAvailable": {
+        "name": "prisma",
+        "version": "6.19.3",
+        "isSemVerMajor": true
+      }
+    },
+    "uuid": {
+      "name": "uuid",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1116970,
+          "name": "uuid",
+          "dependency": "uuid",
+          "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+          "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-787",
+            "CWE-1285"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": "<14.0.0"
+        }
+      ],
+      "effects": [
+        "bull",
+        "preview-email"
+      ],
+      "range": "<14.0.0",
+      "nodes": [
+        "node_modules/preview-email/node_modules/uuid",
+        "node_modules/uuid"
+      ],
+      "fixAvailable": false
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 8,
+      "high": 0,
+      "critical": 0,
+      "total": 8
+    },
+    "dependencies": {
+      "prod": 631,
+      "dev": 423,
+      "optional": 267,
+      "peer": 5,
+      "peerOptional": 0,
+      "total": 1288
+    }
+  }
+}

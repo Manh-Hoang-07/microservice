@@ -1,0 +1,71 @@
+import { Module } from '@nestjs/common';
+import { MetricsModule } from "@package/bootstrap";
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
+import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
+import { envValidationSchema } from './config/env.validation';
+import { DatabaseModule } from './database/database.module';
+import { RedisModule } from '@package/redis';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { KafkaModule } from './kafka/kafka.module';
+
+import { PostModule } from './modules/post/post.module';
+import { CategoryModule } from './modules/category/category.module';
+import { TagModule } from './modules/tag/tag.module';
+import { CommentModule } from './modules/comment/comment.module';
+import { StatsModule } from './modules/stats/stats.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '.env.local'],
+      load: [createAppConfig(3007), createKafkaConfig(), createRedisConfig('redis://localhost:6384')],
+      validationSchema: envValidationSchema,
+    }),
+    ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    DatabaseModule,
+    RedisModule,
+    HealthModule.register('post-service'),
+    MetricsModule,
+    CommonKafkaModule,
+    KafkaModule,
+    PostModule,
+    CategoryModule,
+    TagModule,
+    CommentModule,
+    StatsModule,
+  ],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    // ThrottlerGuard first — `@Throttle(...)` decorators are inert without it.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService) =>
+        new JwtGuard(reflector, config),
+      inject: [Reflector, ConfigService],
+    },
+    // RbacGuard MUST follow JwtGuard. Without this, `@Permission(...)` is
+    // decoration-only and any authenticated user reaches admin endpoints.
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService) =>
+        new RbacGuard(reflector, config),
+      inject: [Reflector, ConfigService],
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: BigIntSerializationInterceptor,
+    },
+  ],
+})
+export class AppModule {}

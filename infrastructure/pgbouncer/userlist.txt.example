@@ -1,0 +1,19 @@
+; Copy this file to userlist.txt (gitignored) and replace with your real
+; Postgres credentials. Format:
+;
+;   "username" "password_or_scram_hash"
+;
+; The simplest setup mirrors what's in POSTGRES_USER / POSTGRES_PASSWORD
+; from .env.docker:
+;
+;   "postgres" "<value of POSTGRES_PASSWORD>"
+;
+; For SCRAM-hashed passwords (preferred — pgbouncer.ini auth_type = scram-sha-256),
+; generate a hash from a running Postgres:
+;
+;   docker exec -it comic-auth-db psql -U postgres -c \
+;     "SELECT rolname, rolpassword FROM pg_authid WHERE rolname='postgres';"
+;
+; and copy the SCRAM-SHA-256$... string as the second field.
+
+"postgres" "REPLACE_ME_with_password_or_scram_hash"

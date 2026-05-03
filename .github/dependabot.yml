@@ -1,0 +1,81 @@
+version: 2
+
+updates:
+  # Root npm workspace — covers all apps/* and shared/* via the root lockfile
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels:
+      - dependencies
+      - npm
+    groups:
+      # Bundle minor + patch updates per ecosystem so we get one PR instead
+      # of dozens. Major updates still get their own PR for review.
+      nestjs:
+        patterns:
+          - "@nestjs/*"
+          - "nestjs-*"
+        update-types: [minor, patch]
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+        update-types: [minor, patch]
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
+        update-types: [minor, patch]
+      typescript:
+        patterns:
+          - "typescript"
+          - "ts-node"
+          - "tsconfig-paths"
+          - "@types/*"
+        update-types: [minor, patch]
+      misc:
+        patterns:
+          - "*"
+        update-types: [patch]
+    ignore:
+      # Pin major bumps that need manual migration. Add deps here as they
+      # come up; remove once migration is planned.
+      - dependency-name: "typescript"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@nestjs/*"
+        update-types: [version-update:semver-major]
+      - dependency-name: "prisma"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@prisma/*"
+        update-types: [version-update:semver-major]
+
+  # Docker base image (node:20-alpine) used by infrastructure/docker/Dockerfile.service
+  - package-ecosystem: docker
+    directory: "/infrastructure/docker"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 2
+    labels:
+      - dependencies
+      - docker
+
+  # GitHub Actions in .github/workflows/
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 2
+    labels:
+      - dependencies
+      - github-actions

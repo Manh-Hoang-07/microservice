@@ -1,0 +1,9 @@
+{
+  "FILE_REQUIRED": "Vui lòng chọn tệp tin.",
+  "FILES_REQUIRED": "Vui lòng chọn các tệp tin cần tải lên.",
+  "FILE_EMPTY": "Tệp tin không được để trống.",
+  "FILE_TOO_LARGE": "Dung lượng tệp vượt quá giới hạn cho phép ({maxSizeMB}MB).",
+  "FILE_TYPE_NOT_ALLOWED": "Loại tệp không được hỗ trợ. Các loại được phép: {types}.",
+  "MIME_NOT_ALLOWED": "MIME type '{mimeType}' không được phép cho loại tệp này.",
+  "CONTENT_MISMATCH": "Nội dung tệp không khớp với loại tệp đã khai báo. Tệp có thể bị sai định dạng hoặc đã hỏng."
+}

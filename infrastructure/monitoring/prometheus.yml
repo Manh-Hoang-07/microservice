@@ -1,0 +1,29 @@
+# Sample Prometheus scrape config. Drop this into your Prometheus deployment
+# (or generate ServiceMonitors for prometheus-operator). Each NestJS service
+# exposes /api/metrics — wire @willsoto/nestjs-prometheus into the AppModule
+# to enable that endpoint (TODO in PRODUCTION_READINESS_PLAN.md §3.1).
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: comic-platform
+    metrics_path: /api/metrics
+    static_configs:
+      - targets:
+          - auth-service:3002
+          - comic-service:3001
+          - storage-service:3003
+          - notification-service:3004
+          - config-service:3005
+          - web-api-service:3006
+          - post-service:3007
+          - iam-service:3008
+          - marketing-service:3009
+          - introduction-service:3010
+        labels:
+          environment: production
+
+rule_files:
+  - alerts.yml

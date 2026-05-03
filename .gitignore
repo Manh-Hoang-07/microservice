@@ -1,0 +1,74 @@
+# compiled output
+dist/
+*.tsbuildinfo
+/node_modules
+apps/*/dist/
+apps/*/node_modules/
+shared/*/dist/
+shared/*/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Environment
+.env
+.env.docker
+.env.generated
+
+# PgBouncer userlist (contains DB password)
+infrastructure/pgbouncer/userlist.txt
+
+# Database
+*.sqlite
+*.db
+
+# Storage
+# /storage/uploads
+
+
+# Generated Prisma client (regenerate with `prisma generate` at build time)
+src/generated/
+apps/*/src/generated/
+
+storage/comics
+
+# Prisma config compiled artifacts (only the .ts is canonical)
+apps/*/prisma.config.js
+apps/*/prisma.config.js.map
+apps/*/prisma.config.d.ts
+
+# Accidental zero-byte files created from stray shell redirections
+/auth-service@*
+/comic-platform@*
+/npm
+/prisma

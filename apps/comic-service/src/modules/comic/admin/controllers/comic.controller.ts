@@ -1,0 +1,47 @@
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Permission } from '@package/common';
+import { AdminComicService } from '../services/comic.service';
+import { CreateComicDto } from '../dtos/create-comic.dto';
+import { UpdateComicDto } from '../dtos/update-comic.dto';
+import { ListComicsAdminQueryDto } from '../dtos/list-comics.query.dto';
+
+@Controller('admin/comics')
+export class AdminComicController {
+  constructor(private readonly comicService: AdminComicService) {}
+
+  @Permission('comic.manage')
+  @Get()
+  async getList(@Query() query: ListComicsAdminQueryDto) {
+    return this.comicService.getList(query);
+  }
+
+  @Permission('comic.manage')
+  @Get('simple')
+  async getSimpleList(@Query() query: ListComicsAdminQueryDto) {
+    return this.comicService.getSimpleList(query);
+  }
+
+  @Permission('comic.manage')
+  @Get(':id')
+  async getOne(@Param('id') id: string) {
+    return this.comicService.getOne(id);
+  }
+
+  @Permission('comic.manage')
+  @Post()
+  async create(@Body() dto: CreateComicDto) {
+    return this.comicService.create(dto);
+  }
+
+  @Permission('comic.manage')
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateComicDto) {
+    return this.comicService.update(id, dto);
+  }
+
+  @Permission('comic.manage')
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return this.comicService.delete(id);
+  }
+}

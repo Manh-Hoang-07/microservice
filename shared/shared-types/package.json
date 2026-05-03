@@ -1,0 +1,15 @@
+{
+  "name": "@package/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types and Kafka event definitions",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

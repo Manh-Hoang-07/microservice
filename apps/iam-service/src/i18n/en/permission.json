@@ -1,0 +1,5 @@
+{
+  "NOT_FOUND": "Permission not found.",
+  "CODE_EXISTS": "Permission code already exists.",
+  "CYCLE_DETECTED": "Setting this parent would create a permission hierarchy cycle."
+}

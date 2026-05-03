@@ -1,0 +1,18 @@
+{
+  "name": "@package/circuit-breaker",
+  "version": "1.0.0",
+  "description": "Circuit breaker wrapper using cockatiel for inter-service calls",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cockatiel": "^3.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
