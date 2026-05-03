@@ -2,18 +2,18 @@
 set -euo pipefail
 
 BASE_URL=${1:-http://localhost}
-# Updated ports to match docker-compose.yml
+# Service ports (must match each service's default port config)
 declare -A SERVICES=(
-  ["web-api-service"]="3001"
+  ["comic-service"]="3001"
   ["auth-service"]="3002"
-  ["comic-service"]="3003"
+  ["storage-service"]="3003"
   ["notification-service"]="3004"
-  ["post-service"]="3005"
-  ["storage-service"]="3006"
-  ["iam-service"]="3007"
-  ["config-service"]="3008"
-  ["introduction-service"]="3009"
-  ["marketing-service"]="3010"
+  ["config-service"]="3005"
+  ["web-api-service"]="3006"
+  ["post-service"]="3007"
+  ["iam-service"]="3008"
+  ["marketing-service"]="3009"
+  ["introduction-service"]="3010"
 )
 
 echo "🔍 Checking health endpoints for all services..."

@@ -17,11 +17,11 @@ ab -n ${TOTAL_REQUESTS} -c ${CONCURRENT_REQUESTS} -g /dev/null "${BASE_URL}:3002
 
 echo ""
 echo "Testing web-api-service health endpoint..."
-ab -n ${TOTAL_REQUESTS} -c ${CONCURRENT_REQUESTS} -g /dev/null "${BASE_URL}:3001/api/v1/health" | grep -E "(Requests per second|Time per request|Failed requests)"
+ab -n ${TOTAL_REQUESTS} -c ${CONCURRENT_REQUESTS} -g /dev/null "${BASE_URL}:3006/api/v1/health" | grep -E "(Requests per second|Time per request|Failed requests)"
 
 echo ""
 echo "Testing comic-service health endpoint..."
-ab -n ${TOTAL_REQUESTS} -c ${CONCURRENT_REQUESTS} -g /dev/null "${BASE_URL}:3003/api/v1/health" | grep -E "(Requests per second|Time per request|Failed requests)"
+ab -n ${TOTAL_REQUESTS} -c ${CONCURRENT_REQUESTS} -g /dev/null "${BASE_URL}:3001/api/v1/health" | grep -E "(Requests per second|Time per request|Failed requests)"
 
 echo ""
 echo "📈 Load test completed. Check results above."
