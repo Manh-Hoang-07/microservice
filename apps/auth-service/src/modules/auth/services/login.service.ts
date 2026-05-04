@@ -10,7 +10,7 @@ import { AttemptLimiterService } from '../../../security/services/attempt-limite
 import { TokenService } from './token.service';
 import { LoginDto } from '../dto/login.dto';
 import { UserRepository } from '../repositories/user.repository';
-import { PrimaryKey } from 'src/types';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 
 @Injectable()
 export class LoginService {
@@ -94,7 +94,7 @@ export class LoginService {
       // before revoking — prevents using a stolen refresh-token to revoke
       // someone else's session via a forged access-token.
       if (refreshSub && jti && (!accessSub || accessSub === refreshSub)) {
-        await this.tokenService.revokeRefreshJti(BigInt(refreshSub), jti);
+        await this.tokenService.revokeRefreshJti(toPrimaryKey(refreshSub), jti);
       }
     }
     return null;
@@ -119,7 +119,7 @@ export class LoginService {
       throw new UnauthorizedException(this.t('auth.INVALID_REFRESH_TOKEN'));
     }
 
-    const userId: PrimaryKey = BigInt(sub);
+    const userId: PrimaryKey = toPrimaryKey(sub);
     const isActive = await this.tokenService.isRefreshActive(userId, jti);
     if (!isActive) {
       throw new UnauthorizedException(this.t('auth.REFRESH_TOKEN_REVOKED'));

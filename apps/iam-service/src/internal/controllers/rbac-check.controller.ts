@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
 import { RbacService } from '../../rbac/services/rbac.service';
 import { RbacCheckDto } from '../dtos/rbac-check.dto';
 import { Internal } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 
 @Internal()
 @Controller('internal/rbac')
@@ -16,8 +17,8 @@ export class InternalRbacController {
     let parsedUser: bigint;
     let parsedGroup: bigint | null;
     try {
-      parsedUser = BigInt(userId);
-      parsedGroup = groupId ? BigInt(groupId) : null;
+      parsedUser = toPrimaryKey(userId);
+      parsedGroup = groupId ? toPrimaryKey(groupId) : null;
     } catch {
       throw new BadRequestException('Invalid id');
     }

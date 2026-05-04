@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { ContextRepository } from '../../repositories/context.repository';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
 import { CreateContextDto } from '../dtos/create-context.dto';
@@ -52,7 +52,7 @@ export class ContextService {
       name: dto.name,
       created_user_id: actorId,
     };
-    if (dto.ref_id) data.ref_id = BigInt(dto.ref_id);
+    if (dto.ref_id) data.ref_id = toPrimaryKey(dto.ref_id);
     return this.repo.create(data);
   }
 
@@ -82,7 +82,7 @@ export class ContextService {
 
   async syncRoles(id: PrimaryKey, dto: SyncRolesDto) {
     await this.getOne(id);
-    await this.repo.syncRoles(id, dto.roleIds.map(BigInt));
+    await this.repo.syncRoles(id, dto.roleIds.map(toPrimaryKey));
     await this.rbacCache.bumpVersion();
     return { updated: true };
   }

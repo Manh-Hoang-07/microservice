@@ -1,7 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../../database/prisma.service';
 import { PUBLIC_COMIC_STATUSES } from '../../../comic/enums/comic-status.enum';
 import { CreateCommentDto } from '../dtos/create-comment.dto';
 import { CommentRepository } from '../../repositories/comment.repository';
@@ -12,7 +11,6 @@ const MAX_REPLY_DEPTH = 1;
 export class UserCommentService {
   constructor(
     private readonly commentRepo: CommentRepository,
-    private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
 
@@ -23,18 +21,12 @@ export class UserCommentService {
 
     // Refuse to comment on a draft/scheduled comic. Without this check, any
     // authenticated user could post comments on unpublished work.
-    const comic = await this.prisma.comic.findFirst({
-      where: { id: comicId, status: { in: PUBLIC_COMIC_STATUSES } },
-      select: { id: true },
-    });
+    const comic = await this.commentRepo.existsPublicComic(comicId, PUBLIC_COMIC_STATUSES);
     if (!comic) throw new NotFoundException('Comic not found');
 
     if (chapterId) {
       // Chapter must belong to the same comic AND be published.
-      const chapter = await this.prisma.chapter.findFirst({
-        where: { id: chapterId, comic_id: comicId, status: 'published' },
-        select: { id: true },
-      });
+      const chapter = await this.commentRepo.existsPublishedChapter(chapterId, comicId);
       if (!chapter) {
         throw new BadRequestException('Chapter does not belong to this comic or is not published');
       }
@@ -55,33 +47,34 @@ export class UserCommentService {
     }
 
     const kafkaEnabled = !!this.config.get<boolean>('kafka.enabled');
+    const parentId = dto.parent_id ? toPrimaryKey(dto.parent_id) : null;
 
-    return this.prisma.$transaction(async (tx) => {
-      const comment = await tx.comment.create({
-        data: {
-          user_id: uid,
-          comic_id: comicId,
-          chapter_id: chapterId,
-          parent_id: dto.parent_id ? toPrimaryKey(dto.parent_id) : null,
-          content: dto.content,
-        },
-      });
+    const commentData = {
+      user_id: uid,
+      comic_id: comicId,
+      chapter_id: chapterId,
+      parent_id: parentId,
+      content: dto.content,
+    };
 
-      if (kafkaEnabled && parent && parent.user_id !== uid) {
-        await tx.outbox.create({
-          data: {
-            event_type: 'comic.comment.created',
-            payload: {
-              // Stringify BigInt — Number() corrupts ids > 2^53.
-              comment_id: String(comment.id),
-              comic_id: String(comment.comic_id),
-              chapter_id: comment.chapter_id ? String(comment.chapter_id) : null,
-              user_id: String(uid),
-              parent_comment_id: String(dto.parent_id),
-              parent_comment_user_id: String(parent.user_id),
-            },
+    const needsOutbox = kafkaEnabled && parent && parent.user_id !== uid;
+
+    return this.commentRepo.withTransaction(async (tx) => {
+      const comment = await this.commentRepo.create(commentData, tx);
+
+      if (needsOutbox) {
+        await this.commentRepo.createOutbox(
+          'comic.comment.created',
+          {
+            comment_id: String(comment.id),
+            comic_id: String(comicId),
+            chapter_id: chapterId ? String(chapterId) : null,
+            user_id: String(uid),
+            parent_comment_id: String(dto.parent_id),
+            parent_comment_user_id: String(parent!.user_id),
           },
-        });
+          tx,
+        );
       }
 
       return comment;

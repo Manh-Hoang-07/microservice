@@ -26,13 +26,13 @@ export class GroupController {
   @Permission('group.manage')
   @Post()
   create(@Body() dto: CreateGroupDto, @Req() req: any) {
-    return this.service.create(dto, BigInt(req.user.sub));
+    return this.service.create(dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('group.manage')
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateGroupDto, @Req() req: any) {
-    return this.service.update(toPrimaryKey(id), dto, BigInt(req.user.sub));
+    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('group.manage')

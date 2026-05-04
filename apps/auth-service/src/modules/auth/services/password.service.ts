@@ -60,7 +60,7 @@ export class PasswordService {
     const rounds = Number(this.config.get('BCRYPT_ROUNDS') ?? 12);
     const hashedPassword = await bcrypt.hash(dto.password, rounds);
 
-    await this.userRepo.client.$transaction(async (tx) => {
+    await this.userRepo.withTransaction(async (tx) => {
       await this.userRepo.update(user.id, { password: hashedPassword }, tx);
       await this.userRepo.enqueueOutboxEvent(
         'user.password.reset',

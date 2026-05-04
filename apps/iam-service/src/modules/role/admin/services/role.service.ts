@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { RoleRepository } from '../../repositories/role.repository';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
 import { RbacPermissionIndexService } from '../../../../rbac/services/rbac-permission-index.service';
@@ -52,7 +52,7 @@ export class RoleService {
     const data: any = { code: dto.code, name: dto.name, created_user_id: actorId };
     if (dto.parent_id) {
       // Check the parent exists; cycle check is N/A on create (no children yet).
-      data.parent = { connect: { id: BigInt(dto.parent_id) } };
+      data.parent = { connect: { id: toPrimaryKey(dto.parent_id) } };
     }
     return this.repo.create(data);
   }
@@ -60,14 +60,14 @@ export class RoleService {
   async update(id: PrimaryKey, dto: UpdateRoleDto, actorId: PrimaryKey) {
     await this.getOne(id);
     if (dto.parent_id) {
-      await this.assertNoCycle(id, BigInt(dto.parent_id));
+      await this.assertNoCycle(id, toPrimaryKey(dto.parent_id));
     }
     const data: any = { updated_user_id: actorId };
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.status !== undefined) data.status = dto.status;
     if ('parent_id' in dto) {
       data.parent = dto.parent_id
-        ? { connect: { id: BigInt(dto.parent_id) } }
+        ? { connect: { id: toPrimaryKey(dto.parent_id) } }
         : { disconnect: true };
     }
     const result = await this.repo.update(id, data);
@@ -89,7 +89,7 @@ export class RoleService {
     actor: { id: string; groupId?: string | null },
   ) {
     await this.getOne(id);
-    const targetIds = dto.permissionIds.map(BigInt);
+    const targetIds = dto.permissionIds.map(toPrimaryKey);
     // Caller must already hold every permission they want to wire onto this role.
     if (targetIds.length) {
       // We approximate "callers can grant these permissions" by treating the
@@ -112,7 +112,7 @@ export class RoleService {
   }
 
   private async assertNoCycle(roleId: PrimaryKey, candidateParentId: bigint): Promise<void> {
-    if (BigInt(String(roleId)) === candidateParentId) {
+    if (toPrimaryKey(roleId) === candidateParentId) {
       throw new BadRequestException(this.t('role.CYCLE_DETECTED'));
     }
     const visited = new Set<string>();
@@ -121,7 +121,7 @@ export class RoleService {
       const key = String(cur);
       if (visited.has(key)) break;
       visited.add(key);
-      if (cur === BigInt(String(roleId))) {
+      if (cur === toPrimaryKey(roleId)) {
         throw new BadRequestException(this.t('role.CYCLE_DETECTED'));
       }
       cur = await this.repo.getParentId(cur);

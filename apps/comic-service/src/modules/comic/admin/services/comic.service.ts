@@ -54,14 +54,10 @@ export class AdminComicService {
       });
 
       try {
-        const created = await this.comicRepo.client.$transaction(async (tx) => {
-          const comic = await this.comicRepo.create({ ...dto, slug }, tx);
-          await this.comicRepo.createStats(comic.id, tx);
-          if (dto.category_ids?.length) {
-            await this.comicRepo.syncCategories(comic.id, dto.category_ids, tx);
-          }
-          return comic;
-        });
+        const created = await this.comicRepo.createWithRelations(
+          { ...dto, slug },
+          dto.category_ids,
+        );
         return this.getOne(created.id);
       } catch (err) {
         if (
@@ -97,12 +93,7 @@ export class AdminComicService {
     }
 
     try {
-      await this.comicRepo.client.$transaction(async (tx) => {
-        await this.comicRepo.update(id, data, tx);
-        if (dto.category_ids !== undefined) {
-          await this.comicRepo.syncCategories(id, dto.category_ids, tx);
-        }
-      });
+      await this.comicRepo.updateWithRelations(id, data, dto.category_ids);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new BadRequestException('Slug already in use');

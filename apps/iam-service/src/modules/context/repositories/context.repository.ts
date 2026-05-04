@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { PrimaryKey } from 'src/types';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 
 @Injectable()
 export class ContextRepository {
@@ -50,7 +50,7 @@ export class ContextRepository {
         });
         const beforeIds = new Set(before.map((r) => String(r.role_id)));
         const targetIds = new Set(roleIds.map((id) => String(id)));
-        const removed = [...beforeIds].filter((id) => !targetIds.has(id)).map((id) => BigInt(id));
+        const removed = [...beforeIds].filter((id) => !targetIds.has(id)).map((id) => toPrimaryKey(id));
 
         await tx.roleContext.deleteMany({ where: { context_id: contextId } });
         if (roleIds.length) {

@@ -5,6 +5,7 @@ import { RbacService } from '../../../../rbac/services/rbac.service';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
 import { RbacRepository } from '../../../../rbac/repositories/rbac.repository';
 import { PERM } from '../../../../rbac/constants/rbac.constants';
+import { toPrimaryKey } from 'src/types';
 import { AssignRoleDto } from '../dtos/assign-role.dto';
 import { SyncUserRolesDto } from '../dtos/sync-user-roles.dto';
 
@@ -25,8 +26,8 @@ export class UserRoleService {
 
   getUserRoles(userId: string, groupId?: string) {
     return this.repo.getUserRoles(
-      BigInt(userId),
-      groupId ? BigInt(groupId) : undefined,
+      toPrimaryKey(userId),
+      groupId ? toPrimaryKey(groupId) : undefined,
     );
   }
 
@@ -50,12 +51,12 @@ export class UserRoleService {
   ) {
     // Caller priv check — must already hold what's being revoked.
     await this.rbacService.assertCallerCanGrantRole(actor.id, actor.groupId ?? null, [
-      BigInt(roleId),
+      toPrimaryKey(roleId),
     ]);
 
     // Last-admin protection: if removing this role would drop the last
     // user with `system.manage`, refuse.
-    const targetCodes = await this.rbacRepo.getPermissionCodesForRoles([BigInt(roleId)]);
+    const targetCodes = await this.rbacRepo.getPermissionCodesForRoles([toPrimaryKey(roleId)]);
     if (targetCodes.has(PERM.SYSTEM.MANAGE)) {
       const remaining = await this.rbacRepo.countUsersWithPermission(PERM.SYSTEM.MANAGE);
       if (remaining <= 1) {
@@ -64,9 +65,9 @@ export class UserRoleService {
     }
 
     const count = await this.repo.removeRole(
-      BigInt(userId),
-      BigInt(roleId),
-      BigInt(groupId),
+      toPrimaryKey(userId),
+      toPrimaryKey(roleId),
+      toPrimaryKey(groupId),
     );
     if (count === 0) {
       throw new NotFoundException(this.t('rbac.USER_ROLE_ASSIGNMENT_NOT_FOUND'));

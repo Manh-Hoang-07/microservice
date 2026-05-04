@@ -39,7 +39,7 @@ export class RegistrationService {
     const hashedPassword = await bcrypt.hash(dto.password, rounds);
 
     try {
-      const user = await this.userRepo.client.$transaction(async (tx) => {
+      const user = await this.userRepo.withTransaction(async (tx) => {
         const created = await this.userRepo.create(
           {
             username,
