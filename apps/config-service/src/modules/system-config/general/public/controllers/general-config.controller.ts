@@ -8,7 +8,7 @@ export class PublicGeneralConfigController {
 
   @Public()
   @Get()
-  getConfig() {
-    return this.generalConfigService.getConfig();
+  async getConfig() {
+    return (await this.generalConfigService.getConfig()) ?? {};
   }
 }

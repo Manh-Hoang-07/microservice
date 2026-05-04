@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import googleOAuthConfig from '../../config/google-oauth.config';
 import { KafkaModule } from '../../kafka/kafka.module';
@@ -32,9 +32,17 @@ import { UserRepository } from './repositories/user.repository';
     RegistrationService,
     PasswordService,
     SocialAuthService,
-    GoogleStrategy,
     GoogleOauthStateService,
     GoogleOAuthGuard,
+    {
+      provide: GoogleStrategy,
+      useFactory: (configService: ConfigService) => {
+        const clientId = configService.get<string>('googleOAuth.clientId');
+        if (!clientId) return null;
+        return new GoogleStrategy(configService);
+      },
+      inject: [ConfigService],
+    },
   ],
   exports: [AuthService, TokenService],
 })

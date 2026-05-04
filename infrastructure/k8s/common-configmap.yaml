@@ -12,11 +12,11 @@ data:
   CORS_ORIGINS: "https://example.com"
 
   # Internal service URLs (DNS = <service-name>.<namespace>.svc.cluster.local)
-  AUTH_JWKS_URL: "http://auth-service.comic-platform.svc.cluster.local:3002/.well-known/jwks.json"
-  IAM_INTERNAL_URL: "http://iam-service.comic-platform.svc.cluster.local:3008/api"
-  CONFIG_INTERNAL_URL: "http://config-service.comic-platform.svc.cluster.local:3005/api"
-  COMIC_SERVICE_URL: "http://comic-service.comic-platform.svc.cluster.local:3001/api"
-  POST_SERVICE_URL: "http://post-service.comic-platform.svc.cluster.local:3007/api"
+  AUTH_JWKS_URL: "http://auth-service.comic-platform.svc.cluster.local:3001/.well-known/jwks.json"
+  IAM_INTERNAL_URL: "http://iam-service.comic-platform.svc.cluster.local:3002/api"
+  CONFIG_INTERNAL_URL: "http://config-service.comic-platform.svc.cluster.local:3003/api"
+  COMIC_SERVICE_URL: "http://comic-service.comic-platform.svc.cluster.local:3009/api"
+  POST_SERVICE_URL: "http://post-service.comic-platform.svc.cluster.local:3008/api"
 
   KAFKA_BROKERS: "kafka.comic-platform.svc.cluster.local:9092"
   EVENT_DRIVER: "kafka"

@@ -3,7 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { OutboxRelayService } from '@package/common';
 import { PrismaService } from '../../database/prisma.service';
 
-const TABLE_NAME = 'outbox';
+const TABLE_NAME = 'post_outbox';
 const TOPIC_MAP: Record<string, string> = {
   'post.comment.created': 'post.comment.created',
   'contact.submitted': 'contact.submitted',

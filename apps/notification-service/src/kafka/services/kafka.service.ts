@@ -105,6 +105,7 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
         sessionTimeout: 30_000,
         heartbeatInterval: 3_000,
         fromBeginning: false,
+        allowAutoTopicCreation: true,
       },
     });
     await this.consumer!.connect();
@@ -113,7 +114,19 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
     this.dlqProducer = kafka.producer();
     await this.dlqProducer!.connect();
 
-    for (const topic of this.handlers.keys()) {
+    // Ensure topics exist before subscribing (librdkafka doesn't auto-create on subscribe)
+    const admin = kafka.admin();
+    await admin.connect();
+    const topics = Array.from(this.handlers.keys());
+    try {
+      await admin.createTopics({ topics: topics.map((t) => ({ topic: t, numPartitions: 1, replicationFactor: 1 })) });
+    } catch (err) {
+      // Ignore "topic already exists" errors
+      this.logger.debug(`Topic creation result: ${(err as Error)?.message || 'ok'}`);
+    }
+    await admin.disconnect();
+
+    for (const topic of topics) {
       await this.consumer!.subscribe({ topic });
     }
 

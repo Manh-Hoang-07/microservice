@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "start": "ts-node -r tsconfig-paths/register src/main.ts",
-    "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
+    "start:dev": "nodemon --watch src --ext ts --exec \"ts-node -r tsconfig-paths/register src/main.ts\"",
     "build": "prisma generate && tsc",
     "start:prod": "node -r tsconfig-paths/register dist/main.js",
     "prisma:generate": "prisma generate",

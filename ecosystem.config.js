@@ -8,16 +8,16 @@
 // mode is acceptable but worth noting.
 
 const SERVICES = [
-  { name: 'auth-service',          port: 3002, prisma: true  },
-  { name: 'comic-service',         port: 3001, prisma: true  },
-  { name: 'config-service',        port: 3005, prisma: true  },
-  { name: 'iam-service',           port: 3008, prisma: true  },
-  { name: 'introduction-service',  port: 3010, prisma: true  },
-  { name: 'marketing-service',     port: 3009, prisma: true  },
-  { name: 'notification-service',  port: 3004, prisma: true  },
-  { name: 'post-service',          port: 3007, prisma: true  },
-  { name: 'storage-service',       port: 3003, prisma: false },
-  { name: 'web-api-service',       port: 3006, prisma: false },
+  { name: 'auth-service',          port: 3001, prisma: true  },
+  { name: 'comic-service',         port: 3009, prisma: true  },
+  { name: 'config-service',        port: 3003, prisma: true  },
+  { name: 'iam-service',           port: 3002, prisma: true  },
+  { name: 'introduction-service',  port: 3007, prisma: true  },
+  { name: 'marketing-service',     port: 3006, prisma: true  },
+  { name: 'notification-service',  port: 3005, prisma: true  },
+  { name: 'post-service',          port: 3008, prisma: true  },
+  { name: 'storage-service',       port: 3004, prisma: false },
+  { name: 'web-api-service',       port: 3010, prisma: false },
 ];
 
 module.exports = {

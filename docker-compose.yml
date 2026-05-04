@@ -340,21 +340,21 @@ services:
       timeout: 5s
       retries: 3
 
-  # ══ Storage Service (:3003) ═══════════════════════════════════════════════════
+  # ══ Storage Service (:3004) ═══════════════════════════════════════════════════
   storage-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: storage-service
-        SERVICE_PORT: "3003"
+        SERVICE_PORT: "3004"
     container_name: comic-storage-service
     restart: unless-stopped
     env_file:
       - .env.docker
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3003
+      PORT: 3004
       GLOBAL_PREFIX: ${GLOBAL_PREFIX:-api/v1}
       STORAGE_TYPE: ${STORAGE_TYPE:-local}
       STORAGE_MAX_FILE_SIZE: ${STORAGE_MAX_FILE_SIZE:-10485760}
@@ -372,18 +372,18 @@ services:
       UPLOAD_DEST: ${UPLOAD_DEST:-./storage/uploads}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3003:3003"
+      - "3004:3004"
     volumes:
       - storage_uploads:/app/storage/uploads
 
-  # ══ Auth Service (:3002) ══════════════════════════════════════════════════════
+  # ══ Auth Service (:3001) ══════════════════════════════════════════════════════
   auth-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: auth-service
-        SERVICE_PORT: "3002"
+        SERVICE_PORT: "3001"
     container_name: comic-auth-service
     restart: unless-stopped
     env_file:
@@ -395,7 +395,7 @@ services:
         condition: service_started
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3002
+      PORT: 3001
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@auth-db:5432/auth_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://auth-redis:6379
@@ -417,19 +417,19 @@ services:
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (>=32 chars)}
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3002:3002"
+      - "3001:3001"
 
-  # ══ Config Service (:3005) ════════════════════════════════════════════════════
+  # ══ Config Service (:3003) ════════════════════════════════════════════════════
   config-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: config-service
-        SERVICE_PORT: "3005"
+        SERVICE_PORT: "3003"
     container_name: comic-config-service
     restart: unless-stopped
     env_file:
@@ -439,23 +439,23 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3005
+      PORT: 3003
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@config-db:5432/config_db?connection_limit=5&pool_timeout=30
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (>=32 chars)}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3005:3005"
+      - "3003:3003"
 
-  # ══ Web API Service (:3006) — aggregator for FE (homepage, search) ═══════════
+  # ══ Web API Service (:3010) — aggregator for FE (homepage, search) ═══════════
   web-api-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: web-api-service
-        SERVICE_PORT: "3006"
+        SERVICE_PORT: "3010"
     container_name: comic-web-api-service
     restart: unless-stopped
     env_file:
@@ -465,25 +465,25 @@ services:
         condition: service_started
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3006
+      PORT: 3010
       GLOBAL_PREFIX: ${GLOBAL_PREFIX:-api/v1}
-      COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://comic-service:3001/api/v1}
-      POST_SERVICE_URL: ${POST_SERVICE_URL:-http://post-service:3007/api/v1}
+      COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://comic-service:3009/api/v1}
+      POST_SERVICE_URL: ${POST_SERVICE_URL:-http://post-service:3008/api/v1}
       REDIS_URL: redis://web-api-redis:6379
       SERVICE_TIMEOUT_MS: ${SERVICE_TIMEOUT_MS:-5000}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3006:3006"
+      - "3010:3010"
 
-  # ══ Comic Service (:3001) ═════════════════════════════════════════════════��═
+  # ══ Comic Service (:3009) ═════════════════════════════════════════════════════
   comic-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: comic-service
-        SERVICE_PORT: "3001"
+        SERVICE_PORT: "3009"
     container_name: comic-comic-service
     restart: unless-stopped
     env_file:
@@ -497,25 +497,25 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3001
+      PORT: 3009
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@comic-db:5432/comic_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://comic-redis:6379
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3001:3001"
+      - "3009:3009"
 
-  # ══ Notification Service (:3004) ═══════════════════════════════════════════
+  # ══ Notification Service (:3005) ═══════════════════════════════════════════
   notification-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: notification-service
-        SERVICE_PORT: "3004"
+        SERVICE_PORT: "3005"
     container_name: comic-notification-service
     restart: unless-stopped
     env_file:
@@ -529,11 +529,11 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3004
+      PORT: 3005
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@notification-db:5432/notification_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://notification-redis:6379
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       KAFKA_GROUP_ID: notification-service
       MAIL_HOST: ${MAIL_HOST:-}
@@ -543,16 +543,16 @@ services:
       MAIL_FROM: ${MAIL_FROM:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3004:3004"
+      - "3005:3005"
 
-  # ══ Post Service (:3007) ═════════════════════════════════════════════════
+  # ══ Post Service (:3008) ═════════════════════════════════════════════════
   post-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: post-service
-        SERVICE_PORT: "3007"
+        SERVICE_PORT: "3008"
     container_name: comic-post-service
     restart: unless-stopped
     env_file:
@@ -566,25 +566,25 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3007
+      PORT: 3008
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@post-db:5432/post_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://post-redis:6379
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3007:3007"
+      - "3008:3008"
 
-  # ══ Introduction Service (:3010) ═══════════════════════════════════════════
+  # ══ Introduction Service (:3007) ═══════════════════════════════════════════
   introduction-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: introduction-service
-        SERVICE_PORT: "3010"
+        SERVICE_PORT: "3007"
     container_name: comic-introduction-service
     restart: unless-stopped
     env_file:
@@ -594,22 +594,22 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3010
+      PORT: 3007
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@introduction-db:5432/introduction_db?connection_limit=5&pool_timeout=30
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3010:3010"
+      - "3007:3007"
 
-  # ══ Marketing Service (:3009) ══════════════════════════════════════════════
+  # ══ Marketing Service (:3006) ══════════════════════════════════════════════
   marketing-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: marketing-service
-        SERVICE_PORT: "3009"
+        SERVICE_PORT: "3006"
     container_name: comic-marketing-service
     restart: unless-stopped
     env_file:
@@ -621,24 +621,24 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3009
+      PORT: 3006
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@marketing-db:5432/marketing_db?connection_limit=5&pool_timeout=30
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3009:3009"
+      - "3006:3006"
 
-  # ══ IAM Service (:3008) ════════════════════════════════════════════════════
+  # ══ IAM Service (:3002) ════════════════════════════════════════════════════
   iam-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
         SERVICE_NAME: iam-service
-        SERVICE_PORT: "3008"
+        SERVICE_PORT: "3002"
     container_name: comic-iam-service
     restart: unless-stopped
     env_file:
@@ -650,16 +650,16 @@ services:
         condition: service_started
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3008
+      PORT: 3002
       GLOBAL_PREFIX: api/v1
       DATABASE_URL: postgresql://postgres:postgres@iam-db:5432/iam_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://iam-redis:6379
-      AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
+      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       RBAC_CACHE_TTL: ${RBAC_CACHE_TTL:-86400}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (>=32 chars)}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
-      - "3008:3008"
+      - "3002:3002"
 
 volumes:
   # Storage

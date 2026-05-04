@@ -296,7 +296,7 @@ model Bookmark {
   @@map("bookmarks")
 }
 
-model Outbox {
+model ComicOutbox {
   id         BigInt   @id @default(autoincrement())
   event_type String   @db.VarChar(100)
   payload    Json
@@ -304,5 +304,5 @@ model Outbox {
   created_at DateTime @default(now()) @db.Timestamptz()
 
   @@index([published, created_at], map: "outbox_idx_unpublished")
-  @@map("outbox")
+  @@map("comic_outbox")
 }

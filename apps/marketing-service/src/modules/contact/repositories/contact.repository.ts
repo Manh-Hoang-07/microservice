@@ -62,7 +62,7 @@ export class ContactRepository {
 
   createOutbox(event_type: string, payload: Record<string, any>, tx?: Tx) {
     const client = tx ?? this.prisma;
-    return client.outbox.create({ data: { event_type, payload } });
+    return client.marketingOutbox.create({ data: { event_type, payload } });
   }
 
   async withTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {

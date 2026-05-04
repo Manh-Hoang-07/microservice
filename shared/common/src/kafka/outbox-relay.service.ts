@@ -15,14 +15,15 @@ export interface OutboxRelayOptions {
 // wires up outbox publishing. We use $queryRawUnsafe with the table name
 // interpolated into the SQL — this allowlist is the only thing standing
 // between a stray refactor and a SQL-injection vector.
-const ALLOWED_TABLE_NAMES = new Set<string>([
-  'authOutbox',
-  'comicOutbox',
-  'postOutbox',
-  'marketingOutbox',
-  'iamOutbox',
-  'notificationOutbox',
-]);
+// Maps DB table name → Prisma model property name.
+// Raw SQL uses the DB name; Prisma Client uses the model property.
+const ALLOWED_TABLES: Record<string, string> = {
+  'auth_outbox': 'authOutbox',
+  'comic_outbox': 'comicOutbox',
+  'post_outbox': 'postOutbox',
+  'marketing_outbox': 'marketingOutbox',
+  'iam_outbox': 'iamOutbox',
+};
 
 @Injectable()
 export class OutboxRelayService implements OnModuleDestroy {
@@ -104,7 +105,7 @@ export class OutboxRelayService implements OnModuleDestroy {
     // Hard allowlist before any string interpolation reaches SQL. Defense in
     // depth: the only callers today pass hardcoded strings, but a future
     // refactor that accidentally accepts user input shouldn't become a SQLi.
-    if (!ALLOWED_TABLE_NAMES.has(tableName)) {
+    if (!(tableName in ALLOWED_TABLES)) {
       this.logger.error(`Refusing to relay from unknown table "${tableName}" — not in allowlist`);
       return;
     }
@@ -132,7 +133,8 @@ export class OutboxRelayService implements OnModuleDestroy {
         if (!rows.length) return [];
 
         const ids = rows.map((r) => r.id);
-        await tx[tableName].updateMany({
+        const modelName = ALLOWED_TABLES[tableName];
+        await tx[modelName].updateMany({
           where: { id: { in: ids } },
           data: { published: true },
         });

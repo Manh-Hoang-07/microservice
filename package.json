@@ -38,6 +38,17 @@
     "start:post": "npm -w apps/post-service run start",
     "start:storage": "npm -w apps/storage-service run start",
     "start": "concurrently --prefix-colors blue,magenta,cyan,green,yellow,red,white,gray,blueBright,magentaBright -n auth,comic,config,web-api,introduction,marketing,notification,post,storage,iam \"npm:start:auth\" \"npm:start:comic\" \"npm:start:config\" \"npm:start:web-api\" \"npm:start:introduction\" \"npm:start:marketing\" \"npm:start:notification\" \"npm:start:post\" \"npm:start:storage\" \"npm:start:iam\"",
+    "dev:auth": "npm -w apps/auth-service run start:dev",
+    "dev:comic": "npm -w apps/comic-service run start:dev",
+    "dev:config": "npm -w apps/config-service run start:dev",
+    "dev:web-api": "npm -w apps/web-api-service run start:dev",
+    "dev:iam": "npm -w apps/iam-service run start:dev",
+    "dev:introduction": "npm -w apps/introduction-service run start:dev",
+    "dev:marketing": "npm -w apps/marketing-service run start:dev",
+    "dev:notification": "npm -w apps/notification-service run start:dev",
+    "dev:post": "npm -w apps/post-service run start:dev",
+    "dev:storage": "npm -w apps/storage-service run start:dev",
+    "dev": "concurrently --prefix-colors blue,magenta,cyan,green,yellow,red,white,gray,blueBright,magentaBright -n auth,comic,config,web-api,introduction,marketing,notification,post,storage,iam \"npm:dev:auth\" \"npm:dev:comic\" \"npm:dev:config\" \"npm:dev:web-api\" \"npm:dev:introduction\" \"npm:dev:marketing\" \"npm:dev:notification\" \"npm:dev:post\" \"npm:dev:storage\" \"npm:dev:iam\"",
     "prisma:generate:auth": "npm -w apps/auth-service run prisma:generate",
     "prisma:generate:comic": "npm -w apps/comic-service run prisma:generate",
     "prisma:generate:config": "npm -w apps/config-service run prisma:generate",
@@ -47,6 +58,8 @@
     "prisma:generate:notification": "npm -w apps/notification-service run prisma:generate",
     "prisma:generate:post": "npm -w apps/post-service run prisma:generate",
     "prisma:generate": "npm run prisma:generate:auth && npm run prisma:generate:comic && npm run prisma:generate:config && npm run prisma:generate:iam && npm run prisma:generate:introduction && npm run prisma:generate:marketing && npm run prisma:generate:notification && npm run prisma:generate:post",
+    "prisma:migrate": "npm -w apps/auth-service run prisma:migrate && npm -w apps/comic-service run prisma:migrate && npm -w apps/config-service run prisma:migrate && npm -w apps/iam-service run prisma:migrate && npm -w apps/introduction-service run prisma:migrate && npm -w apps/marketing-service run prisma:migrate && npm -w apps/notification-service run prisma:migrate && npm -w apps/post-service run prisma:migrate",
+    "prisma:deploy": "npm -w apps/auth-service run prisma:migrate:deploy && npm -w apps/comic-service run prisma:migrate:deploy && npm -w apps/config-service run prisma:migrate:deploy && npm -w apps/iam-service run prisma:migrate:deploy && npm -w apps/introduction-service run prisma:migrate:deploy && npm -w apps/marketing-service run prisma:migrate:deploy && npm -w apps/notification-service run prisma:migrate:deploy && npm -w apps/post-service run prisma:migrate:deploy",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose build",
@@ -63,6 +76,8 @@
     "@types/jest": "^30.0.0",
     "concurrently": "^9.2.1",
     "jest": "^30.3.0",
-    "ts-jest": "^29.4.9"
+    "nodemon": "^3.1.14",
+    "ts-jest": "^29.4.9",
+    "tsx": "^4.21.0"
   }
 }

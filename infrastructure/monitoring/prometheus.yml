@@ -12,16 +12,16 @@ scrape_configs:
     metrics_path: /api/metrics
     static_configs:
       - targets:
-          - auth-service:3002
-          - comic-service:3001
-          - storage-service:3003
-          - notification-service:3004
-          - config-service:3005
-          - web-api-service:3006
-          - post-service:3007
-          - iam-service:3008
-          - marketing-service:3009
-          - introduction-service:3010
+          - auth-service:3001
+          - iam-service:3002
+          - config-service:3003
+          - storage-service:3004
+          - notification-service:3005
+          - marketing-service:3006
+          - introduction-service:3007
+          - post-service:3008
+          - comic-service:3009
+          - web-api-service:3010
         labels:
           environment: production
 

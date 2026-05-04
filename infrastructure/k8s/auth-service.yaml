@@ -28,7 +28,7 @@ spec:
           image: ghcr.io/your-org/auth-service:latest # replace
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 3002
+            - containerPort: 3001
               name: http
           envFrom:
             - configMapRef:
@@ -37,7 +37,7 @@ spec:
                 name: comic-platform-secrets
           env:
             - name: PORT
-              value: "3002"
+              value: "3001"
             - name: SERVICE_NAME
               value: "auth-service"
             - name: DATABASE_URL
@@ -52,17 +52,17 @@ spec:
               cpu: 1000m
               memory: 1Gi
           startupProbe:
-            httpGet: { path: /api/v1/health/live, port: 3002 }
+            httpGet: { path: /api/v1/health/live, port: 3001 }
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 24 # 2 min
           livenessProbe:
-            httpGet: { path: /api/v1/health/live, port: 3002 }
+            httpGet: { path: /api/v1/health/live, port: 3001 }
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
-            httpGet: { path: /api/v1/health/ready, port: 3002 }
+            httpGet: { path: /api/v1/health/ready, port: 3001 }
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
@@ -87,8 +87,8 @@ spec:
   selector:
     app: auth-service
   ports:
-    - port: 3002
-      targetPort: 3002
+    - port: 3001
+      targetPort: 3001
       name: http
   type: ClusterIP
 ---
