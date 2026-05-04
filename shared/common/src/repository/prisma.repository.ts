@@ -1,4 +1,4 @@
-import { toPrimaryKey } from '../helpers/pagination.helper';
+import { toPrimaryKey, createPaginationMeta } from '../helpers/pagination.helper';
 
 export interface PrismaDelegate {
   findMany: (args: any) => Promise<any[]>;
@@ -124,7 +124,6 @@ export abstract class PrismaRepository<
       skipCount ? Promise.resolve(0) : this.delegate.count({ where }),
     ]);
 
-    const { createPaginationMeta } = require('../helpers/pagination.helper');
     return { data, meta: createPaginationMeta({ page, skip: (page - 1) * limit, take: limit }, total) };
   }
 
@@ -194,8 +193,9 @@ export abstract class PrismaRepository<
     try {
       await this.delegate.delete({ where: { id: toPrimaryKey(id) } as any });
       return true;
-    } catch {
-      return false;
+    } catch (error: any) {
+      if (error?.code === 'P2025') return false;
+      throw error;
     }
   }
 

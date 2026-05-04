@@ -101,7 +101,9 @@ export class AuditLogInterceptor implements NestInterceptor {
  */
 function redact<T extends Record<string, any>>(obj: T): T {
   const SENSITIVE = ['password', 'newPassword', 'currentPassword', 'token',
-    'refreshToken', 'accessToken', 'secret', 'apiKey', 'pem'];
+    'refreshToken', 'accessToken', 'secret', 'apiKey', 'pem',
+    'authorization', 'cookie', 'email', 'phone', 'ssn', 'creditCard',
+    'otp', 'googleId'];
   const out: any = Array.isArray(obj) ? [] : {};
   for (const [k, v] of Object.entries(obj)) {
     if (SENSITIVE.some((s) => k.toLowerCase().includes(s.toLowerCase()))) {

@@ -145,6 +145,7 @@ model PostCategory {
   category Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
   @@id([post_id, category_id])
+  @@index([category_id], map: "post_categories_idx_category_id")
   @@map("post_categories")
 }
 
@@ -156,6 +157,7 @@ model PostTag {
   tag  Tag  @relation(fields: [tag_id], references: [id], onDelete: Cascade)
 
   @@id([post_id, tag_id])
+  @@index([tag_id], map: "post_tags_idx_tag_id")
   @@map("post_tags")
 }
 

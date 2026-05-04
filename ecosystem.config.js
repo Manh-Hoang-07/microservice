@@ -32,7 +32,7 @@ module.exports = {
     watch: false,
     max_memory_restart: '768M',
     kill_timeout: 30000,           // give graceful-shutdown hooks 30s
-    wait_ready: false,
+    wait_ready: true,
     listen_timeout: 30000,
     env: {
       NODE_ENV: 'production',

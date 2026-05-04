@@ -176,7 +176,7 @@ export class PostRepository {
   }
 
   findBySlugSimple(slug: string) {
-    return this.prisma.post.findUnique({ where: { slug } });
+    return this.prisma.post.findUnique({ where: { slug }, select: { id: true, slug: true } });
   }
 
   /**

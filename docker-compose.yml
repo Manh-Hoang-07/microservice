@@ -5,8 +5,12 @@ services:
     container_name: comic-kafka
     restart: unless-stopped
     ports:
-      - "9092:9092"
-      - "9093:9093"
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:9093:9093"
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     environment:
       # KRaft combined mode (broker + controller in single node)
       KAFKA_NODE_ID: 1
@@ -39,12 +43,19 @@ services:
     container_name: comic-kafka-ui
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - kafka
     environment:
       KAFKA_CLUSTERS_0_NAME: comic-platform
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      AUTH_TYPE: LOGIN_FORM
+      SPRING_SECURITY_USER_NAME: ${KAFKA_UI_USER:-admin}
+      SPRING_SECURITY_USER_PASSWORD: ${KAFKA_UI_PASSWORD:-admin_changeme}
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   # ══ PostgreSQL — 1 DB per service ═════════════════════════════════════════════
   auth-db:
@@ -56,9 +67,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: auth_db
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - auth_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
       interval: 5s
@@ -74,9 +89,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: comic_db
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - comic_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d comic_db"]
       interval: 5s
@@ -92,9 +111,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: notification_db
     ports:
-      - "5435:5432"
+      - "127.0.0.1:5435:5432"
     volumes:
       - notification_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d notification_db"]
       interval: 5s
@@ -110,9 +133,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: config_db
     ports:
-      - "5436:5432"
+      - "127.0.0.1:5436:5432"
     volumes:
       - config_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d config_db"]
       interval: 5s
@@ -128,9 +155,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: post_db
     ports:
-      - "5438:5432"
+      - "127.0.0.1:5438:5432"
     volumes:
       - post_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d post_db"]
       interval: 5s
@@ -146,9 +177,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: introduction_db
     ports:
-      - "5439:5432"
+      - "127.0.0.1:5439:5432"
     volumes:
       - introduction_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d introduction_db"]
       interval: 5s
@@ -164,9 +199,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: marketing_db
     ports:
-      - "5440:5432"
+      - "127.0.0.1:5440:5432"
     volumes:
       - marketing_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d marketing_db"]
       interval: 5s
@@ -182,9 +221,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: iam_db
     ports:
-      - "5441:5432"
+      - "127.0.0.1:5441:5432"
     volumes:
       - iam_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d iam_db"]
       interval: 5s
@@ -197,60 +240,84 @@ services:
     container_name: comic-auth-redis
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     volumes:
       - auth_redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret_changeme} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   comic-redis:
     image: redis:7-alpine
     container_name: comic-comic-redis
     restart: unless-stopped
     ports:
-      - "6381:6379"
+      - "127.0.0.1:6381:6379"
     volumes:
       - comic_redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret_changeme} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   notification-redis:
     image: redis:7-alpine
     container_name: comic-notification-redis
     restart: unless-stopped
     ports:
-      - "6382:6379"
+      - "127.0.0.1:6382:6379"
     volumes:
       - notification_redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret_changeme} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   post-redis:
     image: redis:7-alpine
     container_name: comic-post-redis
     restart: unless-stopped
     ports:
-      - "6384:6379"
+      - "127.0.0.1:6384:6379"
     volumes:
       - post_redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret_changeme} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   web-api-redis:
     image: redis:7-alpine
     container_name: comic-web-api-redis
     restart: unless-stopped
     ports:
-      - "6383:6379"
+      - "127.0.0.1:6383:6379"
     volumes:
       - web_api_redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret_changeme} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   iam-redis:
     image: redis:7-alpine
     container_name: comic-iam-redis
     restart: unless-stopped
     ports:
-      - "6385:6379"
+      - "127.0.0.1:6385:6379"
     volumes:
       - iam_redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret_changeme} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   # ══ PgBouncer (opt-in — `--profile pgbouncer`) ═══════════════════════════════
   # Transaction-mode pool in front of all per-service DBs.
@@ -262,7 +329,11 @@ services:
     profiles: ["pgbouncer"]
     restart: unless-stopped
     ports:
-      - "6432:6432"
+      - "127.0.0.1:6432:6432"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
     volumes:
       - ./infrastructure/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./infrastructure/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
@@ -287,10 +358,14 @@ services:
     container_name: comic-jaeger
     restart: unless-stopped
     ports:
-      - "16686:16686"   # Jaeger UI
-      - "4318:4318"     # OTLP HTTP receiver
+      - "127.0.0.1:16686:16686"   # Jaeger UI
+      - "127.0.0.1:4318:4318"     # OTLP HTTP receiver
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ API Gateway (Nginx) — full Docker mode ═══════════════════════════════════
   nginx:
@@ -299,6 +374,10 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
     depends_on:
       - storage-service
       - web-api-service
@@ -329,6 +408,10 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -373,6 +456,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3004:3004"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     volumes:
       - storage_uploads:/app/storage/uploads
 
@@ -421,6 +508,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3001:3001"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ Config Service (:3003) ════════════════════════════════════════════════════
   config-service:
@@ -447,6 +538,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3003:3003"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ Web API Service (:3010) — aggregator for FE (homepage, search) ═══════════
   web-api-service:
@@ -475,6 +570,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3010:3010"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ Comic Service (:3009) ═════════════════════════════════════════════════════
   comic-service:
@@ -507,6 +606,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3009:3009"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ Notification Service (:3005) ═══════════════════════════════════════════
   notification-service:
@@ -544,6 +647,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3005:3005"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ Post Service (:3008) ═════════════════════════════════════════════════
   post-service:
@@ -576,6 +683,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3008:3008"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ Introduction Service (:3007) ═══════════════════════════════════════════
   introduction-service:
@@ -601,6 +712,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3007:3007"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ Marketing Service (:3006) ══════════════════════════════════════════════
   marketing-service:
@@ -630,6 +745,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3006:3006"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ══ IAM Service (:3002) ════════════════════════════════════════════════════
   iam-service:
@@ -660,6 +779,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
       - "3002:3002"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   # Storage

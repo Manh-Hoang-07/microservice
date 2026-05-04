@@ -44,6 +44,7 @@ model Comic {
   @@index([last_chapter_updated_at], map: "comics_idx_last_chapter_updated_at")
   @@index([is_featured], map: "comics_idx_is_featured")
   @@index([group_id], map: "comics_idx_group_id")
+  @@index([status, last_chapter_updated_at(sort: Desc)], map: "comics_idx_status_last_chapter_updated")
   @@map("comics")
 }
 
@@ -143,6 +144,7 @@ model ComicCategory {
   category Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
   @@id([comic_id, category_id])
+  @@index([category_id], map: "comic_categories_idx_category_id")
   @@map("comic_categories")
 }
 

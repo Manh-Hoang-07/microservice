@@ -18,7 +18,6 @@ export class PostOutboxCronService implements OnModuleInit {
 
   onModuleInit() {
     this.outboxRelay.init(this.prisma, {
-      clientId: 'post-service-outbox',
       tableName: TABLE_NAME,
       topicMap: TOPIC_MAP,
     });

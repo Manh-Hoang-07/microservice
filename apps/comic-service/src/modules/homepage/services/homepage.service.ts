@@ -35,7 +35,7 @@ export class HomepageService {
   }
 
   async getCategories() {
-    return this.cached('homepage:categories', 43200, () =>
+    return this.cached('homepage:categories', 600, () =>
       this.homepageRepo.findCategories(),
     );
   }
@@ -51,7 +51,7 @@ export class HomepageService {
     if (this.redis.isEnabled()) {
       await this.redis.set(
         `comic:cache:${key}`,
-        JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+        JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? String(v) : v)),
         ttl,
       );
     }

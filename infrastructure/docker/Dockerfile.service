@@ -117,7 +117,7 @@ USER app
 EXPOSE ${SERVICE_PORT}
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS "http://localhost:${PORT}/api/v1/health" >/dev/null || exit 1
+  CMD curl -fsS "http://localhost:${PORT}/api/v1/health/ready" >/dev/null || exit 1
 
 # dumb-init handles SIGTERM forwarding for graceful shutdown.
 # entrypoint.sh runs `prisma migrate deploy` (if applicable) then exec's CMD.

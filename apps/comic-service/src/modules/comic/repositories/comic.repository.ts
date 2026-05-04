@@ -182,7 +182,7 @@ export class ComicRepository {
   }
 
   findBySlugSimple(slug: string) {
-    return this.prisma.comic.findUnique({ where: { slug } });
+    return this.prisma.comic.findUnique({ where: { slug }, select: { id: true, slug: true } });
   }
 
   async createWithRelations(
@@ -195,7 +195,12 @@ export class ComicRepository {
       if (categoryIds?.length) {
         await this.syncCategories(comic.id, categoryIds, tx);
       }
-      return comic;
+      // Re-fetch within the same transaction so the caller gets the full
+      // entity with relations — avoids an extra round-trip after commit.
+      return tx.comic.findUnique({
+        where: { id: comic.id },
+        include: WITH_RELATIONS,
+      });
     });
   }
 
@@ -209,6 +214,12 @@ export class ComicRepository {
       if (categoryIds !== undefined) {
         await this.syncCategories(id, categoryIds, tx);
       }
+      // Return the updated entity with relations inside the transaction
+      // so the caller doesn't need a separate fetch after commit.
+      return tx.comic.findUnique({
+        where: { id: toPrimaryKey(id) },
+        include: WITH_RELATIONS,
+      });
     });
   }
 

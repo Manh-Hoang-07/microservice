@@ -47,6 +47,8 @@ export class ViewCronService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      // Pre-validate entries so we can batch cleanly
+      const validEntries: Array<{ postIdStr: string; postId: bigint; count: number }> = [];
       for (const [postIdStr, countStr] of entries) {
         let postId: bigint;
         try {
@@ -57,18 +59,27 @@ export class ViewCronService {
         }
         const count = parseInt(countStr, 10);
         if (isNaN(count) || count <= 0) continue;
+        validEntries.push({ postIdStr, postId, count });
+      }
 
-        try {
-          await this.statsRepo.upsertStats(postId, count);
-          await this.statsRepo.upsertDailyStats(postId, today, count);
-        } catch (err) {
-          // On failure, restore unflushed entries to the live buffer so we
-          // retry next tick instead of losing the count permanently.
-          this.logger.error(`Failed to flush views for post ${postIdStr}`, err);
-          await this.redis
-            .hincrby('post:views:buffer', postIdStr, count)
-            .catch(() => undefined);
-        }
+      const BATCH_SIZE = 20;
+      for (let i = 0; i < validEntries.length; i += BATCH_SIZE) {
+        const batch = validEntries.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async ({ postIdStr, postId, count }) => {
+            try {
+              await this.statsRepo.upsertStats(postId, count);
+              await this.statsRepo.upsertDailyStats(postId, today, count);
+            } catch (err) {
+              // On failure, restore unflushed entries to the live buffer so we
+              // retry next tick instead of losing the count permanently.
+              this.logger.error(`Failed to flush views for post ${postIdStr}`, err);
+              await this.redis
+                .hincrby('post:views:buffer', postIdStr, count)
+                .catch(() => undefined);
+            }
+          }),
+        );
       }
 
       await this.redis.del(snapshotKey);

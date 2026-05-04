@@ -46,6 +46,8 @@ export class ViewCronService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      // Pre-validate entries so we can batch cleanly
+      const validEntries: Array<{ comicIdStr: string; comicId: bigint; count: number }> = [];
       for (const [comicIdStr, countStr] of entries) {
         let comicId: bigint;
         try {
@@ -56,18 +58,27 @@ export class ViewCronService {
         }
         const count = parseInt(countStr, 10);
         if (isNaN(count) || count <= 0) continue;
+        validEntries.push({ comicIdStr, comicId, count });
+      }
 
-        try {
-          await this.viewRepo.upsertStats(comicId, count);
-          await this.viewRepo.upsertDailyStats(comicId, today, count);
-        } catch (err) {
-          // On failure, restore the unflushed entries to the live buffer
-          // so the next tick retries instead of losing the count forever.
-          this.logger.error(`Failed to flush views for comic ${comicIdStr}`, err);
-          await this.redis
-            .hincrby('comic:views:buffer', comicIdStr, count)
-            .catch(() => undefined);
-        }
+      const BATCH_SIZE = 20;
+      for (let i = 0; i < validEntries.length; i += BATCH_SIZE) {
+        const batch = validEntries.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async ({ comicIdStr, comicId, count }) => {
+            try {
+              await this.viewRepo.upsertStats(comicId, count);
+              await this.viewRepo.upsertDailyStats(comicId, today, count);
+            } catch (err) {
+              // On failure, restore the unflushed entries to the live buffer
+              // so the next tick retries instead of losing the count forever.
+              this.logger.error(`Failed to flush views for comic ${comicIdStr}`, err);
+              await this.redis
+                .hincrby('comic:views:buffer', comicIdStr, count)
+                .catch(() => undefined);
+            }
+          }),
+        );
       }
 
       await this.redis.del(snapshotKey);

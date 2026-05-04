@@ -2,6 +2,13 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createCircuitBreaker } from '@package/circuit-breaker';
 import type { CircuitBreakerPolicy } from 'cockatiel';
+import { Agent } from 'undici';
+
+const keepAliveAgent = new Agent({
+  connections: 10,
+  keepAliveTimeout: 30_000,
+  pipelining: 1,
+});
 
 export interface ComicListItem {
   id: string;
@@ -149,7 +156,8 @@ export class ComicClient implements OnModuleInit {
       const res = await fetch(url, {
         signal: controller.signal,
         headers,
-      });
+        dispatcher: keepAliveAgent,
+      } as any);
 
       if (!res.ok) {
         this.logger.warn(`ComicClient GET ${url} → ${res.status}`);

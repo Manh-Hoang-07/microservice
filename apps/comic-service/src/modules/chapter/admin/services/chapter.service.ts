@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '@package/redis';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -8,9 +9,12 @@ import { ChapterFilter, ChapterRepository } from '../../repositories/chapter.rep
 
 @Injectable()
 export class AdminChapterService {
+  private readonly logger = new Logger(AdminChapterService.name);
+
   constructor(
     private readonly chapterRepo: ChapterRepository,
     private readonly config: ConfigService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   async getList(query: any = {}) {
@@ -74,6 +78,7 @@ export class AdminChapterService {
       await this.handlePublish(chapter);
     }
 
+    await this.clearChapterCaches(chapter.id, dto.comic_id);
     return this.getOne(chapter.id);
   }
 
@@ -108,13 +113,32 @@ export class AdminChapterService {
       await this.handlePublish(chapter);
     }
 
+    await this.clearChapterCaches(id, existing.comic_id);
     return this.getOne(id);
   }
 
   async delete(id: any) {
-    await this.getOne(id);
+    const chapter = await this.getOne(id);
     await this.chapterRepo.delete(id);
+    await this.clearChapterCaches(id, chapter.comic_id);
     return { success: true };
+  }
+
+  private async clearChapterCaches(chapterId: any, comicId?: any): Promise<void> {
+    try {
+      await this.redis?.del(`comic:public:chapter:${chapterId}`);
+      await this.redis?.del(`comic:public:pages:${chapterId}`);
+      if (comicId) {
+        const chapterListKeys = await this.redis?.keys(`comic:public:chapters:${comicId}:*`);
+        if (chapterListKeys?.length) await this.redis?.deleteMany(chapterListKeys);
+      }
+      const navKeys = await this.redis?.keys('comic:public:nav:*');
+      if (navKeys?.length) await this.redis?.deleteMany(navKeys);
+      // Clear homepage recently-updated cache
+      await this.redis?.del('comic:cache:homepage:recently-updated');
+    } catch (err) {
+      this.logger.warn('Failed to clear chapter caches', (err as Error).message);
+    }
   }
 
   private async handlePublish(chapter: any) {

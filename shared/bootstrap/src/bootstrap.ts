@@ -1,10 +1,12 @@
 import 'reflect-metadata';
+import { initTracing } from '@package/tracing';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from '@package/common';
 import { randomUUID } from 'crypto';
 import helmet from 'helmet';
+import { json, urlencoded } from 'express';
 import { JsonLogger } from './json-logger';
 
 // Permitted set of inbound `x-request-id` header values. Anything outside
@@ -21,6 +23,13 @@ export interface BootstrapOptions {
 }
 
 export async function createApp(options: BootstrapOptions): Promise<NestExpressApplication> {
+  // Initialize OpenTelemetry tracing BEFORE NestJS boots so the HTTP and
+  // Nest instrumentations can patch modules before they are required.
+  // Only activates when the OTLP endpoint env var is set.
+  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+    initTracing(options.serviceName);
+  }
+
   // Force the Node process TZ to UTC so `Date` objects serialize identically
   // regardless of the host's locale. `APP_TIMEZONE` is still honored — but
   // it's now an APPLICATION-level concern (date formatting in I/O), not a
@@ -50,6 +59,9 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
     app.setGlobalPrefix(prefix);
   }
 
+  app.use(json({ limit: '1mb' }));
+  app.use(urlencoded({ extended: true, limit: '1mb' }));
+
   // Request-ID middleware: trust an upstream `x-request-id` if it looks
   // sane, otherwise mint a fresh uuid. Echoed on the response so log
   // shippers can correlate client → gateway → service traces even when
@@ -64,7 +76,14 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
     next();
   });
 
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+  }));
 
   const corsEnabled = process.env.CORS_ENABLED !== 'false';
   if (corsEnabled) {

@@ -10,23 +10,6 @@ import { map, catchError } from 'rxjs/operators';
 import { ResponseUtil } from './response.util';
 import { mapExceptionToResponse } from './exception-mapper.helper';
 
-function deepConvertBigInt(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'bigint') return Number(obj);
-  if (typeof obj !== 'object') return obj;
-  if (Object.prototype.toString.call(obj) === '[object Date]') return obj;
-  if (Array.isArray(obj)) return obj.map((v) => deepConvertBigInt(v));
-  const isPlainObject = obj.constructor === undefined || obj.constructor.name === 'Object';
-  if (!isPlainObject) return obj;
-  const res: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      res[key] = deepConvertBigInt(obj[key]);
-    }
-  }
-  return res;
-}
-
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor<T, any> {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
@@ -37,17 +20,15 @@ export class TransformInterceptor<T> implements NestInterceptor<T, any> {
   }
 
   private handleSuccess(raw: any): any {
-    const safeData = deepConvertBigInt(raw);
-
-    if (isApiResponse(safeData)) return safeData;
+    if (isApiResponse(raw)) return raw;
 
     if (
-      safeData &&
-      typeof safeData === 'object' &&
-      'data' in safeData &&
-      'meta' in safeData
+      raw &&
+      typeof raw === 'object' &&
+      'data' in raw &&
+      'meta' in raw
     ) {
-      const { data, meta } = safeData;
+      const { data, meta } = raw;
       return ResponseUtil.paginated(
         data,
         meta.page || meta.currentPage || 1,
@@ -56,7 +37,7 @@ export class TransformInterceptor<T> implements NestInterceptor<T, any> {
       );
     }
 
-    return ResponseUtil.success(safeData);
+    return ResponseUtil.success(raw);
   }
 
   private handleError(err: any): Observable<never> {

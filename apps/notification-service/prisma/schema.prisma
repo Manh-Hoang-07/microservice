@@ -29,6 +29,7 @@ model Notification {
   // created_at DESC. Without it, Postgres scans `[user_id, is_read]` and
   // re-sorts the working set.
   @@index([user_id, created_at(sort: Desc)], map: "notifications_idx_user_created")
+  @@index([user_id, is_read, created_at(sort: Desc)], map: "notifications_idx_user_read_created")
   @@map("notifications")
 }
 

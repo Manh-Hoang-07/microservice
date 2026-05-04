@@ -1,8 +1,24 @@
 import { Module } from '@nestjs/common';
-import { OutboxRelayService } from '@package/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { KAFKA_PRODUCER } from '@package/common';
+import { KafkaClientModule, KafkaProducerService } from '@package/kafka-client';
 import { OutboxCronService } from './services/outbox-relay.service';
 
 @Module({
-  providers: [OutboxRelayService, OutboxCronService],
+  imports: [
+    KafkaClientModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        clientId: config.get<string>('kafka.clientId', 'comic-service'),
+        brokers: config.get<string[]>('kafka.brokers', ['localhost:9093']),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [
+    OutboxCronService,
+    { provide: KAFKA_PRODUCER, useExisting: KafkaProducerService },
+  ],
+  exports: [KAFKA_PRODUCER],
 })
 export class KafkaModule {}

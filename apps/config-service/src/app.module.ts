@@ -9,6 +9,7 @@ import { join } from 'path';
 import { createAppConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { RedisModule } from '@package/redis';
 import { DatabaseModule } from './database/database.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { MenuModule } from './modules/menu/menu.module';
@@ -34,6 +35,7 @@ import { LocationModule } from './modules/location/location.module';
       ],
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    RedisModule,
     DatabaseModule,
     HealthModule.register('config-service'),
     MetricsModule,

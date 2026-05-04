@@ -1,10 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
 import { MenuService } from '../../admin/services/menu.service';
+import { RedisService } from '@package/redis';
 import { Public } from '@package/common';
 
 @Controller()
 export class PublicMenuController {
-  constructor(private readonly service: MenuService) {}
+  constructor(
+    private readonly service: MenuService,
+    private readonly redis: RedisService,
+  ) {}
 
   /**
    * Public menu tree — anonymous only. The previous implementation took
@@ -16,6 +20,30 @@ export class PublicMenuController {
   @Public()
   @Get('menus')
   async getPublicMenuTree() {
-    return this.service.getPublicMenuTree();
+    const cacheKey = 'config:public:menu';
+    try {
+      if (this.redis.isEnabled()) {
+        const raw = await this.redis.get(cacheKey);
+        if (raw) return JSON.parse(raw);
+      }
+    } catch {
+      // silent
+    }
+
+    const result = await this.service.getPublicMenuTree();
+
+    try {
+      if (this.redis.isEnabled()) {
+        await this.redis.set(
+          cacheKey,
+          JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+          600,
+        );
+      }
+    } catch {
+      // silent
+    }
+
+    return result;
   }
 }

@@ -20,7 +20,6 @@ export class OutboxCronService implements OnModuleInit {
 
   onModuleInit() {
     this.outboxRelay.init(this.prisma, {
-      clientId: 'comic-service-outbox',
       tableName: TABLE_NAME,
       topicMap: TOPIC_MAP,
     });

@@ -16,6 +16,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.config.get<string>('redis.url') || this.config.get<string>('REDIS_URL');
   }
 
+  private createClient(url: string): Redis {
+    return new Redis(url, {
+      lazyConnect: true,
+      enableOfflineQueue: true,
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => Math.min(times * 200, 5_000),
+      connectTimeout: 10_000,
+      reconnectOnError: (err) => {
+        const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT'];
+        return targetErrors.some((t) => err.message.includes(t));
+      },
+    });
+  }
+
   async onModuleInit(): Promise<void> {
     const url = this.getRedisUrl();
     if (!url) {
@@ -23,12 +37,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return;
     }
     try {
-      this.client = new Redis(url, { lazyConnect: true, enableOfflineQueue: false });
+      this.client = this.createClient(url);
       this.client.on('error', (err) => {
         this.logger.error('Redis connection error', err);
       });
       this.client.on('connect', () => {
         this.logger.log('Redis connected');
+      });
+      this.client.on('reconnecting', (delay: number) => {
+        this.logger.warn(`Redis reconnecting in ${delay}ms`);
       });
       await this.client.connect();
       this.enabled = true;
@@ -39,8 +56,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.client?.quit().catch(() => undefined);
-    await this.subscriberClient?.quit().catch(() => undefined);
+    await this.client?.quit().catch((err) => {
+      this.logger.warn(`Redis client quit error: ${(err as Error).message}`);
+    });
+    await this.subscriberClient?.quit().catch((err) => {
+      this.logger.warn(`Redis subscriber quit error: ${(err as Error).message}`);
+    });
     this.client = null;
     this.subscriberClient = null;
   }
@@ -98,12 +119,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.hset(key, field, value);
   }
 
-  /**
-   * Atomic set-if-not-exists with optional TTL. Single Redis round trip via
-   * `SET key value [EX ttl] NX` — safer than `SETNX` + `EXPIRE` because a
-   * crash between the two commands would have left the key without a TTL,
-   * making the lock permanent.
-   */
   async setnx(key: string, value: string, ttlSeconds?: number): Promise<boolean> {
     if (!this.client) return false;
     const result = ttlSeconds
@@ -124,7 +139,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async keys(pattern: string): Promise<string[]> {
     if (!this.client) return [];
-    return this.client.keys(pattern);
+    const results: string[] = [];
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      results.push(...keys);
+    } while (cursor !== '0');
+    return results;
   }
 
   async incr(key: string): Promise<number> {
@@ -147,9 +169,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client.srem(key, ...members);
   }
 
-  /**
-   * Atomic GET + DEL. Returns the previous value or null. Requires Redis >= 6.2.
-   */
   async getdel(key: string): Promise<string | null> {
     if (!this.client) return null;
     return (this.client as any).getdel
@@ -157,10 +176,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       : this.client.call('GETDEL', key) as Promise<string | null>;
   }
 
-  /**
-   * Run an atomic Redis transaction (MULTI/EXEC). Returns array of results
-   * or throws on connection failure.
-   */
   async multi(commands: Array<[string, ...(string | number)[]]>): Promise<unknown[]> {
     if (!this.client) return [];
     let pipeline = this.client.multi();
@@ -175,18 +190,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  /**
-   * Atomically delete tracked keys + the tracked-set in a single round trip.
-   */
   async deleteMany(keys: string[]): Promise<void> {
     if (!this.client || !keys.length) return;
     await this.client.del(...keys);
   }
 
-  /**
-   * Atomic RENAME. Throws when the source key does not exist; callers should
-   * wrap in try/catch to treat "missing source" as a no-op.
-   */
   async rename(source: string, destination: string): Promise<void> {
     if (!this.client) return;
     await this.client.rename(source, destination);
@@ -205,7 +213,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.channelCallbacks.set(channel, callbacks);
     try {
       if (!this.subscriberClient) {
-        this.subscriberClient = new Redis(url);
+        this.subscriberClient = this.createClient(url);
+        await this.subscriberClient.connect();
         this.subscriberClient.on('message', (ch: string, msg: string) => {
           (this.channelCallbacks.get(ch) || []).forEach((cb) => cb(msg));
         });
@@ -216,13 +225,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * Detach a callback from a pubsub channel. When the last callback for a
-   * channel is removed, also unsubscribes the underlying client. Used by
-   * services that subscribe in `onModuleInit` and need to clean up in
-   * `onModuleDestroy` — otherwise the closure retains `this` and prevents
-   * GC of the module during hot-reload tests.
-   */
   async unsubscribe(channel: string, callback?: (message: string) => void): Promise<void> {
     const callbacks = this.channelCallbacks.get(channel);
     if (!callbacks?.length) return;

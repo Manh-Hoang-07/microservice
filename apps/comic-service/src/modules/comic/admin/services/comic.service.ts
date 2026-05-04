@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { RedisService } from '@package/redis';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -7,7 +8,12 @@ import { ComicFilter, ComicRepository } from '../../repositories/comic.repositor
 
 @Injectable()
 export class AdminComicService {
-  constructor(private readonly comicRepo: ComicRepository) {}
+  private readonly logger = new Logger(AdminComicService.name);
+
+  constructor(
+    private readonly comicRepo: ComicRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -58,7 +64,8 @@ export class AdminComicService {
           { ...dto, slug },
           dto.category_ids,
         );
-        return this.getOne(created.id);
+        await this.clearComicCaches(slug);
+        return this.transform(created);
       } catch (err) {
         if (
           err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -92,8 +99,9 @@ export class AdminComicService {
       );
     }
 
+    let updated: any;
     try {
-      await this.comicRepo.updateWithRelations(id, data, dto.category_ids);
+      updated = await this.comicRepo.updateWithRelations(id, data, dto.category_ids);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new BadRequestException('Slug already in use');
@@ -101,13 +109,29 @@ export class AdminComicService {
       throw err;
     }
 
-    return this.getOne(id);
+    await this.clearComicCaches(updated.slug || (current as any).slug);
+    return this.transform(updated);
   }
 
   async delete(id: any) {
-    await this.getOne(id);
+    const comic = await this.getOne(id);
     await this.comicRepo.delete(id);
+    await this.clearComicCaches((comic as any).slug);
     return { success: true };
+  }
+
+  private async clearComicCaches(slug?: string): Promise<void> {
+    try {
+      if (slug) {
+        await this.redis?.del(`comic:public:detail:${slug}`);
+      }
+      const listKeys = await this.redis?.keys('comic:public:list:*');
+      if (listKeys?.length) await this.redis?.deleteMany(listKeys);
+      const homepageKeys = await this.redis?.keys('comic:cache:homepage:*');
+      if (homepageKeys?.length) await this.redis?.deleteMany(homepageKeys);
+    } catch (err) {
+      this.logger.warn('Failed to clear comic caches', (err as Error).message);
+    }
   }
 
   private buildFilter(query: any): ComicFilter {

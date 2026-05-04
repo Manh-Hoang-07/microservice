@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -6,7 +7,12 @@ import { CategoryFilter, CategoryRepository } from '../../repositories/category.
 
 @Injectable()
 export class AdminCategoryService {
-  constructor(private readonly categoryRepo: CategoryRepository) {}
+  private readonly logger = new Logger(AdminCategoryService.name);
+
+  constructor(
+    private readonly categoryRepo: CategoryRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -34,7 +40,9 @@ export class AdminCategoryService {
       findOne: (filter: any) => this.categoryRepo.findBySlug(filter.slug),
     });
 
-    return this.categoryRepo.create({ ...dto, slug });
+    const created = await this.categoryRepo.create({ ...dto, slug });
+    await this.clearCategoryCaches();
+    return created;
   }
 
   async update(id: any, dto: UpdateCategoryDto) {
@@ -49,12 +57,24 @@ export class AdminCategoryService {
       );
     }
 
-    return this.categoryRepo.update(id, data);
+    const updated = await this.categoryRepo.update(id, data);
+    await this.clearCategoryCaches();
+    return updated;
   }
 
   async delete(id: any) {
     await this.getOne(id);
     await this.categoryRepo.delete(id);
+    await this.clearCategoryCaches();
     return { success: true };
+  }
+
+  private async clearCategoryCaches(): Promise<void> {
+    try {
+      await this.redis?.del('comic:public:categories');
+      await this.redis?.del('comic:cache:homepage:categories');
+    } catch (err) {
+      this.logger.warn('Failed to clear category caches', (err as Error).message);
+    }
   }
 }

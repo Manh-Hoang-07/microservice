@@ -14,7 +14,7 @@ const PERMS_KEY = 'perms_required';
 export class JwtGuard implements CanActivate {
   private jwks: jose.JWTVerifyGetKey | null = null;
   private lastFetch = 0;
-  private readonly TTL_MS = 24 * 60 * 60 * 1000;
+  private readonly TTL_MS = 5 * 60 * 1000; // 5 minutes — matches Nginx JWKS cache
 
   constructor(
     private readonly reflector: Reflector,
@@ -107,6 +107,7 @@ export class JwtGuard implements CanActivate {
     const issuer = this.config.get<string>('JWT_ISSUER') || 'auth-service';
     const audience = this.config.get<string>('JWT_AUDIENCE') || 'comic-platform';
     const { payload } = await jose.jwtVerify(token, this.jwks, {
+      algorithms: ['RS256'],
       issuer,
       audience,
     });

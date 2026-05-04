@@ -12,6 +12,10 @@ export class PublicComicService {
   ) {}
 
   async getList(query: any = {}) {
+    const cacheKey = `comic:public:list:${this.hashQuery(query)}`;
+    const cached = await this.cacheGet(cacheKey);
+    if (cached) return cached;
+
     const options = parseQueryOptions(query);
 
     const filter: ComicFilter = { status: PUBLIC_COMIC_STATUSES };
@@ -28,16 +32,26 @@ export class PublicComicService {
       this.comicRepo.count(filter),
     ]);
 
-    return {
+    const result = {
       data: data.map((c) => this.transform(c)),
       meta: createPaginationMeta(options, total),
     };
+
+    await this.cacheSet(cacheKey, result, 60);
+    return result;
   }
 
   async getBySlug(slug: string) {
+    const cacheKey = `comic:public:detail:${slug}`;
+    const cached = await this.cacheGet(cacheKey);
+    if (cached) return cached;
+
     const comic = await this.comicRepo.findBySlug(slug, PUBLIC_COMIC_STATUSES);
     if (!comic) throw new NotFoundException('Comic not found');
-    return this.transform(comic);
+    const result = this.transform(comic);
+
+    await this.cacheSet(cacheKey, result, 120);
+    return result;
   }
 
   async getChaptersBySlug(slug: string, query: any = {}, requesterKey?: string) {
@@ -56,6 +70,10 @@ export class PublicComicService {
       }
     }
 
+    const cacheKey = `comic:public:chapters:${slug}:${this.hashQuery(query)}`;
+    const cached = await this.cacheGet(cacheKey);
+    if (cached) return cached;
+
     // Hard cap chapter list at 200 per page (was effectively unbounded with
     // `limit: query.limit ?? 10000` — trivial DoS).
     const options = parseQueryOptions(query, { defaultTake: 50, maxTake: 200 });
@@ -65,7 +83,10 @@ export class PublicComicService {
       this.comicRepo.countPublicChapters(comic.id),
     ]);
 
-    return { data, meta: createPaginationMeta(options, total) };
+    const result = { data, meta: createPaginationMeta(options, total) };
+
+    await this.cacheSet(cacheKey, result, 60);
+    return result;
   }
 
   private transform(entity: any) {
@@ -92,5 +113,37 @@ export class PublicComicService {
     }
 
     return item;
+  }
+
+  private hashQuery(query: any): string {
+    const str = JSON.stringify(query, (_, v) => (typeof v === 'bigint' ? v.toString() : v));
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+    }
+    return hash.toString(36);
+  }
+
+  private async cacheGet(key: string): Promise<any | null> {
+    try {
+      if (!this.redis.isEnabled()) return null;
+      const raw = await this.redis.get(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async cacheSet(key: string, value: any, ttl: number): Promise<void> {
+    try {
+      if (!this.redis.isEnabled()) return;
+      await this.redis.set(
+        key,
+        JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+        ttl,
+      );
+    } catch {
+      // silent — cache failure must not break the endpoint
+    }
   }
 }

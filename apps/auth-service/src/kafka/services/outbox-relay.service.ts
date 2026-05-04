@@ -18,7 +18,6 @@ export class AuthOutboxCronService implements OnModuleInit {
 
   onModuleInit() {
     this.outboxRelay.init(this.prisma, {
-      clientId: 'auth-service-outbox',
       tableName: TABLE_NAME,
       topicMap: TOPIC_MAP,
     });

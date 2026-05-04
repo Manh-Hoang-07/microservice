@@ -65,11 +65,10 @@ export abstract class BaseService<T, R extends IRepository<T>> {
   }
 
   async getSimpleList(query: any = {}) {
-    const limit = Number(query.limit) || 1000;
+    const limit = Math.min(Number(query.limit) || 100, 100);
     return this.getList({
       ...query,
       limit,
-      maxLimit: query.maxLimit || Math.max(limit, 1000),
       skipCount: true,
     });
   }

@@ -131,6 +131,7 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
     }
 
     await this.consumer!.run({
+      partitionsConsumedConcurrently: 3,
       eachMessage: async (payload) => this.dispatch(payload),
     });
   }

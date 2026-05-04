@@ -31,6 +31,9 @@ export class ChapterPublishedHandler implements KafkaHandler {
     const followers = await this.followersProjectionRepo.findByComicId(BigInt(comic_id));
     if (!followers.length) return;
 
+    // TODO: This sequential fan-out is the biggest consumer throughput bottleneck.
+    // Move chapter.published processing to a dedicated consumer group so it
+    // doesn't block other notification handlers while iterating large follower lists.
     const batchSize = 500;
     let failedBatches = 0;
     for (let i = 0; i < followers.length; i += batchSize) {

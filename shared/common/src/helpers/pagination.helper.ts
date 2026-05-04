@@ -32,11 +32,11 @@ export function createPaginationMeta(options: QueryOptions, total: number): Pagi
  * pass an explicit `maxTake` to {@link parseQueryOptions}.
  */
 export const DEFAULT_MAX_TAKE = 100;
-export const MAX_PAGE = 10_000;
+export const MAX_PAGE = 1_000;
 
 export function parseQueryOptions(
   query: any,
-  options: { maxTake?: number; defaultTake?: number } = {},
+  options: { maxTake?: number; defaultTake?: number; allowedSortFields?: string[] } = {},
 ): QueryOptions {
   const maxTake = options.maxTake ?? DEFAULT_MAX_TAKE;
   const defaultTake = options.defaultTake ?? 10;
@@ -51,7 +51,18 @@ export function parseQueryOptions(
     maxTake,
   );
   const skip = (page - 1) * take;
-  const sortBy: string | undefined = query?.sort_by || undefined;
+
+  // Validate sortBy: only allow safe characters (letters, numbers, underscore, dot)
+  const rawSortBy = query?.sort_by;
+  let sortBy: string | undefined;
+  if (rawSortBy) {
+    if (options.allowedSortFields) {
+      sortBy = options.allowedSortFields.includes(rawSortBy) ? rawSortBy : undefined;
+    } else {
+      sortBy = /^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(rawSortBy) ? rawSortBy : undefined;
+    }
+  }
+
   const order: 'asc' | 'desc' | undefined =
     query?.order === 'asc' || query?.order === 'desc' ? query.order : undefined;
   return { page, skip, take, sortBy, order };

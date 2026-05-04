@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { RedisService } from '@package/redis';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -7,7 +8,12 @@ import { PostFilter, PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
 export class AdminPostService {
-  constructor(private readonly postRepo: PostRepository) {}
+  private readonly logger = new Logger(AdminPostService.name);
+
+  constructor(
+    private readonly postRepo: PostRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -60,6 +66,7 @@ export class AdminPostService {
           dto.category_ids,
           dto.tag_ids,
         );
+        await this.clearPostCaches(slug);
         return this.transform(post);
       } catch (err) {
         if (
@@ -104,13 +111,27 @@ export class AdminPostService {
       throw err;
     }
 
+    await this.clearPostCaches(data.slug || (current as any).slug);
     return this.getOne(id);
   }
 
   async delete(id: any) {
-    await this.getOne(id);
+    const post = await this.getOne(id);
     await this.postRepo.delete(id);
+    await this.clearPostCaches((post as any).slug);
     return { success: true };
+  }
+
+  private async clearPostCaches(slug?: string): Promise<void> {
+    try {
+      if (slug) {
+        await this.redis?.del(`post:public:detail:${slug}`);
+      }
+      const listKeys = await this.redis?.keys('post:public:list:*');
+      if (listKeys?.length) await this.redis?.deleteMany(listKeys);
+    } catch (err) {
+      this.logger.warn('Failed to clear post caches', (err as Error).message);
+    }
   }
 
   private buildFilter(query: any): PostFilter {

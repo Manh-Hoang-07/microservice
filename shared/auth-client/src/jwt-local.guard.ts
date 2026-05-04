@@ -21,7 +21,7 @@ export const USER = 'user';
 export class JwtLocalGuard implements CanActivate {
   private jwks: jose.JWTVerifyGetKey | null = null;
   private lastFetch = 0;
-  private readonly TTL_MS = 24 * 60 * 60 * 1000;
+  private readonly TTL_MS = 5 * 60 * 1000; // 5 minutes — matches Nginx JWKS cache
 
   constructor(
     private readonly reflector: Reflector,
@@ -49,14 +49,21 @@ export class JwtLocalGuard implements CanActivate {
 
     const jwksUrl = this.config.get<string>('AUTH_JWKS_URL');
 
-    // Dev mode: no JWKS URL → bypass auth (trust request)
+    // Fail-closed: refuse to authenticate without a JWKS endpoint.
+    // Previously this handed out a hardcoded { sub: 'dev' } identity which
+    // allowed any caller to bypass auth if the env var was accidentally unset.
     if (!jwksUrl) {
-      const request = context.switchToHttp().getRequest();
-      request.user = { id: 0, sub: 'dev' };
-      return true;
+      throw new UnauthorizedException('AUTH_JWKS_URL not configured — cannot verify tokens');
     }
 
     const payload = await this.verifyToken(token, jwksUrl);
+
+    // Refresh tokens are signed with the same keypair as access tokens but
+    // carry { type: 'refresh' }. They must never authorize a regular request.
+    if ((payload as any)?.type === 'refresh') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
     const request = context.switchToHttp().getRequest();
     request.user = payload;
     return true;
@@ -69,6 +76,7 @@ export class JwtLocalGuard implements CanActivate {
     if (!jwksUrl) return;
     try {
       const payload = await this.verifyToken(token, jwksUrl);
+      if ((payload as any)?.type === 'refresh') return;
       const request = context.switchToHttp().getRequest();
       request.user = payload;
     } catch {
@@ -84,7 +92,13 @@ export class JwtLocalGuard implements CanActivate {
       this.jwks = jose.createRemoteJWKSet(new URL(jwksUrl));
       this.lastFetch = Date.now();
     }
-    const { payload } = await jose.jwtVerify(token, this.jwks);
+    const issuer = this.config.get<string>('JWT_ISSUER') || 'auth-service';
+    const audience = this.config.get<string>('JWT_AUDIENCE') || 'comic-platform';
+    const { payload } = await jose.jwtVerify(token, this.jwks, {
+      algorithms: ['RS256'],
+      issuer,
+      audience,
+    });
     return payload;
   }
 

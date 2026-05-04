@@ -79,5 +79,8 @@
     "nodemon": "^3.1.14",
     "ts-jest": "^29.4.9",
     "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "isomorphic-dompurify": "^3.12.0"
   }
 }

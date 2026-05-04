@@ -9,7 +9,7 @@ import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from '@package/redis';
-import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
+import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule, AuditModule } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
 
@@ -40,6 +40,7 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
     HealthModule.register('comic-service'),
     MetricsModule,
     CommonKafkaModule,
+    AuditModule,
     KafkaModule,
     ComicModule,
     ChapterModule,

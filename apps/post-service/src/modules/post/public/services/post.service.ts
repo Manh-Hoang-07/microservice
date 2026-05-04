@@ -12,6 +12,12 @@ export class PublicPostService {
   ) {}
 
   async getList(query: any = {}) {
+    const cacheKey = `post:public:list:${JSON.stringify(query)}`;
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+
     const options = parseQueryOptions(query);
 
     const filter: PostFilter = { status: PUBLIC_POST_STATUSES };
@@ -35,13 +41,25 @@ export class PublicPostService {
       this.postRepo.count(filter),
     ]);
 
-    return {
+    const result = {
       data: data.map((p) => this.transform(p)),
       meta: createPaginationMeta(options, total),
     };
+
+    try {
+      await this.redis.set(cacheKey, JSON.stringify(result), 60);
+    } catch {}
+
+    return result;
   }
 
   async getBySlug(slug: string, requesterKey?: string) {
+    const cacheKey = `post:public:detail:${slug}`;
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+
     const post = await this.postRepo.findBySlug(slug, PUBLIC_POST_STATUSES);
     if (!post) throw new NotFoundException('Post not found');
 
@@ -57,7 +75,13 @@ export class PublicPostService {
       }
     }
 
-    return this.transform(post);
+    const result = this.transform(post);
+
+    try {
+      await this.redis.set(cacheKey, JSON.stringify(result), 120);
+    } catch {}
+
+    return result;
   }
 
   private transform(entity: any) {
