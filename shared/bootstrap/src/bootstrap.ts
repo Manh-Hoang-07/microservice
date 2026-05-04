@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { TransformInterceptor } from '@package/common';
 import { randomUUID } from 'crypto';
 import helmet from 'helmet';
 import { JsonLogger } from './json-logger';

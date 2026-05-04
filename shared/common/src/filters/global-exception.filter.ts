@@ -7,6 +7,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ResponseUtil } from '../response/response.util';
+
+const IGNORED_404_PATHS = [
+  '/favicon.ico',
+  '/.well-known/appspecific/com.chrome.devtools.json',
+  '/robots.txt',
+];
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -17,32 +24,61 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: string | string[] = 'Internal server error';
-    let errors: unknown = undefined;
-
     if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const res = exception.getResponse();
-      if (typeof res === 'string') {
-        message = res;
-      } else if (typeof res === 'object' && res !== null) {
-        message = (res as any).message ?? message;
-        errors = (res as any).errors;
+      const status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+
+      // Already in ApiResponse format → send directly
+      if (isApiResponseFormat(exceptionResponse)) {
+        response.status(status).json(exceptionResponse);
+        return;
       }
-    } else {
-      this.logger.error(
-        `Unhandled exception on ${request.method} ${request.url}`,
-        exception instanceof Error ? exception.stack : String(exception),
-      );
+
+      const { message, errors } = extractErrorDetails(exception, exceptionResponse);
+
+      if (this.shouldLog(status, request.url)) {
+        this.logger.error(`HTTP ${status} – ${message}`, exception.stack);
+      }
+
+      response.status(status).json(ResponseUtil.error(message, 'ERROR', status, errors));
+      return;
     }
 
-    response.status(status).json({
-      statusCode: status,
-      message,
-      ...(errors !== undefined ? { errors } : {}),
-      path: request.url,
-      timestamp: new Date().toISOString(),
-    });
+    // Unhandled (non-HTTP) exception
+    this.logger.error(
+      `Unhandled exception on ${request.method} ${request.url}`,
+      exception instanceof Error ? exception.stack : String(exception),
+    );
+
+    response
+      .status(HttpStatus.INTERNAL_SERVER_ERROR)
+      .json(ResponseUtil.error('Internal server error', 'INTERNAL_SERVER_ERROR', HttpStatus.INTERNAL_SERVER_ERROR));
   }
+
+  private shouldLog(status: number, url: string): boolean {
+    if (status !== HttpStatus.NOT_FOUND) return true;
+    return !IGNORED_404_PATHS.some((path) => url.includes(path));
+  }
+}
+
+function isApiResponseFormat(res: any): boolean {
+  return res !== null && typeof res === 'object' && 'success' in res && 'code' in res && 'timestamp' in res;
+}
+
+function extractErrorDetails(exception: HttpException, exceptionResponse: string | object): { message: string; errors: any } {
+  let message = exception.message;
+  let errors: any = null;
+
+  if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+    const errorObj = exceptionResponse as Record<string, any>;
+    message = errorObj.message || message;
+    errors = errorObj.errors || errorObj.error || null;
+
+    if (Array.isArray(errorObj.message)) {
+      message = errorObj.message.length > 0 ? errorObj.message[0] : 'Validation failed';
+      errors = errorObj.message;
+    }
+  }
+
+  return { message, errors };
 }
