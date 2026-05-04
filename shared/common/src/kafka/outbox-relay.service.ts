@@ -1,7 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Kafka, Producer } from 'kafkajs';
+import { KafkaJS } from '@confluentinc/kafka-javascript';
 import { IdempotencyService } from './idempotency.service';
+
+type Producer = KafkaJS.Producer;
 
 export interface OutboxRelayOptions {
   clientId: string;
@@ -56,12 +58,14 @@ export class OutboxRelayService implements OnModuleDestroy {
     this.prisma = prisma;
 
     if (this.config.get<boolean>('kafka.enabled')) {
-      const kafka = new Kafka({
-        clientId: options.clientId,
-        brokers: this.config.get<string[]>('kafka.brokers') || ['localhost:9093'],
+      const kafka = new KafkaJS.Kafka({
+        kafkaJS: {
+          clientId: options.clientId,
+          brokers: this.config.get<string[]>('kafka.brokers') || ['localhost:9093'],
+        },
       });
       this.producer = kafka.producer();
-      this.producer.connect().catch((err) => {
+      this.producer!.connect().catch((err) => {
         this.logger.error('Kafka producer connect failed', err);
         this.producer = null;
       });

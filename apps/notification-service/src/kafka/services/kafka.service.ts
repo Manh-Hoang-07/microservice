@@ -1,7 +1,11 @@
 import { Injectable, Logger, OnModuleInit, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Kafka, Consumer, EachMessagePayload, KafkaConfig, Producer } from 'kafkajs';
+import { KafkaJS } from '@confluentinc/kafka-javascript';
 import { IdempotencyService } from '@package/common';
+
+type Consumer = KafkaJS.Consumer;
+type EachMessagePayload = KafkaJS.EachMessagePayload;
+type Producer = KafkaJS.Producer;
 import { KafkaHandler } from '../handlers/kafka-handler.interface';
 import { ChapterPublishedHandler } from '../handlers/chapter-published.handler';
 import { CommentCreatedHandler } from '../handlers/comment-created.handler';
@@ -88,29 +92,32 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
       return;
     }
 
-    const kafkaConfig: KafkaConfig = {
-      clientId: 'notification-service',
-      brokers,
-      retry: { retries: 8, initialRetryTime: 300, maxRetryTime: 30_000 },
-    };
-    const kafka = new Kafka(kafkaConfig);
-    this.consumer = kafka.consumer({
-      groupId: groupId || 'notification-service',
-      sessionTimeout: 30_000,
-      heartbeatInterval: 3_000,
+    const kafka = new KafkaJS.Kafka({
+      kafkaJS: {
+        clientId: 'notification-service',
+        brokers,
+        retry: { retries: 8, initialRetryTime: 300, maxRetryTime: 30_000 },
+      },
     });
-    await this.consumer.connect();
+    this.consumer = kafka.consumer({
+      kafkaJS: {
+        groupId: groupId || 'notification-service',
+        sessionTimeout: 30_000,
+        heartbeatInterval: 3_000,
+        fromBeginning: false,
+      },
+    });
+    await this.consumer!.connect();
 
-    // Dedicated producer for DLQ messages. Lazy-created on first failure to
-    // avoid the connect cost when nothing fails.
-    this.dlqProducer = kafka.producer({ allowAutoTopicCreation: true });
-    await this.dlqProducer.connect();
+    // Dedicated producer for DLQ messages.
+    this.dlqProducer = kafka.producer();
+    await this.dlqProducer!.connect();
 
     for (const topic of this.handlers.keys()) {
-      await this.consumer.subscribe({ topic, fromBeginning: false });
+      await this.consumer!.subscribe({ topic });
     }
 
-    await this.consumer.run({
+    await this.consumer!.run({
       eachMessage: async (payload) => this.dispatch(payload),
     });
   }
