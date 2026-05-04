@@ -1,1 +1,5 @@
-ALTER TABLE "outbox" RENAME TO "marketing_outbox";
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'marketing_outbox') THEN
+    ALTER TABLE "marketing_outbox" RENAME TO "outbox";
+  END IF;
+END $$;

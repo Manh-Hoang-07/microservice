@@ -61,7 +61,7 @@ export class UserRepository {
     payload: Record<string, unknown>,
     tx: Tx = this.prisma,
   ) {
-    return tx.authOutbox.create({
+    return tx.outbox.create({
       data: {
         event_type: eventType,
         payload: payload as any,

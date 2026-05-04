@@ -193,7 +193,7 @@ model Comment {
   @@map("comments")
 }
 
-model PostOutbox {
+model Outbox {
   id         BigInt   @id @default(autoincrement())
   event_type String   @db.VarChar(100)
   payload    Json
@@ -201,5 +201,5 @@ model PostOutbox {
   created_at DateTime @default(now()) @db.Timestamptz()
 
   @@index([published, created_at], map: "outbox_idx_unpublished")
-  @@map("post_outbox")
+  @@map("outbox")
 }

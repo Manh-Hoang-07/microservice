@@ -3,7 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { OutboxRelayService } from '@package/common';
 import { PrismaService } from '../../database/prisma.service';
 
-const TABLE_NAME = 'auth_outbox';
+const TABLE_NAME = 'outbox';
 const TOPIC_MAP: Record<string, string> = {
   'user.registered': 'user.registered',
   'user.password.reset': 'user.password.reset',

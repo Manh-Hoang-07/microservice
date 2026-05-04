@@ -18,11 +18,7 @@ export interface OutboxRelayOptions {
 // Maps DB table name → Prisma model property name.
 // Raw SQL uses the DB name; Prisma Client uses the model property.
 const ALLOWED_TABLES: Record<string, string> = {
-  'auth_outbox': 'authOutbox',
-  'comic_outbox': 'comicOutbox',
-  'post_outbox': 'postOutbox',
-  'marketing_outbox': 'marketingOutbox',
-  'iam_outbox': 'iamOutbox',
+  'outbox': 'outbox',
 };
 
 @Injectable()
