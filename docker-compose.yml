@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: auth_db
     ports:
       - "5433:5432"
@@ -71,7 +71,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: comic_db
     ports:
       - "5434:5432"
@@ -89,7 +89,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: notification_db
     ports:
       - "5435:5432"
@@ -107,7 +107,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: config_db
     ports:
       - "5436:5432"
@@ -125,7 +125,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: post_db
     ports:
       - "5438:5432"
@@ -143,7 +143,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: introduction_db
     ports:
       - "5439:5432"
@@ -161,7 +161,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: marketing_db
     ports:
       - "5440:5432"
@@ -179,7 +179,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: iam_db
     ports:
       - "5441:5432"
@@ -397,7 +397,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3002
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@auth-db:5432/auth_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@auth-db:5432/auth_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://auth-redis:6379
       JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM:-}
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM:-}
@@ -441,7 +441,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3005
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@config-db:5432/config_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@config-db:5432/config_db?connection_limit=5&pool_timeout=30
       AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set (>=32 chars)}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
@@ -499,7 +499,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3001
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@comic-db:5432/comic_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@comic-db:5432/comic_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://comic-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -531,7 +531,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3004
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@notification-db:5432/notification_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@notification-db:5432/notification_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://notification-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -568,7 +568,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3007
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@post-db:5432/post_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@post-db:5432/post_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://post-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -596,7 +596,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3010
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@introduction-db:5432/introduction_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@introduction-db:5432/introduction_db?connection_limit=5&pool_timeout=30
       AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     ports:
@@ -623,7 +623,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3009
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@marketing-db:5432/marketing_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@marketing-db:5432/marketing_db?connection_limit=5&pool_timeout=30
       AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
@@ -652,7 +652,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3008
       GLOBAL_PREFIX: api/v1
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@iam-db:5432/iam_db?connection_limit=5&pool_timeout=30
+      DATABASE_URL: postgresql://postgres:postgres@iam-db:5432/iam_db?connection_limit=5&pool_timeout=30
       REDIS_URL: redis://iam-redis:6379
       AUTH_JWKS_URL: http://auth-service:3002/.well-known/jwks.json
       RBAC_CACHE_TTL: ${RBAC_CACHE_TTL:-86400}
