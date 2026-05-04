@@ -92,6 +92,8 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
     }),
   );
 
+  app.useGlobalInterceptors(new TransformInterceptor());
+
   await app.listen(port);
   // Use Nest's Logger so the structured-log shipper (pino/winston) and OTel
   // logs bridge can consume the startup line. Previously a raw console.log
