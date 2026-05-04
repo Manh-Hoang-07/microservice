@@ -4,14 +4,12 @@ import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../../database/prisma.service';
 import { ChapterFilter, ChapterRepository } from '../../repositories/chapter.repository';
 
 @Injectable()
 export class AdminChapterService {
   constructor(
     private readonly chapterRepo: ChapterRepository,
-    private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
 
@@ -119,57 +117,35 @@ export class AdminChapterService {
     return { success: true };
   }
 
-  /**
-   * Atomic publish: update last_chapter_id and emit the outbox event in
-   * one transaction. Previously these were 3 separate Prisma calls — a
-   * crash between them committed the chapter as published without ever
-   * emitting `comic.chapter.published`, so notification fan-out missed.
-   *
-   * IDs are stringified in the payload because BigInt > 2^53 silently
-   * corrupts when narrowed to Number (was using `Number(comic.id)`).
-   */
   private async handlePublish(chapter: any) {
     const kafkaEnabled = !!this.config.get<boolean>('kafka.enabled');
 
-    await this.prisma.$transaction(async (tx) => {
-      // Only promote `last_chapter_id` when this chapter is actually the
-      // newest published one (handles re-publish of an older chapter).
-      const max = await tx.chapter.aggregate({
-        where: { comic_id: chapter.comic_id, status: 'published' },
-        _max: { chapter_index: true },
-      });
-      const isLatest =
-        max._max.chapter_index == null ||
-        chapter.chapter_index >= max._max.chapter_index;
-      if (isLatest) {
-        await tx.comic.update({
-          where: { id: chapter.comic_id },
-          data: { last_chapter_id: chapter.id, last_chapter_updated_at: new Date() },
-        });
-      }
+    await this.chapterRepo.withTransaction(async (tx) => {
+      await this.chapterRepo.updateComicLastChapterIfLatest(
+        chapter.comic_id,
+        chapter.id,
+        chapter.chapter_index,
+        tx,
+      );
 
       if (!kafkaEnabled) return;
 
-      const comic = await tx.comic.findUnique({
-        where: { id: chapter.comic_id },
-        select: { id: true, title: true, slug: true },
-      });
+      const comic = await this.chapterRepo.findComicBasic(chapter.comic_id, tx);
       if (!comic) return;
 
-      await tx.outbox.create({
-        data: {
-          event_type: 'comic.chapter.published',
-          payload: {
-            comic_id: String(comic.id),
-            comic_title: comic.title,
-            comic_slug: comic.slug,
-            chapter_id: String(chapter.id),
-            chapter_index: chapter.chapter_index,
-            chapter_label: chapter.chapter_label || `Chapter ${chapter.chapter_index}`,
-            published_at: new Date().toISOString(),
-          },
+      await this.chapterRepo.createOutbox(
+        'comic.chapter.published',
+        {
+          comic_id: String(comic.id),
+          comic_title: comic.title,
+          comic_slug: comic.slug,
+          chapter_id: String(chapter.id),
+          chapter_index: chapter.chapter_index,
+          chapter_label: chapter.chapter_label || `Chapter ${chapter.chapter_index}`,
+          published_at: new Date().toISOString(),
         },
-      });
+        tx,
+      );
     });
   }
 }

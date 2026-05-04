@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
-import { toPrimaryKey } from 'src/types';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
+
+type Tx = Prisma.TransactionClient | PrismaService;
 
 export interface CommentFilter {
   post_id?: any;
@@ -60,14 +62,31 @@ export class CommentRepository {
     return this.prisma.comment.findUnique({ where: { id: toPrimaryKey(id) } });
   }
 
-  create(data: Record<string, any>) {
-    return this.prisma.comment.create({
+  /**
+   * Checks whether a post with the given id exists and is in one of the
+   * supplied public statuses.
+   */
+  existsPublicPost(postId: PrimaryKey, statuses: string[]) {
+    return this.prisma.post.findFirst({
+      where: { id: postId, status: { in: statuses } },
+      select: { id: true, status: true },
+    });
+  }
+
+  create(data: Record<string, any>, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.comment.create({
       data: this.normalizePayload(data) as Prisma.CommentUncheckedCreateInput,
     });
   }
 
-  createOutbox(event_type: string, payload: Record<string, any>) {
-    return this.prisma.outbox.create({ data: { event_type, payload } });
+  createOutbox(event_type: string, payload: Record<string, any>, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.outbox.create({ data: { event_type, payload } });
+  }
+
+  async withTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 
   update(id: any, data: Record<string, any>) {

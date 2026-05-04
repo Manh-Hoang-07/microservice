@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { parseQueryOptions } from '@package/common';
-import { PrimaryKey } from 'src/types';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { GroupRepository } from '../../repositories/group.repository';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
 import { CreateGroupDto } from '../dtos/create-group.dto';
@@ -21,7 +21,7 @@ export class GroupService {
     const where: any = {};
     if (query.type) where.type = query.type;
     if (query.status) where.status = query.status;
-    if (query.context_id) where.context_id = BigInt(query.context_id);
+    if (query.context_id) where.context_id = toPrimaryKey(query.context_id);
     const [data, total] = await Promise.all([
       this.repo.findMany(where, options.skip, options.take),
       this.repo.count(where),
@@ -49,10 +49,10 @@ export class GroupService {
       code: dto.code,
       name: dto.name,
       description: dto.description,
-      context_id: BigInt(dto.context_id),
+      context_id: toPrimaryKey(dto.context_id),
       created_user_id: actorId,
     };
-    if (dto.owner_id) data.owner_id = BigInt(dto.owner_id);
+    if (dto.owner_id) data.owner_id = toPrimaryKey(dto.owner_id);
     return this.repo.create(data);
   }
 
@@ -63,7 +63,7 @@ export class GroupService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.status !== undefined) data.status = dto.status;
     if ('owner_id' in dto) {
-      data.owner_id = dto.owner_id ? BigInt(dto.owner_id) : null;
+      data.owner_id = dto.owner_id ? toPrimaryKey(dto.owner_id) : null;
     }
     const result = await this.repo.update(id, data);
     if (dto.status !== undefined) {
@@ -91,14 +91,14 @@ export class GroupService {
 
   async addMember(id: PrimaryKey, dto: AddMemberDto) {
     await this.getOne(id);
-    await this.repo.addMember(id, BigInt(dto.userId));
+    await this.repo.addMember(id, toPrimaryKey(dto.userId));
     await this.rbacCache.clearAllUserCaches(dto.userId);
     return { added: true };
   }
 
   async removeMember(id: PrimaryKey, userId: string) {
     await this.getOne(id);
-    await this.repo.removeMember(id, BigInt(userId));
+    await this.repo.removeMember(id, toPrimaryKey(userId));
     await this.rbacCache.clearAllUserCaches(userId);
     return { removed: true };
   }

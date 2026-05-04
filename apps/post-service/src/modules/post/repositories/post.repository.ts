@@ -179,9 +179,49 @@ export class PostRepository {
     return this.prisma.post.findUnique({ where: { slug } });
   }
 
-  /** Direct Prisma access for service-level transactions. */
-  get client(): PrismaService {
-    return this.prisma;
+  /**
+   * Creates a post together with its stats row and optional category/tag
+   * links inside a single transaction.  Returns the post with relations.
+   */
+  async createWithRelations(
+    data: Record<string, any>,
+    categoryIds?: any[],
+    tagIds?: any[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const post = await this.create(data, tx);
+      await this.createStats(post.id, tx);
+      if (categoryIds?.length) {
+        await this.syncCategories(post.id, categoryIds, tx);
+      }
+      if (tagIds?.length) {
+        await this.syncTags(post.id, tagIds, tx);
+      }
+      return tx.post.findUnique({
+        where: { id: post.id },
+        include: WITH_RELATIONS,
+      });
+    });
+  }
+
+  /**
+   * Updates a post and optionally syncs category/tag links atomically.
+   */
+  async updateWithRelations(
+    id: any,
+    data: Record<string, any>,
+    categoryIds?: any[],
+    tagIds?: any[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.update(id, data, tx);
+      if (categoryIds !== undefined) {
+        await this.syncCategories(id, categoryIds, tx);
+      }
+      if (tagIds !== undefined) {
+        await this.syncTags(id, tagIds, tx);
+      }
+    });
   }
 
   create(data: Record<string, any>, tx: Tx = this.prisma) {

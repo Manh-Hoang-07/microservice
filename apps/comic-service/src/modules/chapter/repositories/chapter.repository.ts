@@ -3,6 +3,8 @@ import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
+type Tx = Prisma.TransactionClient | PrismaService;
+
 export interface ChapterFilter {
   comic_id?: any;
   status?: string;
@@ -159,15 +161,51 @@ export class ChapterRepository {
     });
   }
 
-  findComicBasic(comicId: any) {
-    return this.prisma.comic.findUnique({
+  /**
+   * Check if the given chapter is the latest published and, if so, update
+   * the comic's last_chapter pointer. Accepts an optional transaction client.
+   */
+  async updateComicLastChapterIfLatest(
+    comicId: any,
+    chapterId: any,
+    chapterIndex: number,
+    tx?: Tx,
+  ) {
+    const client = tx ?? this.prisma;
+    const cid = toPrimaryKey(comicId);
+    const chid = toPrimaryKey(chapterId);
+
+    const max = await client.chapter.aggregate({
+      where: { comic_id: cid, status: 'published' },
+      _max: { chapter_index: true },
+    });
+
+    const isLatest =
+      max._max.chapter_index == null ||
+      chapterIndex >= max._max.chapter_index;
+    if (!isLatest) return null;
+
+    return client.comic.update({
+      where: { id: cid },
+      data: { last_chapter_id: chid, last_chapter_updated_at: new Date() },
+    });
+  }
+
+  findComicBasic(comicId: any, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.comic.findUnique({
       where: { id: toPrimaryKey(comicId) },
       select: { id: true, title: true, slug: true },
     });
   }
 
-  createOutbox(event_type: string, payload: Record<string, any>) {
-    return this.prisma.outbox.create({ data: { event_type, payload } });
+  createOutbox(event_type: string, payload: Record<string, any>, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.outbox.create({ data: { event_type, payload } });
+  }
+
+  async withTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {

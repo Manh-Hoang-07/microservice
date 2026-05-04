@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
-import { toPrimaryKey } from 'src/types';
+import { toPrimaryKey, PrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
+
+type Tx = Prisma.TransactionClient | PrismaService;
 
 export interface FollowFilter {
   user_id?: any;
@@ -35,21 +37,42 @@ export class FollowRepository {
     return this.prisma.follow.count({ where: this.buildWhere(filter) });
   }
 
-  findUnique(userId: any, comicId: any) {
-    return this.prisma.follow.findUnique({
+  findUnique(userId: any, comicId: any, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.follow.findUnique({
       where: { user_id_comic_id: { user_id: toPrimaryKey(userId), comic_id: toPrimaryKey(comicId) } },
     });
   }
 
-  create(userId: any, comicId: any) {
-    return this.prisma.follow.create({
+  create(userId: any, comicId: any, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.follow.create({
       data: { user_id: toPrimaryKey(userId), comic_id: toPrimaryKey(comicId) },
     });
   }
 
-  delete(userId: any, comicId: any) {
-    return this.prisma.follow.delete({
+  delete(userId: any, comicId: any, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.follow.delete({
       where: { user_id_comic_id: { user_id: toPrimaryKey(userId), comic_id: toPrimaryKey(comicId) } },
+    });
+  }
+
+  incrementFollowCount(comicId: PrimaryKey, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.stats.upsert({
+      where: { comic_id: comicId },
+      create: { comic_id: comicId, follow_count: BigInt(1) },
+      update: { follow_count: { increment: 1 } },
+    });
+  }
+
+  decrementFollowCount(comicId: PrimaryKey, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.stats.upsert({
+      where: { comic_id: comicId },
+      create: { comic_id: comicId, follow_count: BigInt(0) },
+      update: { follow_count: { decrement: 1 } },
     });
   }
 
@@ -63,7 +86,12 @@ export class FollowRepository {
     });
   }
 
-  createOutbox(event_type: string, payload: Record<string, any>) {
-    return this.prisma.outbox.create({ data: { event_type, payload } });
+  createOutbox(event_type: string, payload: Record<string, any>, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.outbox.create({ data: { event_type, payload } });
+  }
+
+  async withTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 }

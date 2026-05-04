@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Internal } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 
 @Internal()
 @Controller('internal/users')
@@ -14,7 +15,7 @@ export class InternalUsersController {
       .split(',')
       .map((id) => id.trim())
       .filter(Boolean)
-      .map((id) => BigInt(id));
+      .map((id) => toPrimaryKey(id));
 
     if (!idList.length) return [];
 

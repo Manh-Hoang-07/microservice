@@ -6,6 +6,7 @@ import { RbacRoleAssignmentService } from './rbac-role-assignment.service';
 import { RbacRepository } from '../repositories/rbac.repository';
 import { PERM } from '../constants/rbac.constants';
 import { RbacId, NullableRbacId } from '../types';
+import { toPrimaryKey } from 'src/types';
 
 function toAssignedSet(codes: Iterable<string>): Set<string> {
   return new Set(
@@ -143,7 +144,7 @@ export class RbacService {
     groupId: RbacId,
     actor: { id: RbacId; groupId: NullableRbacId },
   ): Promise<void> {
-    await this.assertCallerCanGrantRole(actor.id, actor.groupId, [BigInt(String(roleId))]);
+    await this.assertCallerCanGrantRole(actor.id, actor.groupId, [toPrimaryKey(roleId)]);
     await this.roleAssignmentService.assignRoleToUser(userId, roleId, groupId);
     await this.rbacCache.bumpVersion();
     await this.rbacCache.clearAllUserCaches(userId);
@@ -157,7 +158,7 @@ export class RbacService {
     actor: { id: RbacId; groupId: NullableRbacId },
     skipValidation = false,
   ): Promise<void> {
-    const targetIds = roleIds.map((r) => BigInt(String(r)));
+    const targetIds = roleIds.map((r) => toPrimaryKey(r));
     await this.assertCallerCanGrantRole(actor.id, actor.groupId, targetIds);
     const { before } = await this.roleAssignmentService.syncRolesInGroup(
       userId,

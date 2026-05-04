@@ -476,7 +476,7 @@ services:
       GLOBAL_PREFIX: ${GLOBAL_PREFIX:-api/v1}
       COMIC_SERVICE_URL: ${COMIC_SERVICE_URL:-http://comic-service:3001/api/v1}
       POST_SERVICE_URL: ${POST_SERVICE_URL:-http://post-service:3007/api/v1}
-      WEB_API_REDIS_URL: redis://web-api-redis:6379
+      REDIS_URL: redis://web-api-redis:6379
       SERVICE_TIMEOUT_MS: ${SERVICE_TIMEOUT_MS:-5000}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318

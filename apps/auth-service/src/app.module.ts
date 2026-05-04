@@ -23,6 +23,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
 import { InternalModule } from './internal/internal.module';
 import { KafkaModule } from './kafka/kafka.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { KafkaModule } from './kafka/kafka.module';
     AuditModule,
     InternalModule,
     KafkaModule,
+    UserModule,
   ],
   providers: [
     {

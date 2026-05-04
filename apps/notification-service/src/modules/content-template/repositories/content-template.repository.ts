@@ -32,6 +32,12 @@ export class ContentTemplateRepository {
     return this.prisma.contentTemplate.findFirst({ where });
   }
 
+  findActiveByCode(code: string) {
+    return this.prisma.contentTemplate.findFirst({
+      where: { code, status: 'active', category: 'render', type: 'email' },
+    });
+  }
+
   create(data: Prisma.ContentTemplateCreateInput) {
     return this.prisma.contentTemplate.create({ data });
   }

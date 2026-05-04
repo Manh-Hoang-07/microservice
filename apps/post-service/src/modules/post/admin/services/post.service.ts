@@ -55,25 +55,12 @@ export class AdminPostService {
       });
 
       try {
-        return await this.postRepo.client.$transaction(async (tx) => {
-          const post = await this.postRepo.create({ ...dto, slug }, tx);
-          await this.postRepo.createStats(post.id, tx);
-          if (dto.category_ids?.length) {
-            await this.postRepo.syncCategories(post.id, dto.category_ids, tx);
-          }
-          if (dto.tag_ids?.length) {
-            await this.postRepo.syncTags(post.id, dto.tag_ids, tx);
-          }
-          // Re-read inside the same tx so the response includes relations.
-          return tx.post.findUnique({
-            where: { id: post.id },
-            include: {
-              stats: true,
-              categoryLinks: { select: { category: { select: { id: true, name: true, slug: true } } } },
-              tagLinks: { select: { tag: { select: { id: true, name: true, slug: true } } } },
-            },
-          });
-        }).then((post) => this.transform(post));
+        const post = await this.postRepo.createWithRelations(
+          { ...dto, slug },
+          dto.category_ids,
+          dto.tag_ids,
+        );
+        return this.transform(post);
       } catch (err) {
         if (
           err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -109,15 +96,7 @@ export class AdminPostService {
     }
 
     try {
-      await this.postRepo.client.$transaction(async (tx) => {
-        await this.postRepo.update(id, data, tx);
-        if (dto.category_ids !== undefined) {
-          await this.postRepo.syncCategories(id, dto.category_ids, tx);
-        }
-        if (dto.tag_ids !== undefined) {
-          await this.postRepo.syncTags(id, dto.tag_ids, tx);
-        }
-      });
+      await this.postRepo.updateWithRelations(id, data, dto.category_ids, dto.tag_ids);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new BadRequestException('Slug already in use');

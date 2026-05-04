@@ -30,7 +30,7 @@ export class GatewayCacheService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     const url = this.config.get<string>('gateway.redisUrl', '');
     if (!url) {
-      this.logger.warn('GATEWAY_REDIS_URL not set — caching disabled');
+      this.logger.warn('REDIS_URL not set — caching disabled');
       return;
     }
     try {

@@ -25,13 +25,13 @@ export class PermissionController {
   @Permission('permission.manage')
   @Post()
   create(@Body() dto: CreatePermissionDto, @Req() req: any) {
-    return this.service.create(dto, BigInt(req.user.sub));
+    return this.service.create(dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('permission.manage')
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePermissionDto, @Req() req: any) {
-    return this.service.update(toPrimaryKey(id), dto, BigInt(req.user.sub));
+    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('permission.manage')

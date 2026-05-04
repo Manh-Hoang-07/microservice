@@ -26,13 +26,13 @@ export class RoleController {
   @Permission('role.manage')
   @Post()
   create(@Body() dto: CreateRoleDto, @Req() req: any) {
-    return this.service.create(dto, BigInt(req.user.sub));
+    return this.service.create(dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('role.manage')
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateRoleDto, @Req() req: any) {
-    return this.service.update(toPrimaryKey(id), dto, BigInt(req.user.sub));
+    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('role.manage')

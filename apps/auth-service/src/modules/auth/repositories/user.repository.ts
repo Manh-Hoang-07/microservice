@@ -11,11 +11,6 @@ export class UserRepository {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Expose Prisma instance for service-level transactions. */
-  get client(): PrismaService {
-    return this.prisma;
-  }
-
   findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
   }
@@ -60,7 +55,7 @@ export class UserRepository {
       });
   }
 
-  /** Insert an outbox event in the same transaction as a business write. */
+  /** Insert an outbox event — call within a transaction. */
   enqueueOutboxEvent(
     eventType: string,
     payload: Record<string, unknown>,
@@ -72,5 +67,10 @@ export class UserRepository {
         payload: payload as any,
       },
     });
+  }
+
+  /** Run multiple repo operations in a single transaction. */
+  async withTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 }

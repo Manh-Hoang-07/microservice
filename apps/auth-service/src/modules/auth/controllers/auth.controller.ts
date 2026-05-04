@@ -29,6 +29,7 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendOtpDto } from '../dto/send-otp.dto';
 import { LogoutDto } from '../dto/logout.dto';
 import { Public } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import {
   REFRESH_COOKIE,
   clearAuthCookies,
@@ -105,7 +106,7 @@ export class AuthController {
   ) {
     const accessToken = extractBearer(authHeader);
     const userId = requireUserId(req);
-    await this.authService.logoutAll(BigInt(userId), accessToken);
+    await this.authService.logoutAll(toPrimaryKey(userId), accessToken);
     clearAuthCookies(req, res, this.isProd);
     return { success: true };
   }
@@ -134,7 +135,7 @@ export class AuthController {
   @Get('me')
   async me(@Req() req: Request) {
     const userId = requireUserId(req);
-    return this.authService.me(BigInt(userId));
+    return this.authService.me(toPrimaryKey(userId));
   }
 
   @Public()

@@ -27,7 +27,7 @@ export const envValidationSchema = Joi.object({
   SERVICE_TIMEOUT_MS: Joi.number().default(5000),
 
   // Redis (cache, optional)
-  GATEWAY_REDIS_URL: Joi.string().optional().allow(''),
+  REDIS_URL: Joi.string().optional().allow(''),
 
   // JWT (consumer) — required in prod
   AUTH_JWKS_URL: Joi.alternatives().conditional('NODE_ENV', {

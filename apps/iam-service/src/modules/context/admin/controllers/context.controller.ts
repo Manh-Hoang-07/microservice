@@ -26,13 +26,13 @@ export class ContextController {
   @Permission('context.manage')
   @Post()
   create(@Body() dto: CreateContextDto, @Req() req: any) {
-    return this.service.create(dto, BigInt(req.user.sub));
+    return this.service.create(dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('context.manage')
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateContextDto, @Req() req: any) {
-    return this.service.update(toPrimaryKey(id), dto, BigInt(req.user.sub));
+    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(req.user.sub));
   }
 
   @Permission('context.manage')

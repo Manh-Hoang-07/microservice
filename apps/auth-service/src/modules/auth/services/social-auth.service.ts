@@ -93,7 +93,7 @@ export class SocialAuthService {
       const suffix = i < 5 ? randomBytes(3).toString('hex') : randomBytes(8).toString('hex');
       const candidate = `${base}_${suffix}`;
       try {
-        return await this.userRepo.client.$transaction(async (tx) => {
+        return await this.userRepo.withTransaction(async (tx) => {
           const created = await this.userRepo.create(
             {
               email,

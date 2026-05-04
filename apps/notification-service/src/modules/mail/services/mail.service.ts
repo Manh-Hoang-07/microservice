@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { RedisService } from '@package/redis';
-import { PrismaService } from '../../../database/prisma.service';
+import { ContentTemplateRepository } from '../../content-template/repositories/content-template.repository';
 import { SendMailOptions } from '../interfaces/send-mail-options.interface';
 
 const VAR_PATTERN = /\{\{\s*([\w.]{1,80})\s*\}\}/g;
@@ -65,7 +65,7 @@ export class MailService implements OnModuleInit {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly contentTemplateRepo: ContentTemplateRepository,
     private readonly redis: RedisService,
   ) {}
 
@@ -216,9 +216,7 @@ export class MailService implements OnModuleInit {
     templateCode: string,
     options: { to: string | string[]; variables?: Record<string, any>; subject?: string },
   ): Promise<void> {
-    const template = await this.prisma.contentTemplate.findFirst({
-      where: { code: templateCode, status: 'active', category: 'render', type: 'email' },
-    });
+    const template = await this.contentTemplateRepo.findActiveByCode(templateCode);
     if (!template?.content) {
       this.logger.warn(`Template ${templateCode} not found or empty`);
       return;

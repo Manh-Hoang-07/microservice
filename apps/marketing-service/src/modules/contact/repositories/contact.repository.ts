@@ -3,6 +3,8 @@ import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../database/prisma.service';
 
+type Tx = Prisma.TransactionClient | PrismaService;
+
 export interface ContactFilter {
   search?: string;
   status?: string;
@@ -44,8 +46,9 @@ export class ContactRepository {
     return this.prisma.contact.findUnique({ where: { id: toPrimaryKey(id) } });
   }
 
-  create(data: Record<string, any>) {
-    return this.prisma.contact.create({
+  create(data: Record<string, any>, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.contact.create({
       data: data as Prisma.ContactUncheckedCreateInput,
     });
   }
@@ -57,8 +60,13 @@ export class ContactRepository {
     });
   }
 
-  createOutbox(event_type: string, payload: Record<string, any>) {
-    return this.prisma.outbox.create({ data: { event_type, payload } });
+  createOutbox(event_type: string, payload: Record<string, any>, tx?: Tx) {
+    const client = tx ?? this.prisma;
+    return client.outbox.create({ data: { event_type, payload } });
+  }
+
+  async withTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {

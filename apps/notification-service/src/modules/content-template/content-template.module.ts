@@ -6,5 +6,6 @@ import { ContentTemplateRepository } from './repositories/content-template.repos
 @Module({
   controllers: [AdminContentTemplateController],
   providers: [ContentTemplateRepository, AdminContentTemplateService],
+  exports: [ContentTemplateRepository],
 })
 export class ContentTemplateModule {}

@@ -185,9 +185,31 @@ export class ComicRepository {
     return this.prisma.comic.findUnique({ where: { slug } });
   }
 
-  /** Direct Prisma access for service-level transactions. */
-  get client(): PrismaService {
-    return this.prisma;
+  async createWithRelations(
+    data: Record<string, any>,
+    categoryIds?: any[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const comic = await this.create(data, tx);
+      await this.createStats(comic.id, tx);
+      if (categoryIds?.length) {
+        await this.syncCategories(comic.id, categoryIds, tx);
+      }
+      return comic;
+    });
+  }
+
+  async updateWithRelations(
+    id: any,
+    data: Record<string, any>,
+    categoryIds?: any[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.update(id, data, tx);
+      if (categoryIds !== undefined) {
+        await this.syncCategories(id, categoryIds, tx);
+      }
+    });
   }
 
   create(data: Record<string, any>, tx: Tx = this.prisma) {
