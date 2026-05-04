@@ -1,13 +1,25 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { GalleryFilter, GalleryRepository } from '../../repositories/gallery.repository';
 
 @Injectable()
 export class AdminGalleryService {
-  constructor(private readonly galleryRepo: GalleryRepository) {}
+  constructor(
+    private readonly galleryRepo: GalleryRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(slug?: string) {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('intro:public:gallery:list').catch(() => {});
+    if (slug) {
+      await this.redis.del(`intro:public:gallery:detail:${slug}`).catch(() => {});
+    }
+  }
 
   private mapP2002(err: unknown): never {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -46,7 +58,9 @@ export class AdminGalleryService {
       findOne: (filter: any) => this.galleryRepo.findBySlug(filter.slug),
     });
     try {
-      return await this.galleryRepo.create({ ...dto, slug, images: dto.images ?? [] });
+      const result = await this.galleryRepo.create({ ...dto, slug, images: dto.images ?? [] });
+      await this.clearCache();
+      return result;
     } catch (err) {
       this.mapP2002(err);
     }
@@ -66,15 +80,21 @@ export class AdminGalleryService {
     }
 
     try {
-      return await this.galleryRepo.update(id, data);
+      const result = await this.galleryRepo.update(id, data);
+      await this.clearCache((current as any).slug);
+      if (data.slug && data.slug !== (current as any).slug) {
+        await this.clearCache(data.slug);
+      }
+      return result;
     } catch (err) {
       this.mapP2002(err);
     }
   }
 
   async delete(id: any) {
-    await this.getOne(id);
+    const item = await this.getOne(id);
     await this.galleryRepo.delete(id);
+    await this.clearCache((item as any).slug);
     return { success: true };
   }
 }

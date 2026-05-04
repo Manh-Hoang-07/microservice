@@ -4,37 +4,47 @@ import { CategoryRepository } from '../../repositories/category.repository';
 
 @Injectable()
 export class PublicCategoryService {
+  private readonly inflight = new Map<string, Promise<any>>();
+
   constructor(
     private readonly categoryRepo: CategoryRepository,
     private readonly redis: RedisService,
   ) {}
 
   async getAll() {
-    const cacheKey = 'comic:public:categories';
+    return this.getOrSet('comic:public:categories', 600, async () => {
+      const data = await this.categoryRepo.findAll();
+      return { data };
+    });
+  }
+
+  private async getOrSet<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T> {
     try {
       if (this.redis.isEnabled()) {
-        const raw = await this.redis.get(cacheKey);
+        const raw = await this.redis.get(key);
         if (raw) return JSON.parse(raw);
       }
-    } catch {
-      // silent
-    }
+    } catch {}
 
-    const data = await this.categoryRepo.findAll();
-    const result = { data };
+    const existing = this.inflight.get(key);
+    if (existing) return existing as Promise<T>;
 
-    try {
-      if (this.redis.isEnabled()) {
-        await this.redis.set(
-          cacheKey,
-          JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
-          600,
-        );
-      }
-    } catch {
-      // silent
-    }
+    const promise = factory().then(async (result) => {
+      try {
+        if (this.redis.isEnabled()) {
+          await this.redis.set(
+            key,
+            JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+            ttl,
+          );
+        }
+      } catch {}
+      return result;
+    }).finally(() => {
+      this.inflight.delete(key);
+    });
 
-    return result;
+    this.inflight.set(key, promise);
+    return promise;
   }
 }

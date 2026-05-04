@@ -1,12 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { PartnerFilter, PartnerRepository } from '../../repositories/partner.repository';
 
 @Injectable()
 export class AdminPartnerService {
-  constructor(private readonly partnerRepo: PartnerRepository) {}
+  constructor(
+    private readonly partnerRepo: PartnerRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(id?: any) {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('intro:public:partner:list').catch(() => {});
+    if (id !== undefined) {
+      await this.redis.del(`intro:public:partner:detail:${id}`).catch(() => {});
+    }
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -32,21 +44,26 @@ export class AdminPartnerService {
   }
 
   async create(dto: CreatePartnerDto) {
-    return this.partnerRepo.create({
+    const result = await this.partnerRepo.create({
       ...dto,
       status: dto.status || 'active',
       sort_order: dto.sort_order ?? 0,
     });
+    await this.clearCache();
+    return result;
   }
 
   async update(id: any, dto: UpdatePartnerDto) {
     await this.getOne(id);
-    return this.partnerRepo.update(id, dto);
+    const result = await this.partnerRepo.update(id, dto);
+    await this.clearCache(id);
+    return result;
   }
 
   async delete(id: any) {
     await this.getOne(id);
     await this.partnerRepo.delete(id);
+    await this.clearCache(id);
     return { success: true };
   }
 }

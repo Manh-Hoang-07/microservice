@@ -1,12 +1,6 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-} from '@nestjs/common';
-import { ProvinceService } from '../../admin/services/province.service';
-import { WardService } from '../../../ward/admin/services/ward.service';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@package/common';
+import { PublicProvinceService } from '../services/province.service';
 import {
   ListProvincesPublicQueryDto,
   ListProvinceWardsPublicQueryDto,
@@ -14,15 +8,12 @@ import {
 
 @Controller()
 export class PublicProvinceController {
-  constructor(
-    private readonly provinceService: ProvinceService,
-    private readonly wardService: WardService,
-  ) {}
+  constructor(private readonly service: PublicProvinceService) {}
 
   @Public()
   @Get('provinces')
   async getList(@Query() query: ListProvincesPublicQueryDto) {
-    return this.provinceService.getList({ ...query, status: 'active' });
+    return this.service.getList(query);
   }
 
   @Public()
@@ -31,11 +22,7 @@ export class PublicProvinceController {
     @Param('countryId') countryId: string,
     @Query() query: ListProvincesPublicQueryDto,
   ) {
-    return this.provinceService.getList({
-      ...query,
-      country_id: countryId,
-      status: 'active',
-    });
+    return this.service.getByCountry(countryId, query);
   }
 
   @Public()
@@ -44,11 +31,6 @@ export class PublicProvinceController {
     @Param('id') id: string,
     @Query() query: ListProvinceWardsPublicQueryDto,
   ) {
-    // Previously returned the province record itself instead of its wards.
-    return this.wardService.getList({
-      ...query,
-      province_id: id,
-      status: 'active',
-    });
+    return this.service.getWards(id, query);
   }
 }

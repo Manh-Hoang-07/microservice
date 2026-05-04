@@ -1,12 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { CreateStaffDto } from '../dtos/create-staff.dto';
 import { UpdateStaffDto } from '../dtos/update-staff.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { StaffFilter, StaffRepository } from '../../repositories/staff.repository';
 
 @Injectable()
 export class AdminStaffService {
-  constructor(private readonly staffRepo: StaffRepository) {}
+  constructor(
+    private readonly staffRepo: StaffRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(id?: any) {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('intro:public:staff:list').catch(() => {});
+    if (id !== undefined) {
+      await this.redis.del(`intro:public:staff:detail:${id}`).catch(() => {});
+    }
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -32,22 +44,27 @@ export class AdminStaffService {
   }
 
   async create(dto: CreateStaffDto) {
-    return this.staffRepo.create({
+    const result = await this.staffRepo.create({
       ...dto,
       social_links: dto.social_links ?? {},
       status: dto.status || 'active',
       sort_order: dto.sort_order ?? 0,
     });
+    await this.clearCache();
+    return result;
   }
 
   async update(id: any, dto: UpdateStaffDto) {
     await this.getOne(id);
-    return this.staffRepo.update(id, dto);
+    const result = await this.staffRepo.update(id, dto);
+    await this.clearCache(id);
+    return result;
   }
 
   async delete(id: any) {
     await this.getOne(id);
     await this.staffRepo.delete(id);
+    await this.clearCache(id);
     return { success: true };
   }
 }

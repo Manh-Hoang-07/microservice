@@ -6,67 +6,53 @@ import { PostFilter, PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
 export class PublicPostService {
+  private readonly inflight = new Map<string, Promise<any>>();
+
   constructor(
     private readonly postRepo: PostRepository,
     private readonly redis: RedisService,
   ) {}
 
   async getList(query: any = {}) {
-    const cacheKey = `post:public:list:${JSON.stringify(query)}`;
-    try {
-      const cached = await this.redis.get(cacheKey);
-      if (cached) return JSON.parse(cached);
-    } catch {}
+    const version = await this.getVersion('post:public:list:v');
+    const cacheKey = `post:public:list:${version}:${this.hashQuery(query)}`;
 
-    const options = parseQueryOptions(query);
+    return this.getOrSet(cacheKey, 60, async () => {
+      const options = parseQueryOptions(query);
 
-    const filter: PostFilter = { status: PUBLIC_POST_STATUSES };
-    if (query.search) filter.search = query.search;
-    if (query.post_type) filter.post_type = query.post_type;
-    if (query.is_featured !== undefined) {
-      filter.is_featured = query.is_featured === 'true' || query.is_featured === true;
-    }
-    if (query.is_pinned !== undefined) {
-      filter.is_pinned = query.is_pinned === 'true' || query.is_pinned === true;
-    }
-    if (query.post_category_id || query.category_id) {
-      filter.category_id = query.post_category_id ?? query.category_id;
-    }
-    if (query.post_tag_id || query.tag_id) {
-      filter.tag_id = query.post_tag_id ?? query.tag_id;
-    }
+      const filter: PostFilter = { status: PUBLIC_POST_STATUSES };
+      if (query.search) filter.search = query.search;
+      if (query.post_type) filter.post_type = query.post_type;
+      if (query.is_featured !== undefined) {
+        filter.is_featured = query.is_featured === 'true' || query.is_featured === true;
+      }
+      if (query.is_pinned !== undefined) {
+        filter.is_pinned = query.is_pinned === 'true' || query.is_pinned === true;
+      }
+      if (query.post_category_id || query.category_id) {
+        filter.category_id = query.post_category_id ?? query.category_id;
+      }
+      if (query.post_tag_id || query.tag_id) {
+        filter.tag_id = query.post_tag_id ?? query.tag_id;
+      }
 
-    const [data, total] = await Promise.all([
-      this.postRepo.findManyPublic(filter, { ...options, sort: query.sort }),
-      this.postRepo.count(filter),
-    ]);
+      const [data, total] = await Promise.all([
+        this.postRepo.findManyPublic(filter, { ...options, sort: query.sort }),
+        this.postRepo.count(filter),
+      ]);
 
-    const result = {
-      data: data.map((p) => this.transform(p)),
-      meta: createPaginationMeta(options, total),
-    };
-
-    try {
-      await this.redis.set(cacheKey, JSON.stringify(result), 60);
-    } catch {}
-
-    return result;
+      return {
+        data: data.map((p) => this.transform(p)),
+        meta: createPaginationMeta(options, total),
+      };
+    });
   }
 
   async getBySlug(slug: string, requesterKey?: string) {
-    const cacheKey = `post:public:detail:${slug}`;
-    try {
-      const cached = await this.redis.get(cacheKey);
-      if (cached) return JSON.parse(cached);
-    } catch {}
-
+    // View counting must happen outside getOrSet since it's per-request, not per-cache-miss
     const post = await this.postRepo.findBySlug(slug, PUBLIC_POST_STATUSES);
     if (!post) throw new NotFoundException('Post not found');
 
-    // View-counter dedup: same requester (user id or IP) counts at most once
-    // every 5 min per post. Without this, a single bot inflates view_count
-    // arbitrarily by replaying GET. Skip the increment when we can't
-    // identify the requester rather than running unbounded.
     if (this.redis.isEnabled() && requesterKey) {
       const dedupKey = `post:view:seen:${post.id}:${requesterKey}`;
       const acquired = await this.redis.setnx(dedupKey, '1', 300);
@@ -75,13 +61,11 @@ export class PublicPostService {
       }
     }
 
-    const result = this.transform(post);
+    const cacheKey = `post:public:detail:${slug}`;
 
-    try {
-      await this.redis.set(cacheKey, JSON.stringify(result), 120);
-    } catch {}
-
-    return result;
+    return this.getOrSet(cacheKey, 120, async () => {
+      return this.transform(post);
+    });
   }
 
   private transform(entity: any) {
@@ -96,5 +80,59 @@ export class PublicPostService {
       delete item.tagLinks;
     }
     return item;
+  }
+
+  private async getVersion(key: string): Promise<string> {
+    try {
+      if (this.redis.isEnabled()) {
+        return (await this.redis.get(key)) || '0';
+      }
+    } catch {}
+    return '0';
+  }
+
+  private hashQuery(query: any): string {
+    const stableStr = JSON.stringify(
+      query,
+      (_, v) => {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          return Object.keys(v).sort().reduce((o: any, k) => { o[k] = v[k]; return o; }, {});
+        }
+        return typeof v === 'bigint' ? Number(v) : v;
+      },
+    );
+    let hash = 5381;
+    for (let i = 0; i < stableStr.length; i++) hash = ((hash << 5) + hash + stableStr.charCodeAt(i)) | 0;
+    return (hash >>> 0).toString(36);
+  }
+
+  private async getOrSet<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T> {
+    try {
+      if (this.redis.isEnabled()) {
+        const raw = await this.redis.get(key);
+        if (raw) return JSON.parse(raw);
+      }
+    } catch {}
+
+    const existing = this.inflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = factory().then(async (result) => {
+      try {
+        if (this.redis.isEnabled()) {
+          await this.redis.set(
+            key,
+            JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+            ttl,
+          );
+        }
+      } catch {}
+      return result;
+    }).finally(() => {
+      this.inflight.delete(key);
+    });
+
+    this.inflight.set(key, promise);
+    return promise;
   }
 }

@@ -1,22 +1,19 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { CategoryRepository } from '../../repositories/category.repository';
+import { MenuService } from '../../admin/services/menu.service';
 
 @Injectable()
-export class PublicCategoryService {
+export class PublicMenuService {
   private readonly inflight = new Map<string, Promise<any>>();
 
   constructor(
-    private readonly categoryRepo: CategoryRepository,
+    private readonly menuService: MenuService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
-  async getAll() {
-    const cacheKey = 'post:public:categories:list';
-
-    return this.getOrSet(cacheKey, 600, async () => {
-      const data = await this.categoryRepo.findRootActiveTree();
-      return { data };
+  async getPublicMenuTree() {
+    return this.getOrSet('config:public:menu', 600, async () => {
+      return this.menuService.getPublicMenuTree();
     });
   }
 

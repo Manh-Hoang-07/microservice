@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -7,7 +8,10 @@ import { CategoryFilter, CategoryRepository } from '../../repositories/category.
 
 @Injectable()
 export class AdminCategoryService {
-  constructor(private readonly categoryRepo: CategoryRepository) {}
+  constructor(
+    private readonly categoryRepo: CategoryRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   private async assertNoCycle(categoryId: any, candidateParentId: any): Promise<void> {
     if (String(categoryId) === String(candidateParentId)) {
@@ -64,7 +68,9 @@ export class AdminCategoryService {
       if (!parent) throw new BadRequestException('Parent category not found');
     }
 
-    return this.categoryRepo.create({ ...dto, slug });
+    const result = await this.categoryRepo.create({ ...dto, slug });
+    await this.invalidateCategoryCache();
+    return result;
   }
 
   async update(id: any, dto: UpdateCategoryDto) {
@@ -82,12 +88,23 @@ export class AdminCategoryService {
       await this.assertNoCycle(id, (dto as any).parent_id);
     }
 
-    return this.categoryRepo.update(id, data);
+    const result = await this.categoryRepo.update(id, data);
+    await this.invalidateCategoryCache();
+    return result;
   }
 
   async delete(id: any) {
     await this.getOne(id);
     await this.categoryRepo.delete(id);
+    await this.invalidateCategoryCache();
     return { success: true };
+  }
+
+  private async invalidateCategoryCache(): Promise<void> {
+    try {
+      if (this.redis?.isEnabled()) {
+        await this.redis.del('post:public:categories:list');
+      }
+    } catch {}
   }
 }

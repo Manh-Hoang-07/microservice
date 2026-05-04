@@ -1,22 +1,29 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { CategoryRepository } from '../../repositories/category.repository';
+import { WardService } from '../../admin/services/ward.service';
 
 @Injectable()
-export class PublicCategoryService {
+export class PublicWardService {
   private readonly inflight = new Map<string, Promise<any>>();
 
   constructor(
-    private readonly categoryRepo: CategoryRepository,
+    private readonly wardService: WardService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
-  async getAll() {
-    const cacheKey = 'post:public:categories:list';
+  async getList(query: any = {}) {
+    return this.getOrSet('config:public:wards:all', 86400, async () => {
+      return this.wardService.getList({ ...query, status: 'active' });
+    });
+  }
 
-    return this.getOrSet(cacheKey, 600, async () => {
-      const data = await this.categoryRepo.findRootActiveTree();
-      return { data };
+  async getByProvince(provinceId: string, query: any = {}) {
+    return this.getOrSet(`config:public:wards:${provinceId}`, 86400, async () => {
+      return this.wardService.getList({
+        ...query,
+        province_id: provinceId,
+        status: 'active',
+      });
     });
   }
 

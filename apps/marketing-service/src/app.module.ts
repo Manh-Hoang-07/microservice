@@ -9,7 +9,8 @@ import { createAppConfig, createKafkaConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
+import { RedisModule } from '@package/redis';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
 
@@ -28,6 +29,7 @@ import { ContactModule } from './modules/contact/contact.module';
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
+    RedisModule,
     HealthModule.register('marketing-service'),
     MetricsModule,
     CommonKafkaModule,

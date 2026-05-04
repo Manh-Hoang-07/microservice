@@ -1,8 +1,11 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { MenuRepository, MenuFilter } from '../../repositories/menu.repository';
 import { MenuTreeItem } from '../../interfaces/menu-tree-item.interface';
@@ -11,9 +14,12 @@ import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class MenuService {
+  private readonly logger = new Logger(MenuService.name);
+
   constructor(
     private readonly menuRepo: MenuRepository,
     private readonly i18n: I18nService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   private t(key: string): string {
@@ -67,7 +73,9 @@ export class MenuService {
       if (!parent) throw new BadRequestException(this.t('menu.PARENT_NOT_FOUND'));
     }
     try {
-      return await this.menuRepo.create(dto);
+      const created = await this.menuRepo.create(dto);
+      await this.clearMenuCaches();
+      return created;
     } catch (err: any) {
       // P2002 = unique-constraint race (concurrent create with same code).
       if (err?.code === 'P2002') {
@@ -95,7 +103,9 @@ export class MenuService {
       if (!parent) throw new BadRequestException(this.t('menu.PARENT_NOT_FOUND'));
     }
     try {
-      return await this.menuRepo.update(id, dto);
+      const updated = await this.menuRepo.update(id, dto);
+      await this.clearMenuCaches();
+      return updated;
     } catch (err: any) {
       if (err?.code === 'P2002') {
         throw new BadRequestException(this.t('menu.CODE_EXISTS'));
@@ -112,6 +122,7 @@ export class MenuService {
   async delete(id: any) {
     await this.getOne(id);
     await this.menuRepo.delete(id);
+    await this.clearMenuCaches();
     return true;
   }
 
@@ -132,6 +143,14 @@ export class MenuService {
     const visible = allMenus.filter((m: any) => m.show_in_menu);
     const filtered = filterPublicMenus(visible, userPermissions);
     return buildMenuTree(filtered);
+  }
+
+  private async clearMenuCaches(): Promise<void> {
+    try {
+      await this.redis?.del('config:public:menu');
+    } catch (err) {
+      this.logger.warn('Failed to clear menu caches', (err as Error).message);
+    }
   }
 
   /**

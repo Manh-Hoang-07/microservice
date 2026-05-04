@@ -4,6 +4,8 @@ import { ChapterRepository } from '../../repositories/chapter.repository';
 
 @Injectable()
 export class PublicChapterService {
+  private readonly inflight = new Map<string, Promise<any>>();
+
   constructor(
     private readonly chapterRepo: ChapterRepository,
     private readonly redis: RedisService,
@@ -11,87 +13,121 @@ export class PublicChapterService {
 
   async getOne(id: any) {
     const cacheKey = `comic:public:chapter:${id}`;
-    const cached = await this.cacheGet(cacheKey);
-    if (cached) return cached;
 
-    const chapter = await this.chapterRepo.findPublicOne(id);
-    if (!chapter) throw new NotFoundException('Chapter not found');
-
-    await this.cacheSet(cacheKey, chapter, 120);
-    return chapter;
+    return this.getOrSet(cacheKey, 120, async () => {
+      const chapter = await this.chapterRepo.findPublicOne(id);
+      if (!chapter) throw new NotFoundException('Chapter not found');
+      return chapter;
+    });
   }
 
   async getPages(id: any) {
     const cacheKey = `comic:public:pages:${id}`;
-    const cached = await this.cacheGet(cacheKey);
-    if (cached) return cached;
 
-    const chapter = await this.chapterRepo.findPublicOne(id);
-    if (!chapter) throw new NotFoundException('Chapter not found');
+    return this.getOrSet(cacheKey, 300, async () => {
+      const chapter = await this.chapterRepo.findPublicOne(id);
+      if (!chapter) throw new NotFoundException('Chapter not found');
 
-    const pages = await this.chapterRepo.findPages(id);
-    const result = { data: pages };
-
-    await this.cacheSet(cacheKey, result, 300);
-    return result;
+      const pages = await this.chapterRepo.findPages(id);
+      return { data: pages };
+    });
   }
 
   async getNext(id: any) {
-    const cacheKey = `comic:public:chapternav:${id}:next`;
-    const cached = await this.cacheGetRaw(cacheKey);
-    if (cached !== null) return JSON.parse(cached);
+    const version = await this.getVersion('comic:public:nav:v');
+    const cacheKey = `comic:public:chapternav:${version}:${id}:next`;
 
-    const current = await this.chapterRepo.findById(id);
-    if (!current) throw new NotFoundException('Chapter not found');
-    const result = (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'next')) || null;
-
-    await this.cacheSet(cacheKey, result, 300);
-    return result;
+    return this.getOrSetRaw(cacheKey, 300, async () => {
+      const current = await this.chapterRepo.findById(id);
+      if (!current) throw new NotFoundException('Chapter not found');
+      return (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'next')) || null;
+    });
   }
 
   async getPrev(id: any) {
-    const cacheKey = `comic:public:chapternav:${id}:prev`;
-    const cached = await this.cacheGetRaw(cacheKey);
-    if (cached !== null) return JSON.parse(cached);
+    const version = await this.getVersion('comic:public:nav:v');
+    const cacheKey = `comic:public:chapternav:${version}:${id}:prev`;
 
-    const current = await this.chapterRepo.findById(id);
-    if (!current) throw new NotFoundException('Chapter not found');
-    const result = (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'prev')) || null;
-
-    await this.cacheSet(cacheKey, result, 300);
-    return result;
+    return this.getOrSetRaw(cacheKey, 300, async () => {
+      const current = await this.chapterRepo.findById(id);
+      if (!current) throw new NotFoundException('Chapter not found');
+      return (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'prev')) || null;
+    });
   }
 
-  private async cacheGet(key: string): Promise<any | null> {
+  private async getVersion(key: string): Promise<string> {
     try {
-      if (!this.redis.isEnabled()) return null;
-      const raw = await this.redis.get(key);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
+      if (this.redis.isEnabled()) {
+        return (await this.redis.get(key)) || '0';
+      }
+    } catch {}
+    return '0';
   }
 
-  /** Returns the raw cached string so callers can distinguish "cached null" from "cache miss". */
-  private async cacheGetRaw(key: string): Promise<string | null> {
+  /**
+   * Standard getOrSet: cache miss returns null (not distinguishable from "no data").
+   */
+  private async getOrSet<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T> {
     try {
-      if (!this.redis.isEnabled()) return null;
-      return await this.redis.get(key);
-    } catch {
-      return null;
-    }
+      if (this.redis.isEnabled()) {
+        const raw = await this.redis.get(key);
+        if (raw) return JSON.parse(raw);
+      }
+    } catch {}
+
+    const existing = this.inflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = factory().then(async (result) => {
+      try {
+        if (this.redis.isEnabled()) {
+          await this.redis.set(
+            key,
+            JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+            ttl,
+          );
+        }
+      } catch {}
+      return result;
+    }).finally(() => {
+      this.inflight.delete(key);
+    });
+
+    this.inflight.set(key, promise);
+    return promise;
   }
 
-  private async cacheSet(key: string, value: any, ttl: number): Promise<void> {
+  /**
+   * Raw variant: distinguishes "cached null" from "cache miss" so that
+   * navigation endpoints can cache a null result (no next/prev chapter).
+   */
+  private async getOrSetRaw<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T> {
     try {
-      if (!this.redis.isEnabled()) return;
-      await this.redis.set(
-        key,
-        JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
-        ttl,
-      );
-    } catch {
-      // silent — cache failure must not break the endpoint
-    }
+      if (this.redis.isEnabled()) {
+        const raw = await this.redis.get(key);
+        if (raw !== null) return JSON.parse(raw);
+      }
+    } catch {}
+
+    const existing = this.inflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = factory().then(async (result) => {
+      try {
+        if (this.redis.isEnabled()) {
+          await this.redis.set(
+            key,
+            JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+            ttl,
+          );
+        }
+      } catch {}
+      return result;
+    }).finally(() => {
+      this.inflight.delete(key);
+    });
+
+    this.inflight.set(key, promise);
+    return promise;
   }
 }

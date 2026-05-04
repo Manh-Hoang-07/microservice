@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { I18nService, I18nContext } from 'nestjs-i18n';
+import { RedisService } from '@package/redis';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { NotificationRepository } from '../../repositories/notification.repository';
@@ -14,6 +15,7 @@ export class AdminNotificationService {
   constructor(
     private readonly notifRepo: NotificationRepository,
     private readonly i18n: I18nService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   async getList(query: any) {
@@ -51,7 +53,7 @@ export class AdminNotificationService {
   }
 
   async send(dto: SendNotificationDto) {
-    return this.notifRepo.createMany(
+    const result = await this.notifRepo.createMany(
       dto.user_ids.map((user_id) => ({
         user_id,
         title: dto.title,
@@ -61,6 +63,8 @@ export class AdminNotificationService {
         status: 'active',
       })),
     );
+    await this.invalidateUnreadCounts(dto.user_ids);
+    return result;
   }
 
   async delete(id: PrimaryKey) {
@@ -74,10 +78,24 @@ export class AdminNotificationService {
   // --- internal methods called from Kafka events ---
 
   async create(data: { user_id: string | bigint; title: string; message: string; type?: string; data?: any }) {
-    return this.notifRepo.create({ ...data, status: 'active' });
+    const result = await this.notifRepo.create({ ...data, status: 'active' });
+    await this.invalidateUnreadCounts([data.user_id]);
+    return result;
   }
 
   async createMany(notifications: Array<{ user_id: string | bigint; title: string; message: string; type?: string; data?: any }>) {
-    return this.notifRepo.createMany(notifications.map((n) => ({ ...n, status: 'active' })));
+    const result = await this.notifRepo.createMany(notifications.map((n) => ({ ...n, status: 'active' })));
+    const userIds = [...new Set(notifications.map((n) => n.user_id))];
+    await this.invalidateUnreadCounts(userIds);
+    return result;
+  }
+
+  private async invalidateUnreadCounts(userIds: Array<string | bigint>): Promise<void> {
+    try {
+      if (!this.redis) return;
+      await Promise.all(
+        userIds.map((uid) => this.redis!.del(`notif:unread:${uid}`)),
+      );
+    } catch {}
   }
 }

@@ -1,12 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { TestimonialFilter, TestimonialRepository } from '../../repositories/testimonial.repository';
 
 @Injectable()
 export class AdminTestimonialService {
-  constructor(private readonly testimonialRepo: TestimonialRepository) {}
+  constructor(
+    private readonly testimonialRepo: TestimonialRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(id?: any) {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('intro:public:testimonial:list').catch(() => {});
+    if (id !== undefined) {
+      await this.redis.del(`intro:public:testimonial:detail:${id}`).catch(() => {});
+    }
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -35,23 +47,28 @@ export class AdminTestimonialService {
   }
 
   async create(dto: CreateTestimonialDto) {
-    return this.testimonialRepo.create({
+    const result = await this.testimonialRepo.create({
       ...dto,
       rating: dto.rating ?? 5,
       featured: dto.featured ?? false,
       status: dto.status || 'active',
       sort_order: dto.sort_order ?? 0,
     });
+    await this.clearCache();
+    return result;
   }
 
   async update(id: any, dto: UpdateTestimonialDto) {
     await this.getOne(id);
-    return this.testimonialRepo.update(id, dto);
+    const result = await this.testimonialRepo.update(id, dto);
+    await this.clearCache(id);
+    return result;
   }
 
   async delete(id: any) {
     await this.getOne(id);
     await this.testimonialRepo.delete(id);
+    await this.clearCache(id);
     return { success: true };
   }
 }

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { I18nService, I18nContext } from 'nestjs-i18n';
+import { RedisService } from '@package/redis';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { NotificationRepository } from '../../repositories/notification.repository';
@@ -9,6 +10,7 @@ export class UserNotificationService {
   constructor(
     private readonly notifRepo: NotificationRepository,
     private readonly i18n: I18nService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   async getList(userId: string, query: any) {
@@ -27,7 +29,18 @@ export class UserNotificationService {
   }
 
   async getUnreadCount(userId: string) {
+    const cacheKey = `notif:unread:${userId}`;
+    try {
+      const cached = await this.redis?.get(cacheKey);
+      if (cached !== undefined && cached !== null) return { count: Number(cached) };
+    } catch {}
+
     const count = await this.notifRepo.count({ user_id: userId, is_read: false, status: 'active' });
+
+    try {
+      await this.redis?.set(cacheKey, String(count), 30);
+    } catch {}
+
     return { count };
   }
 
@@ -40,7 +53,9 @@ export class UserNotificationService {
 
   async markAsRead(userId: string, id: PrimaryKey) {
     const notif = await this.getOne(userId, id);
-    return this.notifRepo.update(notif.id, { is_read: true, read_at: new Date() });
+    const result = await this.notifRepo.update(notif.id, { is_read: true, read_at: new Date() });
+    await this.invalidateUnreadCount(userId);
+    return result;
   }
 
   async markAllAsRead(userId: string) {
@@ -48,6 +63,14 @@ export class UserNotificationService {
       { user_id: userId, is_read: false },
       { is_read: true, read_at: new Date() },
     );
+    await this.invalidateUnreadCount(userId);
     return { updated: result.count };
+  }
+
+  /** Called externally (e.g. from Kafka handlers) to bust the cached unread count. */
+  async invalidateUnreadCount(userId: string): Promise<void> {
+    try {
+      await this.redis?.del(`notif:unread:${userId}`);
+    } catch {}
   }
 }

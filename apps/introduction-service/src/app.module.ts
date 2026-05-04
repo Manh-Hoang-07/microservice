@@ -9,7 +9,8 @@ import { createAppConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
 
 import { DatabaseModule } from './database/database.module';
-import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { RedisModule } from '@package/redis';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { AboutModule } from './modules/about/about.module';
@@ -31,6 +32,7 @@ import { FaqModule } from './modules/faq/faq.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     DatabaseModule,
+    RedisModule,
     HealthModule.register('introduction-service'),
     MetricsModule,
     AboutModule,

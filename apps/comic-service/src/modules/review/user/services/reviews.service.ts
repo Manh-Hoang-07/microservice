@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { toPrimaryKey } from 'src/types';
 import { CreateReviewDto } from '../dtos/create-review.dto';
 import { ReviewRepository } from '../../repositories/review.repository';
 
 @Injectable()
 export class UserReviewService {
-  constructor(private readonly reviewRepo: ReviewRepository) {}
+  constructor(
+    private readonly reviewRepo: ReviewRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   async createOrUpdate(userId: any, dto: CreateReviewDto) {
     const review = await this.reviewRepo.upsert(userId, dto.comic_id, {
@@ -14,6 +18,7 @@ export class UserReviewService {
     });
 
     await this.reviewRepo.syncRatingStats(dto.comic_id);
+    await this.incrementVersion('comic:public:reviews:v');
     return review;
   }
 
@@ -24,6 +29,15 @@ export class UserReviewService {
 
     await this.reviewRepo.delete(id);
     await this.reviewRepo.syncRatingStats(review.comic_id);
+    await this.incrementVersion('comic:public:reviews:v');
     return { success: true };
+  }
+
+  private async incrementVersion(key: string): Promise<void> {
+    try {
+      if (this.redis?.isEnabled()) {
+        await this.redis.incr(key);
+      }
+    } catch {}
   }
 }

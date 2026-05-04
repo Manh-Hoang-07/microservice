@@ -6,52 +6,49 @@ import { ComicFilter, ComicRepository } from '../../repositories/comic.repositor
 
 @Injectable()
 export class PublicComicService {
+  private readonly inflight = new Map<string, Promise<any>>();
+
   constructor(
     private readonly comicRepo: ComicRepository,
     private readonly redis: RedisService,
   ) {}
 
   async getList(query: any = {}) {
-    const cacheKey = `comic:public:list:${this.hashQuery(query)}`;
-    const cached = await this.cacheGet(cacheKey);
-    if (cached) return cached;
+    const version = await this.getVersion('comic:public:list:v');
+    const cacheKey = `comic:public:list:${version}:${this.hashQuery(query)}`;
 
-    const options = parseQueryOptions(query);
+    return this.getOrSet(cacheKey, 60, async () => {
+      const options = parseQueryOptions(query);
 
-    const filter: ComicFilter = { status: PUBLIC_COMIC_STATUSES };
-    if (query.search) filter.search = query.search;
-    if (query.is_featured !== undefined) {
-      filter.is_featured = query.is_featured === 'true' || query.is_featured === true;
-    }
-    if (query.comic_category_id || query.category_id) {
-      filter.category_id = query.comic_category_id ?? query.category_id;
-    }
+      const filter: ComicFilter = { status: PUBLIC_COMIC_STATUSES };
+      if (query.search) filter.search = query.search;
+      if (query.is_featured !== undefined) {
+        filter.is_featured = query.is_featured === 'true' || query.is_featured === true;
+      }
+      if (query.comic_category_id || query.category_id) {
+        filter.category_id = query.comic_category_id ?? query.category_id;
+      }
 
-    const [data, total] = await Promise.all([
-      this.comicRepo.findManyPublic(filter, { ...options, sort: query.sort }),
-      this.comicRepo.count(filter),
-    ]);
+      const [data, total] = await Promise.all([
+        this.comicRepo.findManyPublic(filter, { ...options, sort: query.sort }),
+        this.comicRepo.count(filter),
+      ]);
 
-    const result = {
-      data: data.map((c) => this.transform(c)),
-      meta: createPaginationMeta(options, total),
-    };
-
-    await this.cacheSet(cacheKey, result, 60);
-    return result;
+      return {
+        data: data.map((c) => this.transform(c)),
+        meta: createPaginationMeta(options, total),
+      };
+    });
   }
 
   async getBySlug(slug: string) {
     const cacheKey = `comic:public:detail:${slug}`;
-    const cached = await this.cacheGet(cacheKey);
-    if (cached) return cached;
 
-    const comic = await this.comicRepo.findBySlug(slug, PUBLIC_COMIC_STATUSES);
-    if (!comic) throw new NotFoundException('Comic not found');
-    const result = this.transform(comic);
-
-    await this.cacheSet(cacheKey, result, 120);
-    return result;
+    return this.getOrSet(cacheKey, 120, async () => {
+      const comic = await this.comicRepo.findBySlug(slug, PUBLIC_COMIC_STATUSES);
+      if (!comic) throw new NotFoundException('Comic not found');
+      return this.transform(comic);
+    });
   }
 
   async getChaptersBySlug(slug: string, query: any = {}, requesterKey?: string) {
@@ -70,23 +67,21 @@ export class PublicComicService {
       }
     }
 
-    const cacheKey = `comic:public:chapters:${slug}:${this.hashQuery(query)}`;
-    const cached = await this.cacheGet(cacheKey);
-    if (cached) return cached;
+    const chaptersVersion = await this.getVersion('comic:public:chapters:v');
+    const cacheKey = `comic:public:chapters:${chaptersVersion}:${slug}:${this.hashQuery(query)}`;
 
-    // Hard cap chapter list at 200 per page (was effectively unbounded with
-    // `limit: query.limit ?? 10000` — trivial DoS).
-    const options = parseQueryOptions(query, { defaultTake: 50, maxTake: 200 });
+    return this.getOrSet(cacheKey, 60, async () => {
+      // Hard cap chapter list at 200 per page (was effectively unbounded with
+      // `limit: query.limit ?? 10000` — trivial DoS).
+      const options = parseQueryOptions(query, { defaultTake: 50, maxTake: 200 });
 
-    const [data, total] = await Promise.all([
-      this.comicRepo.findPublicChapters(comic.id, options),
-      this.comicRepo.countPublicChapters(comic.id),
-    ]);
+      const [data, total] = await Promise.all([
+        this.comicRepo.findPublicChapters(comic.id, options),
+        this.comicRepo.countPublicChapters(comic.id),
+      ]);
 
-    const result = { data, meta: createPaginationMeta(options, total) };
-
-    await this.cacheSet(cacheKey, result, 60);
-    return result;
+      return { data, meta: createPaginationMeta(options, total) };
+    });
   }
 
   private transform(entity: any) {
@@ -115,35 +110,59 @@ export class PublicComicService {
     return item;
   }
 
+  private async getVersion(key: string): Promise<string> {
+    try {
+      if (this.redis.isEnabled()) {
+        return (await this.redis.get(key)) || '0';
+      }
+    } catch {}
+    return '0';
+  }
+
   private hashQuery(query: any): string {
-    const str = JSON.stringify(query, (_, v) => (typeof v === 'bigint' ? v.toString() : v));
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-    }
-    return hash.toString(36);
+    const stableStr = JSON.stringify(
+      query,
+      (_, v) => {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          return Object.keys(v).sort().reduce((o: any, k) => { o[k] = v[k]; return o; }, {});
+        }
+        return typeof v === 'bigint' ? Number(v) : v;
+      },
+    );
+    let hash = 5381;
+    for (let i = 0; i < stableStr.length; i++) hash = ((hash << 5) + hash + stableStr.charCodeAt(i)) | 0;
+    return (hash >>> 0).toString(36);
   }
 
-  private async cacheGet(key: string): Promise<any | null> {
+  private async getOrSet<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T> {
+    // Check cache first
     try {
-      if (!this.redis.isEnabled()) return null;
-      const raw = await this.redis.get(key);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }
+      if (this.redis.isEnabled()) {
+        const raw = await this.redis.get(key);
+        if (raw) return JSON.parse(raw);
+      }
+    } catch {}
 
-  private async cacheSet(key: string, value: any, ttl: number): Promise<void> {
-    try {
-      if (!this.redis.isEnabled()) return;
-      await this.redis.set(
-        key,
-        JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
-        ttl,
-      );
-    } catch {
-      // silent — cache failure must not break the endpoint
-    }
+    // Single-flight: if another request is already loading this key, wait for it
+    const existing = this.inflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = factory().then(async (result) => {
+      try {
+        if (this.redis.isEnabled()) {
+          await this.redis.set(
+            key,
+            JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+            ttl,
+          );
+        }
+      } catch {}
+      return result;
+    }).finally(() => {
+      this.inflight.delete(key);
+    });
+
+    this.inflight.set(key, promise);
+    return promise;
   }
 }

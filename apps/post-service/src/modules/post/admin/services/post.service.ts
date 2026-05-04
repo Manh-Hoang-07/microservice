@@ -127,8 +127,9 @@ export class AdminPostService {
       if (slug) {
         await this.redis?.del(`post:public:detail:${slug}`);
       }
-      const listKeys = await this.redis?.keys('post:public:list:*');
-      if (listKeys?.length) await this.redis?.deleteMany(listKeys);
+      // Increment the list version so all old list cache keys become stale.
+      // Old keys expire naturally via their TTL (60s). No SCAN needed.
+      await this.redis?.incr('post:public:list:v');
     } catch (err) {
       this.logger.warn('Failed to clear post caches', (err as Error).message);
     }

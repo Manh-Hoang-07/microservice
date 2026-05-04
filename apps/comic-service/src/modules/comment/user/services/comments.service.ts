@@ -1,5 +1,6 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '@package/redis';
 import { toPrimaryKey } from 'src/types';
 import { PUBLIC_COMIC_STATUSES } from '../../../comic/enums/comic-status.enum';
 import { CreateCommentDto } from '../dtos/create-comment.dto';
@@ -12,6 +13,7 @@ export class UserCommentService {
   constructor(
     private readonly commentRepo: CommentRepository,
     private readonly config: ConfigService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   async create(userId: any, dto: CreateCommentDto) {
@@ -59,7 +61,7 @@ export class UserCommentService {
 
     const needsOutbox = kafkaEnabled && parent && parent.user_id !== uid;
 
-    return this.commentRepo.withTransaction(async (tx) => {
+    const result = await this.commentRepo.withTransaction(async (tx) => {
       const comment = await this.commentRepo.create(commentData, tx);
 
       if (needsOutbox) {
@@ -79,13 +81,18 @@ export class UserCommentService {
 
       return comment;
     });
+
+    await this.incrementVersion('comic:public:comments:v');
+    return result;
   }
 
   async update(userId: any, id: any, content: string) {
     const comment = await this.commentRepo.findById(id);
     if (!comment) throw new NotFoundException('Comment not found');
     if (comment.user_id !== toPrimaryKey(userId)) throw new ForbiddenException('Not your comment');
-    return this.commentRepo.update(id, { content });
+    const result = await this.commentRepo.update(id, { content });
+    await this.incrementVersion('comic:public:comments:v');
+    return result;
   }
 
   async delete(userId: any, id: any) {
@@ -94,6 +101,16 @@ export class UserCommentService {
     if (comment.user_id !== toPrimaryKey(userId)) throw new ForbiddenException('Not your comment');
     // Soft-delete via status to preserve thread context (replies still
     // resolve their parent without becoming orphans).
-    return this.commentRepo.update(id, { status: 'deleted' });
+    const result = await this.commentRepo.update(id, { status: 'deleted' });
+    await this.incrementVersion('comic:public:comments:v');
+    return result;
+  }
+
+  private async incrementVersion(key: string): Promise<void> {
+    try {
+      if (this.redis?.isEnabled()) {
+        await this.redis.incr(key);
+      }
+    } catch {}
   }
 }

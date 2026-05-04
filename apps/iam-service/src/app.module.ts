@@ -11,9 +11,9 @@ import {
   JwtGuard,
   RbacGuard,
   GlobalExceptionFilter,
-  BigIntSerializationInterceptor,
   HealthModule,
   AuditModule,
+  BigIntSerializationInterceptor,
 } from '@package/common';
 import { RedisModule } from '@package/redis';
 import { envValidationSchema } from './config/env.validation';

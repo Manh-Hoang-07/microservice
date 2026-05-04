@@ -11,7 +11,7 @@ import { RedisModule } from '@package/redis';
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { MailModule } from './modules/mail/mail.module';
-import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ContentTemplateModule } from './modules/content-template/content-template.module';

@@ -81,6 +81,28 @@ export function prepareQuery(query: any = {}): { filter: any; options: IPaginati
   };
 }
 
+/**
+ * Recursively converts BigInt values to strings so that downstream
+ * JSON.stringify (caching, HTTP responses) never throws.  Primitives and
+ * Date instances pass through untouched; only plain objects and arrays are
+ * traversed.  Returns a shallow clone when at least one BigInt is found,
+ * otherwise returns the original reference.
+ */
+function toBigIntStrings<T>(data: T): T {
+  if (data === null || data === undefined) return data;
+  if (typeof data === 'bigint') return String(data) as any;
+  if (data instanceof Date) return data as any;
+  if (Array.isArray(data)) return data.map(toBigIntStrings) as any;
+  if (typeof data === 'object') {
+    const result: any = {};
+    for (const key of Object.keys(data as any)) {
+      result[key] = toBigIntStrings((data as any)[key]);
+    }
+    return result;
+  }
+  return data;
+}
+
 export abstract class PrismaRepository<
   Model,
   WhereInput = any,
@@ -124,7 +146,7 @@ export abstract class PrismaRepository<
       skipCount ? Promise.resolve(0) : this.delegate.count({ where }),
     ]);
 
-    return { data, meta: createPaginationMeta({ page, skip: (page - 1) * limit, take: limit }, total) };
+    return { data: toBigIntStrings(data), meta: createPaginationMeta({ page, skip: (page - 1) * limit, take: limit }, total) };
   }
 
   async findById(id: any, options: IPaginationOptions = {}): Promise<Model | null> {
@@ -133,7 +155,8 @@ export abstract class PrismaRepository<
       include: this.defaultDetailInclude ?? this.defaultInclude,
     });
     const finder = this.delegate.findUnique || this.delegate.findFirst;
-    return finder({ where: { id: toPrimaryKey(id) } as any, ...selection });
+    const result = await finder({ where: { id: toPrimaryKey(id) } as any, ...selection });
+    return toBigIntStrings(result);
   }
 
   async findManyByIds(ids: any[]): Promise<Model[]> {
@@ -142,9 +165,10 @@ export abstract class PrismaRepository<
       select: this.defaultDetailSelect ?? this.defaultSelect,
       include: this.defaultDetailInclude ?? this.defaultInclude,
     });
-    return this.delegate.findMany({
+    const result = await this.delegate.findMany({
       where: { id: { in: ids.map(toPrimaryKey) } } as any, ...selection,
     });
+    return toBigIntStrings(result);
   }
 
   async findOne(filter: Record<string, any>): Promise<Model | null> {
@@ -152,28 +176,32 @@ export abstract class PrismaRepository<
       select: this.defaultDetailSelect ?? this.defaultSelect,
       include: this.defaultDetailInclude ?? this.defaultInclude,
     });
-    return this.delegate.findFirst({ where: this.buildWhere(filter), ...selection });
+    const result = await this.delegate.findFirst({ where: this.buildWhere(filter), ...selection });
+    return toBigIntStrings(result);
   }
 
   async findMany(filter: Record<string, any> = {}, options: IPaginationOptions = {}): Promise<Model[]> {
     const selectionFlat = resolveQuerySelection(options, {
       select: this.defaultSelect, include: this.defaultInclude,
     });
-    return this.delegate.findMany({
+    const result = await this.delegate.findMany({
       where: this.buildWhere(filter),
       orderBy: options.sort ? parseSort(options.sort) : undefined,
       take: options.limit,
       skip: options.page && options.limit ? (options.page - 1) * options.limit : undefined,
       ...selectionFlat,
     });
+    return toBigIntStrings(result);
   }
 
   async create(data: any): Promise<Model> {
-    return this.delegate.create({ data });
+    const result = await this.delegate.create({ data });
+    return toBigIntStrings(result);
   }
 
   async update(id: any, data: any): Promise<Model> {
-    return this.delegate.update({ where: { id: toPrimaryKey(id) } as any, data });
+    const result = await this.delegate.update({ where: { id: toPrimaryKey(id) } as any, data });
+    return toBigIntStrings(result);
   }
 
   async updateMany(filter: Record<string, any>, data: any): Promise<{ count: number }> {
@@ -182,11 +210,12 @@ export abstract class PrismaRepository<
 
   async upsert(id: any, data: any): Promise<Model> {
     const pk = toPrimaryKey(id);
-    return this.delegate.upsert({
+    const result = await this.delegate.upsert({
       where: { id: pk } as any,
       create: { ...data, id: pk },
       update: data,
     });
+    return toBigIntStrings(result);
   }
 
   async delete(id: any): Promise<boolean> {
@@ -213,11 +242,13 @@ export abstract class PrismaRepository<
   }
 
   async findFirstRaw(options: any): Promise<Model | null> {
-    return this.delegate.findFirst(options);
+    const result = await this.delegate.findFirst(options);
+    return toBigIntStrings(result);
   }
 
   async findManyRaw(options: any): Promise<Model[]> {
-    return this.delegate.findMany(options);
+    const result = await this.delegate.findMany(options);
+    return toBigIntStrings(result);
   }
 
   protected toPrimaryKey(id: any): any {

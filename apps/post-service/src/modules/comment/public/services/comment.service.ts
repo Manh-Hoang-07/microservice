@@ -1,10 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { CommentFilter, CommentRepository } from '../../repositories/comment.repository';
 
 @Injectable()
 export class PublicCommentService {
-  constructor(private readonly commentRepo: CommentRepository) {}
+  private readonly inflight = new Map<string, Promise<any>>();
+
+  constructor(
+    private readonly commentRepo: CommentRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   async getList(query: any = {}) {
     // Require `post_id` on the public list. Without this the endpoint dumps
@@ -14,20 +20,79 @@ export class PublicCommentService {
       throw new BadRequestException('post_id query parameter is required');
     }
 
-    // Cap public list at 50 comments/page; replies are capped server-side.
-    const options = parseQueryOptions(query, { defaultTake: 20, maxTake: 50 });
+    const version = await this.getVersion('post:public:comments:v');
+    const cacheKey = `post:public:comments:${version}:${this.hashQuery(query)}`;
 
-    const filter: CommentFilter = {
-      status: 'visible',
-      parent_id: null,
-      post_id: query.post_id,
-    };
+    return this.getOrSet(cacheKey, 60, async () => {
+      // Cap public list at 50 comments/page; replies are capped server-side.
+      const options = parseQueryOptions(query, { defaultTake: 20, maxTake: 50 });
 
-    const [data, total] = await Promise.all([
-      this.commentRepo.findManyWithReplies(filter, options),
-      this.commentRepo.count(filter),
-    ]);
+      const filter: CommentFilter = {
+        status: 'visible',
+        parent_id: null,
+        post_id: query.post_id,
+      };
 
-    return { data, meta: createPaginationMeta(options, total) };
+      const [data, total] = await Promise.all([
+        this.commentRepo.findManyWithReplies(filter, options),
+        this.commentRepo.count(filter),
+      ]);
+
+      return { data, meta: createPaginationMeta(options, total) };
+    });
+  }
+
+  private async getVersion(key: string): Promise<string> {
+    try {
+      if (this.redis?.isEnabled()) {
+        return (await this.redis.get(key)) || '0';
+      }
+    } catch {}
+    return '0';
+  }
+
+  private hashQuery(query: any): string {
+    const stableStr = JSON.stringify(
+      query,
+      (_, v) => {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          return Object.keys(v).sort().reduce((o: any, k) => { o[k] = v[k]; return o; }, {});
+        }
+        return typeof v === 'bigint' ? Number(v) : v;
+      },
+    );
+    let hash = 5381;
+    for (let i = 0; i < stableStr.length; i++) hash = ((hash << 5) + hash + stableStr.charCodeAt(i)) | 0;
+    return (hash >>> 0).toString(36);
+  }
+
+  private async getOrSet<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T> {
+    try {
+      if (this.redis?.isEnabled()) {
+        const raw = await this.redis.get(key);
+        if (raw) return JSON.parse(raw);
+      }
+    } catch {}
+
+    const existing = this.inflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = factory().then(async (result) => {
+      try {
+        if (this.redis?.isEnabled()) {
+          await this.redis.set(
+            key,
+            JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),
+            ttl,
+          );
+        }
+      } catch {}
+      return result;
+    }).finally(() => {
+      this.inflight.delete(key);
+    });
+
+    this.inflight.set(key, promise);
+    return promise;
   }
 }

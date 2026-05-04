@@ -1,4 +1,5 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, Optional } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { GeneralConfigRepository } from '../../repositories/general-config.repository';
 import { UpdateGeneralConfigDto } from '../dtos/update-general-config.dto';
@@ -6,9 +7,12 @@ import { buildConfigPayload } from '../../../helpers/config-payload.helper';
 
 @Injectable()
 export class GeneralConfigService {
+  private readonly logger = new Logger(GeneralConfigService.name);
+
   constructor(
     private readonly generalConfigRepo: GeneralConfigRepository,
     private readonly i18n: I18nService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   async getConfig(): Promise<any> {
@@ -42,6 +46,15 @@ export class GeneralConfigService {
       );
     }
 
+    await this.clearGeneralConfigCaches();
     return result;
+  }
+
+  private async clearGeneralConfigCaches(): Promise<void> {
+    try {
+      await this.redis?.del('config:public:general');
+    } catch (err) {
+      this.logger.warn('Failed to clear general config caches', (err as Error).message);
+    }
   }
 }

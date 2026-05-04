@@ -1,22 +1,31 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { CategoryRepository } from '../../repositories/category.repository';
+import { CountryService } from '../../admin/services/country.service';
+import { ProvinceService } from '../../../province/admin/services/province.service';
 
 @Injectable()
-export class PublicCategoryService {
+export class PublicCountryService {
   private readonly inflight = new Map<string, Promise<any>>();
 
   constructor(
-    private readonly categoryRepo: CategoryRepository,
+    private readonly countryService: CountryService,
+    private readonly provinceService: ProvinceService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
-  async getAll() {
-    const cacheKey = 'post:public:categories:list';
+  async getList(query: any = {}) {
+    return this.getOrSet('config:public:countries', 86400, async () => {
+      return this.countryService.getList({ ...query, status: 'active' });
+    });
+  }
 
-    return this.getOrSet(cacheKey, 600, async () => {
-      const data = await this.categoryRepo.findRootActiveTree();
-      return { data };
+  async getProvinces(countryId: string, query: any = {}) {
+    return this.getOrSet(`config:public:provinces:${countryId}`, 86400, async () => {
+      return this.provinceService.getList({
+        ...query,
+        country_id: countryId,
+        status: 'active',
+      });
     });
   }
 

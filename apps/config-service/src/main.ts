@@ -1,14 +1,18 @@
+import 'dotenv/config';
 import { initTracing } from '@package/tracing';
-initTracing('config-service');
+
+initTracing(process.env.SERVICE_NAME ?? 'config-service');
 
 import { ConfigAppModule } from './app.module';
 import { createApp } from '@package/bootstrap';
 
+const SERVICE_NAME = process.env.SERVICE_NAME ?? 'Config Service';
+
 createApp({
-  serviceName: 'Config Service',
-  defaultPort: 3005,
+  serviceName: SERVICE_NAME,
+  defaultPort: parseInt(process.env.PORT ?? '3003', 10),
   module: ConfigAppModule,
 }).catch((err) => {
-  console.error('Config Service failed to start', err);
+  console.error(`${SERVICE_NAME} failed to start`, err);
   process.exit(1);
 });

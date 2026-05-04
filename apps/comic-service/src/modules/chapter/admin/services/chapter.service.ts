@@ -128,14 +128,10 @@ export class AdminChapterService {
     try {
       await this.redis?.del(`comic:public:chapter:${chapterId}`);
       await this.redis?.del(`comic:public:pages:${chapterId}`);
-      if (comicId) {
-        const chapterListKeys = await this.redis?.keys(`comic:public:chapters:${comicId}:*`);
-        if (chapterListKeys?.length) await this.redis?.deleteMany(chapterListKeys);
-      }
-      const navKeys = await this.redis?.keys('comic:public:nav:*');
-      if (navKeys?.length) await this.redis?.deleteMany(navKeys);
-      // Clear homepage recently-updated cache
-      await this.redis?.del('comic:cache:homepage:recently-updated');
+      // Increment version keys so all old cache keys become stale.
+      // Old keys expire naturally via their TTL (60-300s). No SCAN needed.
+      await this.redis?.incr('comic:public:chapters:v');
+      await this.redis?.incr('comic:public:nav:v');
     } catch (err) {
       this.logger.warn('Failed to clear chapter caches', (err as Error).message);
     }

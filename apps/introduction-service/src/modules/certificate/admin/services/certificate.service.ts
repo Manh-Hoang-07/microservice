@@ -1,12 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { CreateCertificateDto } from '../dtos/create-certificate.dto';
 import { UpdateCertificateDto } from '../dtos/update-certificate.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { CertificateFilter, CertificateRepository } from '../../repositories/certificate.repository';
 
 @Injectable()
 export class AdminCertificateService {
-  constructor(private readonly certificateRepo: CertificateRepository) {}
+  constructor(
+    private readonly certificateRepo: CertificateRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(id?: any) {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('intro:public:certificate:list').catch(() => {});
+    if (id !== undefined) {
+      await this.redis.del(`intro:public:certificate:detail:${id}`).catch(() => {});
+    }
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -32,17 +44,22 @@ export class AdminCertificateService {
   }
 
   async create(dto: CreateCertificateDto) {
-    return this.certificateRepo.create({ ...dto, status: dto.status || 'active', sort_order: dto.sort_order ?? 0 });
+    const result = await this.certificateRepo.create({ ...dto, status: dto.status || 'active', sort_order: dto.sort_order ?? 0 });
+    await this.clearCache();
+    return result;
   }
 
   async update(id: any, dto: UpdateCertificateDto) {
     await this.getOne(id);
-    return this.certificateRepo.update(id, dto);
+    const result = await this.certificateRepo.update(id, dto);
+    await this.clearCache(id);
+    return result;
   }
 
   async delete(id: any) {
     await this.getOne(id);
     await this.certificateRepo.delete(id);
+    await this.clearCache(id);
     return { success: true };
   }
 }

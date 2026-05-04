@@ -15,7 +15,7 @@ export class AdminGeneralConfigController {
 
   @Permission('config.manage')
   @Put()
-  updateConfig(
+  async updateConfig(
     @Body(ValidationPipe) dto: UpdateGeneralConfigDto,
     @Req() req: any,
   ) {

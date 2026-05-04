@@ -9,7 +9,7 @@ import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from '@package/redis';
-import { JwtGuard, RbacGuard, BigIntSerializationInterceptor, GlobalExceptionFilter, HealthModule, CommonKafkaModule, AuditModule } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, AuditModule, BigIntSerializationInterceptor } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
 

@@ -125,10 +125,9 @@ export class AdminComicService {
       if (slug) {
         await this.redis?.del(`comic:public:detail:${slug}`);
       }
-      const listKeys = await this.redis?.keys('comic:public:list:*');
-      if (listKeys?.length) await this.redis?.deleteMany(listKeys);
-      const homepageKeys = await this.redis?.keys('comic:cache:homepage:*');
-      if (homepageKeys?.length) await this.redis?.deleteMany(homepageKeys);
+      // Increment the list version so all old list cache keys become stale.
+      // Old keys expire naturally via their TTL (60s). No SCAN needed.
+      await this.redis?.incr('comic:public:list:v');
     } catch (err) {
       this.logger.warn('Failed to clear comic caches', (err as Error).message);
     }

@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { BannerFilter, BannerRepository } from '../../repositories/banner.repository';
 import { BannerLocationRepository } from '../../../banner-location/repositories/banner-location.repository';
 
@@ -10,7 +11,13 @@ export class AdminBannerService {
   constructor(
     private readonly bannerRepo: BannerRepository,
     private readonly locationRepo: BannerLocationRepository,
+    @Optional() private readonly redis?: RedisService,
   ) {}
+
+  private async clearCache() {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('marketing:public:banners:list').catch(() => {});
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -56,6 +63,7 @@ export class AdminBannerService {
       end_date: dto.end_date,
     });
 
+    await this.clearCache();
     return this.getOne(banner.id);
   }
 
@@ -67,12 +75,14 @@ export class AdminBannerService {
     }
 
     await this.bannerRepo.update(id, dto);
+    await this.clearCache();
     return this.getOne(id);
   }
 
   async delete(id: any) {
     await this.getOne(id);
     await this.bannerRepo.delete(id);
+    await this.clearCache();
     return { success: true };
   }
 

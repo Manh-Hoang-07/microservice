@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { join } from 'path';
 import { createAppConfig } from '@package/config';
 import { envValidationSchema } from './config/env.validation';
-import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
 import { RedisModule } from '@package/redis';
 import { DatabaseModule } from './database/database.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
@@ -20,7 +20,7 @@ import { LocationModule } from './modules/location/location.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
-      load: [createAppConfig(3005, { internalApiSecret: process.env.INTERNAL_API_SECRET || '' })],
+      load: [createAppConfig(3003, { internalApiSecret: process.env.INTERNAL_API_SECRET || '' })],
       validationSchema: envValidationSchema,
     }),
     I18nModule.forRoot({
@@ -64,6 +64,10 @@ import { LocationModule } from './modules/location/location.module';
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new RbacGuard(reflector, config),
       inject: [Reflector, ConfigService],
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: BigIntSerializationInterceptor,
     },
   ],
 })

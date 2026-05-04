@@ -3,7 +3,7 @@ import { MetricsModule } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as path from 'path';
 import cookieParser = require('cookie-parser');
@@ -20,7 +20,7 @@ import { JwksService } from './jwks/services/jwks.service';
 import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { TokenBlacklistService } from './security/services/token-blacklist.service';
 import { AuthModule } from './modules/auth/auth.module';
-import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule } from '@package/common';
+import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
 import { InternalModule } from './internal/internal.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { UserModule } from './modules/user/user.module';
@@ -31,7 +31,7 @@ import { UserModule } from './modules/user/user.module';
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
       load: [
-        createAppConfig(3002, {
+        createAppConfig(3001, {
           internalApiSecret: process.env.INTERNAL_API_SECRET || '',
         }),
         jwtConfig,
@@ -86,6 +86,10 @@ import { UserModule } from './modules/user/user.module';
         blacklist: TokenBlacklistService,
       ) => new AuthJwtGuard(reflector, config, jwksService, i18n, blacklist),
       inject: [Reflector, ConfigService, JwksService, I18nService, TokenBlacklistService],
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: BigIntSerializationInterceptor,
     },
   ],
 })

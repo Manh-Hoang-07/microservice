@@ -1,21 +1,16 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-} from '@nestjs/common';
-import { WardService } from '../../admin/services/ward.service';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@package/common';
+import { PublicWardService } from '../services/ward.service';
 import { ListWardsPublicQueryDto } from '../dtos/list-ward.query.dto';
 
 @Controller()
 export class PublicWardController {
-  constructor(private readonly wardService: WardService) {}
+  constructor(private readonly service: PublicWardService) {}
 
   @Public()
   @Get('wards')
   async getList(@Query() query: ListWardsPublicQueryDto) {
-    return this.wardService.getList({ ...query, status: 'active' });
+    return this.service.getList(query);
   }
 
   @Public()
@@ -24,10 +19,6 @@ export class PublicWardController {
     @Param('provinceId') provinceId: string,
     @Query() query: ListWardsPublicQueryDto,
   ) {
-    return this.wardService.getList({
-      ...query,
-      province_id: provinceId,
-      status: 'active',
-    });
+    return this.service.getByProvince(provinceId, query);
   }
 }

@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { RedisService } from '@package/redis';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { CommentFilter, CommentRepository } from '../../repositories/comment.repository';
 
 @Injectable()
 export class AdminCommentService {
-  constructor(private readonly commentRepo: CommentRepository) {}
+  constructor(
+    private readonly commentRepo: CommentRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -26,6 +30,16 @@ export class AdminCommentService {
   async updateStatus(id: any, status: string) {
     const comment = await this.commentRepo.findById(id);
     if (!comment) throw new NotFoundException('Comment not found');
-    return this.commentRepo.update(id, { status });
+    const result = await this.commentRepo.update(id, { status });
+    await this.incrementVersion('post:public:comments:v');
+    return result;
+  }
+
+  private async incrementVersion(key: string): Promise<void> {
+    try {
+      if (this.redis?.isEnabled()) {
+        await this.redis.incr(key);
+      }
+    } catch {}
   }
 }

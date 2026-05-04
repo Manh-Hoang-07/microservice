@@ -1,13 +1,25 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { ProjectFilter, ProjectRepository } from '../../repositories/project.repository';
 
 @Injectable()
 export class AdminProjectService {
-  constructor(private readonly projectRepo: ProjectRepository) {}
+  constructor(
+    private readonly projectRepo: ProjectRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(slug?: string) {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('intro:public:project:list').catch(() => {});
+    if (slug) {
+      await this.redis.del(`intro:public:project:detail:${slug}`).catch(() => {});
+    }
+  }
 
   private mapP2002(err: unknown): never {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -46,9 +58,11 @@ export class AdminProjectService {
       findOne: (filter: any) => this.projectRepo.findBySlug(filter.slug),
     });
     try {
-      return await this.projectRepo.create({ ...dto, slug, images: dto.images ?? [] });
+      const result = await this.projectRepo.create({ ...dto, slug, images: dto.images ?? [] });
+      await this.clearCache();
+      return result;
     } catch (err) {
-      // Concurrent create raced our slug check → friendly 400 instead of 500.
+      // Concurrent create raced our slug check -> friendly 400 instead of 500.
       this.mapP2002(err);
     }
   }
@@ -68,15 +82,21 @@ export class AdminProjectService {
     }
 
     try {
-      return await this.projectRepo.update(id, data);
+      const result = await this.projectRepo.update(id, data);
+      await this.clearCache((current as any).slug);
+      if (data.slug && data.slug !== (current as any).slug) {
+        await this.clearCache(data.slug);
+      }
+      return result;
     } catch (err) {
       this.mapP2002(err);
     }
   }
 
   async delete(id: any) {
-    await this.getOne(id);
+    const item = await this.getOne(id);
     await this.projectRepo.delete(id);
+    await this.clearCache((item as any).slug);
     return { success: true };
   }
 }

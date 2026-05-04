@@ -1,13 +1,25 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { RedisService } from '@package/redis';
 import { AboutSectionFilter, AboutSectionRepository } from '../../repositories/about-section.repository';
 
 @Injectable()
 export class AdminAboutService {
-  constructor(private readonly aboutRepo: AboutSectionRepository) {}
+  constructor(
+    private readonly aboutRepo: AboutSectionRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(slug?: string) {
+    if (!this.redis?.isEnabled()) return;
+    await this.redis.del('intro:public:about:list').catch(() => {});
+    if (slug) {
+      await this.redis.del(`intro:public:about:detail:${slug}`).catch(() => {});
+    }
+  }
 
   private mapP2002(err: unknown): never {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -44,7 +56,9 @@ export class AdminAboutService {
       findOne: (filter: any) => this.aboutRepo.findBySlug(filter.slug),
     });
     try {
-      return await this.aboutRepo.create({ ...dto, slug });
+      const result = await this.aboutRepo.create({ ...dto, slug });
+      await this.clearCache();
+      return result;
     } catch (err) {
       // Concurrent create raced our slug check.
       this.mapP2002(err);
@@ -65,15 +79,22 @@ export class AdminAboutService {
     }
 
     try {
-      return await this.aboutRepo.update(id, data);
+      const result = await this.aboutRepo.update(id, data);
+      await this.clearCache((current as any).slug);
+      // If slug changed, also clear the new slug cache
+      if (data.slug && data.slug !== (current as any).slug) {
+        await this.clearCache(data.slug);
+      }
+      return result;
     } catch (err) {
       this.mapP2002(err);
     }
   }
 
   async delete(id: any) {
-    await this.getOne(id);
+    const item = await this.getOne(id);
     await this.aboutRepo.delete(id);
+    await this.clearCache((item as any).slug);
     return { success: true };
   }
 }
