@@ -1,7 +1,9 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Kafka, Producer } from 'kafkajs';
+import { KafkaJS } from '@confluentinc/kafka-javascript';
 import { MAIL_SEND_TOPIC, MailSendEvent } from '@package/shared-types';
+
+type Producer = KafkaJS.Producer;
 
 @Injectable()
 export class MailPublisher implements OnModuleInit, OnModuleDestroy {
@@ -15,7 +17,7 @@ export class MailPublisher implements OnModuleInit, OnModuleDestroy {
     if (!brokers.length) {
       throw new Error('KAFKA_BROKERS is required when EVENT_DRIVER=kafka');
     }
-    const kafka = new Kafka({ clientId: 'auth-mail', brokers });
+    const kafka = new KafkaJS.Kafka({ kafkaJS: { clientId: 'auth-mail', brokers } });
     this.producer = kafka.producer();
     await this.producer.connect();
   }
