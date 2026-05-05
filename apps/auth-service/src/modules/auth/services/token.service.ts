@@ -8,21 +8,28 @@ import { PrimaryKey } from 'src/types';
 
 @Injectable()
 export class TokenService {
-  private readonly DEFAULT_AT_TTL = 3600;
-  private readonly DEFAULT_RT_TTL = 604800;
+  private readonly accessExpiresIn: string;
+  private readonly refreshExpiresIn: string;
+  private readonly accessTtlSec: number;
+  private readonly refreshTtlSec: number;
 
   constructor(
     private readonly jwksService: JwksService,
-    private readonly config: ConfigService,
+    config: ConfigService,
     private readonly redis: RedisService,
-  ) {}
+  ) {
+    this.accessExpiresIn = config.get<string>('jwt.expiresIn') || '1h';
+    this.refreshExpiresIn = config.get<string>('jwt.refreshExpiresIn') || '7d';
+    this.accessTtlSec = parseDurationToSeconds(this.accessExpiresIn, 3600);
+    this.refreshTtlSec = parseDurationToSeconds(this.refreshExpiresIn, 604800);
+  }
 
   getAccessTtlSec(): number {
-    return parseDurationToSeconds(this.config.get<string>('jwt.expiresIn'), this.DEFAULT_AT_TTL);
+    return this.accessTtlSec;
   }
 
   getRefreshTtlSec(): number {
-    return parseDurationToSeconds(this.config.get<string>('jwt.refreshExpiresIn'), this.DEFAULT_RT_TTL);
+    return this.refreshTtlSec;
   }
 
   buildRefreshKey(userId: PrimaryKey, jti: string): string {
@@ -35,23 +42,18 @@ export class TokenService {
 
   async generateTokens(userId: PrimaryKey, email?: string) {
     const jti = randomUUID();
-    const accessTtlSec = this.getAccessTtlSec();
-    const refreshTtlSec = this.getRefreshTtlSec();
-
-    const expiresIn = this.config.get<string>('jwt.expiresIn')!;
-    const refreshExpiresIn = this.config.get<string>('jwt.refreshExpiresIn')!;
 
     const accessToken = await this.jwksService.signToken(
       { sub: String(userId), email },
-      expiresIn,
+      this.accessExpiresIn,
     );
 
     const refreshToken = await this.jwksService.signToken(
       { sub: String(userId), email, jti, type: 'refresh' },
-      refreshExpiresIn,
+      this.refreshExpiresIn,
     );
 
-    return { accessToken, refreshToken, refreshJti: jti, accessTtlSec, refreshTtlSec } as const;
+    return { accessToken, refreshToken, refreshJti: jti, accessTtlSec: this.accessTtlSec, refreshTtlSec: this.refreshTtlSec } as const;
   }
 
   async verifyAccessToken(token: string) {
