@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { MetricsModule } from "@package/bootstrap";
+import { MetricsModule, FileLogger } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -91,6 +91,7 @@ import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, Bi
       provide: APP_INTERCEPTOR,
       useClass: BigIntSerializationInterceptor,
     },
+    FileLogger,
   ],
 })
 export class AppModule implements NestModule {

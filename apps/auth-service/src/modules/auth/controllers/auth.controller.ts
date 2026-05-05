@@ -7,7 +7,6 @@ import {
   HttpCode,
   HttpStatus,
   InternalServerErrorException,
-  Logger,
   Post,
   Req,
   Res,
@@ -40,8 +39,6 @@ import {
 
 @Controller('auth')
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name);
-
   constructor(
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
@@ -193,7 +190,6 @@ export class AuthController {
       this.writeAuthCookies(req, res, result.token, result.refreshToken);
       return res.redirect(`${frontendUrl}/auth/google/success`);
     } catch (err) {
-      this.logger.warn(`Google OAuth callback failed: ${(err as Error).message}`);
       const code =
         err instanceof BadRequestException ? 'bad_request'
           : err instanceof UnauthorizedException ? 'unauthorized'

@@ -15,6 +15,15 @@ const LEVEL_PRIORITY: Record<string, number> = {
   verbose: 5,
 };
 
+/** NestJS internal contexts that produce noisy startup/routing logs */
+const NOISY_CONTEXTS = new Set([
+  'InstanceLoader',
+  'RoutesResolver',
+  'RouterExplorer',
+  'NestFactory',
+  'NestApplication',
+]);
+
 /**
  * Structured JSON logger with pluggable output targets.
  *
@@ -119,11 +128,18 @@ export class JsonLogger extends ConsoleLogger {
   }
 
   private writeFile(level: Level, message: any, context?: string, stack?: string) {
+    // Skip noisy NestJS startup logs in file — only keep business & error logs
+    const ctx = context ?? this.context ?? '';
+    if (NOISY_CONTEXTS.has(ctx) && LEVEL_PRIORITY[level] >= LEVEL_PRIORITY.info) {
+      return;
+    }
+
     const today = new Date().toISOString().slice(0, 10);
 
     if (today !== this.currentDate) {
       this.fileStream?.end();
-      const filePath = path.join(this.logDir, `${this.serviceName}-${today}.log`);
+      const slug = this.serviceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const filePath = path.join(this.logDir, `${slug}-${today}.log`);
       this.fileStream = fs.createWriteStream(filePath, { flags: 'a' });
       this.currentDate = today;
     }

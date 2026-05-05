@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -16,8 +15,6 @@ import { PrimaryKey, toPrimaryKey } from 'src/types';
 
 @Injectable()
 export class LoginService {
-  private readonly logger = new Logger(LoginService.name);
-
   constructor(
     private readonly userRepo: UserRepository,
     private readonly tokenBlacklistService: TokenBlacklistService,
@@ -73,25 +70,18 @@ export class LoginService {
     if (accessToken) {
       try {
         const accessPayload = await this.tokenService.verifyAccessToken(accessToken);
-        // Reject refresh tokens presented as access tokens (cannot blacklist
-        // someone else's session via this endpoint).
         if ((accessPayload as any)?.type === 'refresh') {
           accessSub = undefined;
         } else {
           accessSub = accessPayload.sub as string | undefined;
           await this.tokenBlacklistService.add(accessToken, this.tokenService.getAccessTtlSec());
         }
-      } catch {
-        // Invalid access token — silently ignore; logout still tries refresh
-      }
+      } catch { /* ignore invalid token */ }
     }
     if (refreshToken) {
       const decoded = await this.tokenService.decodeRefresh(refreshToken);
       const refreshSub = decoded?.sub as string | undefined;
       const jti = (decoded as any)?.jti as string | undefined;
-      // If both tokens were supplied, ensure they belong to the same subject
-      // before revoking — prevents using a stolen refresh-token to revoke
-      // someone else's session via a forged access-token.
       if (refreshSub && jti && (!accessSub || accessSub === refreshSub)) {
         await this.tokenService.revokeRefreshJti(toPrimaryKey(refreshSub), jti);
       }
@@ -121,13 +111,6 @@ export class LoginService {
     const userId: PrimaryKey = toPrimaryKey(sub);
     const isActive = await this.tokenService.isRefreshActive(userId, jti);
     if (!isActive) {
-      // Refresh token reuse detection: a valid JWT whose JTI has already
-      // been consumed likely means the token was stolen and used by an
-      // attacker before the legitimate user. Revoke ALL sessions to protect
-      // the account.
-      this.logger.warn(
-        `Refresh token reuse detected for user ${sub}, jti ${jti} — revoking all sessions`,
-      );
       await this.tokenService.revokeAllUserSessions(userId);
       throw new UnauthorizedException(t(this.i18n,'auth.REFRESH_TOKEN_REUSE_DETECTED'));
     }

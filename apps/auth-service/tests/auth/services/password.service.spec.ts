@@ -42,6 +42,10 @@ jest.mock('src/types', () => ({
   PrimaryKey: BigInt,
 }), { virtual: true });
 
+jest.mock('@package/bootstrap', () => ({
+  FileLogger: jest.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
@@ -106,6 +110,15 @@ function buildService() {
   const i18nService = makeMockI18nService();
   const configService = makeMockConfigService();
 
+  const mockLogSession = {
+    addDebug: jest.fn().mockReturnThis(),
+    addException: jest.fn().mockReturnThis(),
+    save: jest.fn(),
+  };
+  const fileLogger = {
+    create: jest.fn().mockReturnValue(mockLogSession),
+  };
+
   const service = new PasswordService(
     userRepo as any,
     otpService as any,
@@ -113,6 +126,7 @@ function buildService() {
     tokenService as any,
     i18nService as any,
     configService as any,
+    fileLogger as any,
   );
 
   return {

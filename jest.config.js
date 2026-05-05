@@ -13,6 +13,9 @@
  * Watch:                 npm run test:watch
  * Coverage:              npm run test:coverage
  */
+// Disable file logging during tests to avoid parallel worker conflicts
+process.env.LOG_TARGET = process.env.LOG_TARGET || 'console';
+
 module.exports = {
   testEnvironment: 'node',
   rootDir: '.',

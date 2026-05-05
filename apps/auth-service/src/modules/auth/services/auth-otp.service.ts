@@ -49,7 +49,6 @@ export class AuthOtpService {
       return false;
     }
 
-    // Success — clear attempt counter
     await this.attemptLimiter.reset(scope, email);
     return true;
   }
@@ -58,14 +57,12 @@ export class AuthOtpService {
     const otp = generateOtp();
     const key = buildOtpKey(type, email);
     try {
-      // Publish first so a Kafka failure leaves no orphan OTP in Redis.
       await this.mailPublisher.publish({
         to: email,
         templateCode,
         variables: { otp },
       });
     } catch (err) {
-      // Best-effort cleanup of any prior key to keep cache consistent
       await this.redis.del(key).catch(() => undefined);
       throw err;
     }

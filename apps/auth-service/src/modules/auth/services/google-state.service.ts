@@ -21,9 +21,6 @@ export class GoogleOauthStateService {
   private readonly secret: string;
 
   constructor(config: ConfigService) {
-    // Required-in-prod by env.validation. Empty string in dev/staging is
-    // tolerated; the cookie comparison still works because both sides use
-    // the same empty key — but it provides no integrity guarantee.
     this.secret = config.get<string>('GOOGLE_OAUTH_STATE_SECRET') || '';
   }
 

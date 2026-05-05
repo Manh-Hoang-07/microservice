@@ -12,6 +12,7 @@ export { RbacGuard } from './guards/rbac.guard';
 // Interceptors
 export { BigIntSerializationInterceptor } from './interceptors/bigint-serialization.interceptor';
 export { TransformInterceptor } from './response/transform.interceptor';
+export { RequestLoggerInterceptor } from './interceptors/request-logger.interceptor';
 
 // Response
 export { ResponseUtil, ApiResponse, PaginationMeta as ResponsePaginationMeta } from './response/response.util';
