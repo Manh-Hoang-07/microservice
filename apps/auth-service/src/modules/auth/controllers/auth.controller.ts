@@ -16,7 +16,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { Response, Request } from 'express';
-import { I18nContext, I18nService } from 'nestjs-i18n';
 import { GoogleOAuthGuard } from '../guards/google-oauth.guard';
 import { AuthService } from '../services/auth.service';
 import { TokenService } from '../services/token.service';
@@ -27,7 +26,7 @@ import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendOtpDto } from '../dto/send-otp.dto';
 import { LogoutDto } from '../dto/logout.dto';
-import { Public } from '@package/common';
+import { Public, Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import {
   REFRESH_COOKIE,
@@ -43,7 +42,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
     private readonly configService: ConfigService,
-    private readonly i18n: I18nService,
   ) {}
 
   private get isProd(): boolean {
@@ -94,6 +92,7 @@ export class AuthController {
     return { success: true };
   }
 
+  @Permission('user')
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   async logoutAll(
@@ -118,17 +117,12 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = dto.refreshToken || (req.cookies?.[REFRESH_COOKIE] as string | undefined);
-    if (!refreshToken) {
-      const lang = I18nContext.current()?.lang ?? 'en';
-      throw new UnauthorizedException(
-        this.i18n.t('auth.REFRESH_TOKEN_REQUIRED', { lang }),
-      );
-    }
-    const result = await this.authService.refreshTokenByValue(refreshToken);
+    const result = await this.authService.refreshTokenByValue(refreshToken ?? '');
     this.writeAuthCookies(req, res, result.token, result.refreshToken);
     return result;
   }
 
+  @Permission('user')
   @Get('me')
   async me(@Req() req: Request) {
     const userId = requireUserId(req);

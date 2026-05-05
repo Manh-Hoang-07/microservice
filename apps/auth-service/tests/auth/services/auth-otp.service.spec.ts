@@ -4,6 +4,10 @@ jest.mock('@package/common', () => ({
   t: (_i18n: any, key: string) => key,
 }));
 
+jest.mock('@package/bootstrap', () => ({
+  FileLogger: jest.fn(),
+}));
+
 import { AuthOtpService } from '../../../src/modules/auth/services/auth-otp.service';
 
 jest.mock('../../../src/modules/auth/utils/otp.helper', () => ({
@@ -16,7 +20,7 @@ function makeRedis(overrides: Record<string, jest.Mock> = {}) {
     get: jest.fn().mockResolvedValue(null),
     set: jest.fn().mockResolvedValue('OK'),
     del: jest.fn().mockResolvedValue(1),
-    getdel: jest.fn().mockResolvedValue(null),
+        ttl: jest.fn().mockResolvedValue(-2),
     ...overrides,
   } as any;
 }
@@ -47,12 +51,23 @@ function makeI18n() {
   } as any;
 }
 
+const mockLogSession = {
+  addDebug: jest.fn().mockReturnThis(),
+  addException: jest.fn().mockReturnThis(),
+  save: jest.fn(),
+};
+
+function makeFileLogger() {
+  return { create: jest.fn().mockReturnValue(mockLogSession) } as any;
+}
+
 function buildService(deps: {
   redis?: any;
   mailPublisher?: any;
   config?: any;
   attemptLimiter?: any;
   i18n?: any;
+  fileLogger?: any;
 } = {}) {
   return new AuthOtpService(
     deps.redis ?? makeRedis(),
@@ -60,6 +75,7 @@ function buildService(deps: {
     deps.config ?? makeConfig({ OTP_TTL_SECONDS: '300' }),
     deps.attemptLimiter ?? makeAttemptLimiter(),
     deps.i18n ?? makeI18n(),
+    deps.fileLogger ?? makeFileLogger(),
   );
 }
 
@@ -67,21 +83,22 @@ describe('AuthOtpService', () => {
   beforeEach(() => jest.clearAllMocks());
 
   describe('verifyAndDelete()', () => {
-    it('returns true and resets attempts on correct OTP', async () => {
-      const redis = makeRedis({ getdel: jest.fn().mockResolvedValue('123456') });
+    it('returns true, deletes OTP, and resets attempts on correct OTP', async () => {
+      const redis = makeRedis({ get: jest.fn().mockResolvedValue('123456') });
       const attemptLimiter = makeAttemptLimiter();
       const svc = buildService({ redis, attemptLimiter });
 
       const result = await svc.verifyAndDelete('register', 'user@test.com', '123456');
 
       expect(result).toBe(true);
-      expect(redis.getdel).toHaveBeenCalledWith('otp:register:user@test.com');
+      expect(redis.get).toHaveBeenCalledWith('otp:register:user@test.com');
+      expect(redis.del).toHaveBeenCalledWith('otp:register:user@test.com');
       expect(attemptLimiter.reset).toHaveBeenCalledWith('otp:verify:register', 'user@test.com');
       expect(attemptLimiter.add).not.toHaveBeenCalled();
     });
 
     it('returns false and records failed attempt on wrong OTP', async () => {
-      const redis = makeRedis({ getdel: jest.fn().mockResolvedValue('123456') });
+      const redis = makeRedis({ get: jest.fn().mockResolvedValue('123456') });
       const attemptLimiter = makeAttemptLimiter();
       const svc = buildService({ redis, attemptLimiter });
 
@@ -93,11 +110,12 @@ describe('AuthOtpService', () => {
         'user@test.com',
         expect.objectContaining({ maxAttempts: 5, lockoutSeconds: 900, windowSeconds: 300 }),
       );
+      expect(redis.del).not.toHaveBeenCalled();
       expect(attemptLimiter.reset).not.toHaveBeenCalled();
     });
 
     it('returns false when no OTP exists in Redis (expired/not sent)', async () => {
-      const redis = makeRedis({ getdel: jest.fn().mockResolvedValue(null) });
+      const redis = makeRedis();
       const attemptLimiter = makeAttemptLimiter();
       const svc = buildService({ redis, attemptLimiter });
 
@@ -120,20 +138,7 @@ describe('AuthOtpService', () => {
         svc.verifyAndDelete('register', 'user@test.com', '123456'),
       ).rejects.toThrow(ForbiddenException);
 
-      expect(redis.getdel).not.toHaveBeenCalled();
-    });
-
-    it('deletes OTP atomically on success (uses getdel)', async () => {
-      const redis = makeRedis({ getdel: jest.fn().mockResolvedValue('555555') });
-      const svc = buildService({ redis });
-
-      await svc.verifyAndDelete('forgot-password', 'a@b.com', '555555');
-
-      expect(redis.getdel).toHaveBeenCalledTimes(1);
-      expect(redis.getdel).toHaveBeenCalledWith('otp:forgot-password:a@b.com');
-      // Ensures we use getdel (atomic get+delete) rather than separate get then del
       expect(redis.get).not.toHaveBeenCalled();
-      expect(redis.del).not.toHaveBeenCalled();
     });
   });
 

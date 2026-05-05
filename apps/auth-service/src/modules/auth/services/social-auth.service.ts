@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException, Injectable } from '@nestjs/commo
 import { randomBytes } from 'crypto';
 import { I18nService } from 'nestjs-i18n';
 import { t } from '@package/common';
+import { FileLogger } from '@package/bootstrap';
 import { Prisma } from 'src/generated/prisma';
 import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
@@ -14,6 +15,7 @@ export class SocialAuthService {
     private readonly userRepo: UserRepository,
     private readonly tokenService: TokenService,
     private readonly i18n: I18nService,
+    private readonly fileLogger: FileLogger,
   ) {}
 
   async handleGoogleAuth(profile: {
@@ -25,37 +27,46 @@ export class SocialAuthService {
   }) {
     const email = profile.email.toLowerCase();
     const now = new Date();
+    const log = this.fileLogger.create('auth/google-oauth', { email, googleId: profile.googleId });
 
+    log.addDebug('finding existing user');
     const existing = await this.userRepo.findByEmail(email);
 
-    // Block silent account merge: if a user exists for this email but it has
-    // already been linked to a DIFFERENT Google account, refuse the link
-    // attempt instead of overwriting the bound googleId.
     if (existing && existing.googleId && existing.googleId !== profile.googleId) {
-      throw new ForbiddenException(t(this.i18n,'auth.ACCOUNT_LINKED_TO_OTHER'));
+      log.addException(new Error('account_linked_to_other'));
+      log.save();
+      throw new ForbiddenException(t(this.i18n, 'auth.ACCOUNT_LINKED_TO_OTHER'));
     }
 
-    // Status must be checked BEFORE writing — locked/banned users should not
-    // have profile fields refreshed by an attempted login.
     if (existing && existing.status !== 'active') {
-      throw new ForbiddenException(t(this.i18n,'auth.ACCOUNT_LOCKED'));
+      log.addException(new Error('account_locked'));
+      log.save();
+      throw new ForbiddenException(t(this.i18n, 'auth.ACCOUNT_LOCKED'));
     }
 
     const fullName = this.resolveFullName(profile);
-    const dbUser = existing
-      ? await this.userRepo.update(existing.id, {
-          name: fullName,
-          image: profile.picture ?? null,
-          googleId: profile.googleId,
-          email_verified_at: existing.email_verified_at ?? now,
-          last_login_at: now,
-        })
-      : await this.createWithUniqueUsername(email, profile.googleId, fullName, profile.picture, now);
+    let dbUser;
 
+    if (existing) {
+      log.addDebug('updating existing user');
+      dbUser = await this.userRepo.update(existing.id, {
+        name: fullName,
+        image: profile.picture ?? null,
+        googleId: profile.googleId,
+        email_verified_at: existing.email_verified_at ?? now,
+        last_login_at: now,
+      });
+    } else {
+      log.addDebug('creating new user');
+      dbUser = await this.createWithUniqueUsername(email, profile.googleId, fullName, profile.picture, now);
+    }
+
+    log.addDebug('generating tokens');
     const userId: PrimaryKey = dbUser.id;
     const tokens = await this.tokenService.generateTokens(userId, dbUser.email!);
     await this.tokenService.storeRefreshJti(userId, tokens.refreshJti, tokens.refreshTtlSec);
 
+    log.save({ userId: String(dbUser.id), isNew: !existing });
     return {
       token: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -84,7 +95,6 @@ export class SocialAuthService {
     now: Date,
   ) {
     const base = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40) || 'user';
-    // Up to 5 retries on username collisions, then fall back to a long suffix.
     for (let i = 0; i < 6; i++) {
       const suffix = i < 5 ? randomBytes(3).toString('hex') : randomBytes(8).toString('hex');
       const candidate = `${base}_${suffix}`;
@@ -124,6 +134,6 @@ export class SocialAuthService {
         throw err;
       }
     }
-    throw new ConflictException(t(this.i18n,'auth.USERNAME_GENERATION_FAILED'));
+    throw new ConflictException(t(this.i18n, 'auth.USERNAME_GENERATION_FAILED'));
   }
 }

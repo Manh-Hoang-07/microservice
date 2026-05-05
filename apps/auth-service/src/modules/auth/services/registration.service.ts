@@ -24,23 +24,24 @@ export class RegistrationService {
     const email = dto.email.toLowerCase();
     const username = dto.username ?? email;
     const log = this.fileLogger.create('auth/register', { email, username, phone: dto.phone });
-    let result: any = null;
 
+    log.addDebug('validating uniqueness');
+    await this.validateUniqueness(email, dto.username, dto.phone);
+
+    log.addDebug('verifying OTP');
+    const isOtpValid = await this.otpService.verifyAndDelete('register', email, dto.otp);
+    if (!isOtpValid) {
+      log.addException(new Error('invalid_otp'));
+      log.save();
+      throw new BadRequestException(t(this.i18n, 'auth.INVALID_OTP'));
+    }
+
+    log.addDebug('hashing password');
+    const rounds = Number(this.config.get('BCRYPT_ROUNDS') ?? 12);
+    const hashedPassword = await bcrypt.hash(dto.password, rounds);
+
+    log.addDebug('creating user in transaction');
     try {
-      log.addDebug('validating uniqueness');
-      await this.validateUniqueness(email, dto.username, dto.phone);
-
-      log.addDebug('verifying OTP');
-      const isOtpValid = await this.otpService.verifyAndDelete('register', email, dto.otp);
-      if (!isOtpValid) {
-        throw new BadRequestException(t(this.i18n, 'auth.INVALID_OTP'));
-      }
-
-      log.addDebug('hashing password');
-      const rounds = Number(this.config.get('BCRYPT_ROUNDS') ?? 12);
-      const hashedPassword = await bcrypt.hash(dto.password, rounds);
-
-      log.addDebug('creating user in transaction');
       const user = await this.userRepo.withTransaction(async (tx) => {
         const created = await this.userRepo.create(
           {
@@ -67,21 +68,20 @@ export class RegistrationService {
         return created;
       });
 
-      result = { user: safeUser(user) };
+      const result = { user: safeUser(user) };
+      log.save({ userId: String(user.id), email: user.email, username: user.username });
       return result;
     } catch (err) {
+      log.addException(err);
+      log.save();
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         const target = (err.meta as { target?: string[] | string })?.target;
         const fields = Array.isArray(target) ? target : typeof target === 'string' ? [target] : [];
-        log.addException(err);
         if (fields.some((f) => f.includes('email'))) throw new BadRequestException(t(this.i18n, 'auth.EMAIL_IN_USE'));
         if (fields.some((f) => f.includes('username'))) throw new BadRequestException(t(this.i18n, 'auth.USERNAME_IN_USE'));
         if (fields.some((f) => f.includes('phone'))) throw new BadRequestException(t(this.i18n, 'auth.PHONE_IN_USE'));
       }
-      log.addException(err);
       throw err;
-    } finally {
-      log.save(result);
     }
   }
 

@@ -108,9 +108,18 @@ export class LogSession {
     try {
       const dir = path.dirname(this.filePath);
       fs.mkdirSync(dir, { recursive: true });
-      fs.appendFileSync(this.filePath, JSON.stringify(record) + '\n');
-    } catch {
-      // Never let logging break the request
+      const json = JSON.stringify(record, (_key, value) =>
+        typeof value === 'bigint' ? String(value) : value,
+      );
+      fs.appendFileSync(this.filePath, json + '\n');
+    } catch (e) {
+      try {
+        const errDir = path.dirname(this.filePath);
+        fs.appendFileSync(
+          path.join(errDir, '_file-logger-errors.log'),
+          `${new Date().toISOString()} | ${this.filePath} | ${(e as Error).message}\n`,
+        );
+      } catch { /* truly give up */ }
     }
   }
 }

@@ -1,30 +1,25 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { MetricsModule, FileLogger } from "@package/bootstrap";
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MetricsModule } from '@package/bootstrap';
+import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { I18nThrottlerGuard } from './core/guards/throttler.guard';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { Reflector } from '@nestjs/core';
 import * as path from 'path';
 import cookieParser = require('cookie-parser');
-import { I18nModule, AcceptLanguageResolver, QueryResolver, I18nService } from 'nestjs-i18n';
+import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { RedisModule } from '@package/redis';
+import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { CoreModule } from './core/core.module';
 import { envValidationSchema } from './core/config/env.validation';
 import jwtConfig from './core/config/jwt.config';
-
-import { DatabaseModule } from './core/database/database.module';
-import { SecurityModule } from './core/security/security.module';
 import { AuthJwtGuard } from './core/guards/auth-jwt.guard';
-import { TokenBlacklistService } from './core/security/services/token-blacklist.service';
-import { KafkaModule } from './kafka/kafka.module';
+import { I18nThrottlerGuard } from './core/guards/throttler.guard';
 import { JwksModule } from './jwks/jwks.module';
-import { JwksService } from './jwks/services/jwks.service';
+import { KafkaModule } from './kafka/kafka.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { InternalModule } from './internal/internal.module';
 import { UserModule } from './modules/user/user.module';
-import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { InternalModule } from './internal/internal.module';
 
 @Module({
   imports: [
@@ -54,9 +49,8 @@ import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, Bi
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
-    DatabaseModule,
+    CoreModule,
     RedisModule,
-    SecurityModule,
     JwksModule,
     AuthModule,
     HealthModule.register('auth-service'),
@@ -76,22 +70,11 @@ import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, Bi
       provide: APP_GUARD,
       useClass: I18nThrottlerGuard
     },
-    {
-      provide: APP_GUARD,
-      useFactory: (
-        reflector: Reflector,
-        config: ConfigService,
-        jwksService: JwksService,
-        i18n: I18nService,
-        blacklist: TokenBlacklistService,
-      ) => new AuthJwtGuard(reflector, config, jwksService, i18n, blacklist),
-      inject: [Reflector, ConfigService, JwksService, I18nService, TokenBlacklistService],
-    },
+    { provide: APP_GUARD, useClass: AuthJwtGuard },
     {
       provide: APP_INTERCEPTOR,
       useClass: BigIntSerializationInterceptor,
     },
-    FileLogger,
   ],
 })
 export class AppModule implements NestModule {

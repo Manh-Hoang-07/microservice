@@ -5,6 +5,10 @@ jest.mock('@package/common', () => ({
   t: (_i18n: any, key: string) => key,
 }));
 
+jest.mock('@package/bootstrap', () => ({
+  FileLogger: jest.fn(),
+}));
+
 jest.mock('nestjs-i18n', () => ({
   I18nContext: { current: () => ({ lang: 'en' }) },
   I18nService: jest.fn(),
@@ -110,11 +114,19 @@ describe('SocialAuthService', () => {
   let userRepo: ReturnType<typeof makeMockUserRepo>;
   let tokenService: ReturnType<typeof makeMockTokenService>;
   const i18n = {} as any;
+  const mockLogSession = {
+    addDebug: jest.fn().mockReturnThis(),
+    addException: jest.fn().mockReturnThis(),
+    save: jest.fn(),
+  };
+  const fileLogger = { create: jest.fn().mockReturnValue(mockLogSession) };
 
   beforeEach(() => {
     userRepo = makeMockUserRepo();
     tokenService = makeMockTokenService();
-    service = new SocialAuthService(userRepo as any, tokenService as any, i18n);
+    jest.clearAllMocks();
+    fileLogger.create.mockReturnValue(mockLogSession);
+    service = new SocialAuthService(userRepo as any, tokenService as any, i18n, fileLogger as any);
     tokenService.generateTokens.mockResolvedValue(defaultTokens);
     tokenService.storeRefreshJti.mockResolvedValue(undefined);
   });

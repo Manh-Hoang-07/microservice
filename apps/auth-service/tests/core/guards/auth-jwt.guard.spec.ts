@@ -87,12 +87,18 @@ function buildGuard(options: {
   const i18nService = makeMockI18nService();
   const tokenBlacklistService = makeMockTokenBlacklistService();
 
+  const iamClient = {
+    isConfigured: jest.fn().mockReturnValue(false),
+    checkPermissions: jest.fn().mockResolvedValue(true),
+  };
+
   const guard = new AuthJwtGuard(
     reflector as any,
     configService as any,
     jwksService as any,
     i18nService as any,
     tokenBlacklistService as any,
+    iamClient as any,
   );
 
   return {

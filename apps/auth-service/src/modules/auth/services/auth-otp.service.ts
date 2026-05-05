@@ -1,7 +1,8 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { I18nService } from 'nestjs-i18n';
 import { t } from '@package/common';
+import { FileLogger } from '@package/bootstrap';
 import { RedisService } from '@package/redis';
 import { MailPublisher } from '../../../kafka/services/mail-publisher.service';
 import { AttemptLimiterService } from '../../../core/security/services/attempt-limiter.service';
@@ -17,6 +18,7 @@ export class AuthOtpService {
     private readonly config: ConfigService,
     private readonly attemptLimiter: AttemptLimiterService,
     private readonly i18n: I18nService,
+    private readonly fileLogger: FileLogger,
   ) {
     this.otpTtlSec = Number(this.config.get('OTP_TTL_SECONDS') ?? 300);
   }
@@ -34,13 +36,12 @@ export class AuthOtpService {
     const lockout = await this.attemptLimiter.check(scope, email);
     if (lockout.isLocked) {
       throw new ForbiddenException(
-        t(this.i18n,'auth.OTP_VERIFY_LOCKED', { minutes: lockout.remainingMinutes }),
+        t(this.i18n, 'auth.OTP_VERIFY_LOCKED', { minutes: lockout.remainingMinutes }),
       );
     }
     const key = buildOtpKey(type, email);
-    const cached = await this.redis.getdel(key);
+    const cached = await this.redis.get(key);
     if (!cached || !safeEqual(cached, providedOtp)) {
-      // Record failed attempt (max 5 tries, then 15-min lockout)
       await this.attemptLimiter.add(scope, email, {
         maxAttempts: 5,
         lockoutSeconds: 900,
@@ -49,13 +50,33 @@ export class AuthOtpService {
       return false;
     }
 
+    // OTP matched — delete immediately to prevent reuse
+    await this.redis.del(key);
     await this.attemptLimiter.reset(scope, email);
     return true;
   }
 
   private async sendOtp(type: string, email: string, templateCode: string): Promise<void> {
-    const otp = generateOtp();
+    const log = this.fileLogger.create(`auth/otp-${type}`, { email, templateCode });
     const key = buildOtpKey(type, email);
+
+    // Check if an OTP is still alive — prevent spam resend
+    log.addDebug('checking existing OTP');
+    const existing = await this.redis.get(key);
+    if (existing) {
+      const ttl = await this.redis.ttl(key);
+      const remaining = ttl > 0 ? ttl : this.otpTtlSec;
+      log.addException(new Error('otp_still_valid'));
+      log.save();
+      throw new BadRequestException(
+        t(this.i18n, 'auth.OTP_STILL_VALID', { seconds: remaining }),
+      );
+    }
+
+    log.addDebug('generating OTP');
+    const otp = generateOtp();
+
+    log.addDebug('publishing to Kafka');
     try {
       await this.mailPublisher.publish({
         to: email,
@@ -64,9 +85,14 @@ export class AuthOtpService {
       });
     } catch (err) {
       await this.redis.del(key).catch(() => undefined);
+      log.addException(err);
+      log.save();
       throw err;
     }
+
+    log.addDebug('storing OTP in Redis');
     await this.redis.set(key, otp, this.otpTtlSec);
+    log.save();
   }
 }
 

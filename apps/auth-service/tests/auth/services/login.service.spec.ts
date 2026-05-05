@@ -8,6 +8,10 @@ jest.mock('@package/common', () => ({
   parseDurationToSeconds: jest.fn((v: string, d: number) => d),
 }));
 
+jest.mock('@package/bootstrap', () => ({
+  FileLogger: jest.fn(),
+}));
+
 jest.mock('nestjs-i18n', () => ({
   I18nContext: { current: () => ({ lang: 'en' }) },
   I18nService: jest.fn(),
@@ -100,12 +104,20 @@ function buildService() {
   const attemptLimiterService = makeMockAttemptLimiterService();
   const i18nService = makeMockI18nService();
 
+  const mockLogSession = {
+    addDebug: jest.fn().mockReturnThis(),
+    addException: jest.fn().mockReturnThis(),
+    save: jest.fn(),
+  };
+  const fileLogger = { create: jest.fn().mockReturnValue(mockLogSession) };
+
   const service = new LoginService(
     userRepo as any,
     tokenBlacklistService as any,
     tokenService as any,
     attemptLimiterService as any,
     i18nService as any,
+    fileLogger as any,
   );
 
   return {
