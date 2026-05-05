@@ -3,7 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
+import { t } from '@package/common';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
@@ -30,11 +31,6 @@ export class AuthService {
     private readonly i18n: I18nService,
   ) {}
 
-  private t(key: string): string {
-    const lang = I18nContext.current()?.lang ?? 'en';
-    return this.i18n.t(key, { lang }) as string;
-  }
-
   async login(dto: LoginDto) {
     return this.loginService.login(dto);
   }
@@ -53,7 +49,7 @@ export class AuthService {
 
   async me(userId: PrimaryKey) {
     const user = await this.userRepo.findById(userId);
-    if (!user) throw new NotFoundException(this.t('auth.USER_NOT_FOUND'));
+    if (!user) throw new NotFoundException(t(this.i18n, 'auth.USER_NOT_FOUND'));
     return safeUser(user);
   }
 
@@ -79,7 +75,7 @@ export class AuthService {
     if (!existing) {
       await this.otpService.sendRegisterOtp(email);
     }
-    return { message: this.t('auth.OTP_SENT') };
+    return { message: t(this.i18n, 'auth.OTP_SENT') };
   }
 
   /**
@@ -91,7 +87,7 @@ export class AuthService {
     if (existing && existing.status === 'active') {
       await this.otpService.sendForgotPasswordOtp(email);
     }
-    return { message: this.t('auth.OTP_SENT') };
+    return { message: t(this.i18n, 'auth.OTP_SENT') };
   }
 
   async handleGoogleAuth(profile: any) {

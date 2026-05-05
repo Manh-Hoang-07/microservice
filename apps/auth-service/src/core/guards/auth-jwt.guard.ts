@@ -6,8 +6,10 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { I18nContext, I18nService } from 'nestjs-i18n';
-import { JwksService } from '../jwks/services/jwks.service';
+import { timingSafeEqual } from 'crypto';
+import { I18nService } from 'nestjs-i18n';
+import { t } from '@package/common';
+import { JwksService } from '../../jwks/services/jwks.service';
 import { TokenBlacklistService } from '../security/services/token-blacklist.service';
 
 const PERMS_KEY = 'perms_required';
@@ -21,11 +23,6 @@ export class AuthJwtGuard implements CanActivate {
     private readonly i18n: I18nService,
     private readonly tokenBlacklistService: TokenBlacklistService,
   ) {}
-
-  private t(key: string): string {
-    const lang = I18nContext.current()?.lang ?? 'en';
-    return this.i18n.t(key, { lang }) as string;
-  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const permissions = this.reflector.getAllAndOverride<string[]>(PERMS_KEY, [
@@ -45,23 +42,23 @@ export class AuthJwtGuard implements CanActivate {
     }
 
     const token = this.extractToken(context);
-    if (!token) throw new UnauthorizedException(this.t('auth.TOKEN_REQUIRED'));
+    if (!token) throw new UnauthorizedException(t(this.i18n,'auth.TOKEN_REQUIRED'));
 
     let payload: any;
     try {
       payload = await this.jwksService.verifyToken(token);
     } catch {
-      throw new UnauthorizedException(this.t('auth.INVALID_TOKEN'));
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_TOKEN'));
     }
 
     // Refresh tokens carry { type: 'refresh' } and must never authorize
     // protected resources, even though they are signed by the same keypair.
     if (payload?.type === 'refresh') {
-      throw new UnauthorizedException(this.t('auth.INVALID_TOKEN'));
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_TOKEN'));
     }
 
     if (await this.tokenBlacklistService.has(token)) {
-      throw new UnauthorizedException(this.t('auth.INVALID_TOKEN'));
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_TOKEN'));
     }
 
     context.switchToHttp().getRequest().user = payload;
@@ -83,10 +80,14 @@ export class AuthJwtGuard implements CanActivate {
 
   private checkInternal(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    const secret = request.headers['x-internal-secret'];
+    const secret = request.headers['x-internal-secret'] as string | undefined;
     const expected = this.config.get<string>('INTERNAL_API_SECRET') || this.config.get<string>('app.internalApiSecret');
-    if (!expected || secret !== expected) {
-      throw new UnauthorizedException(this.t('auth.INVALID_INTERNAL_SECRET'));
+    if (!expected) {
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_INTERNAL_SECRET'));
+    }
+    if (!secret || secret.length !== expected.length ||
+        !timingSafeEqual(Buffer.from(secret), Buffer.from(expected))) {
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_INTERNAL_SECRET'));
     }
     return true;
   }

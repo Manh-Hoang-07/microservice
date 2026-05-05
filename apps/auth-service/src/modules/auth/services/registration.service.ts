@@ -1,7 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
+import { t } from '@package/common';
 import { Prisma } from 'src/generated/prisma';
 import { UserRepository } from '../repositories/user.repository';
 import { AuthOtpService } from './auth-otp.service';
@@ -17,11 +18,6 @@ export class RegistrationService {
     private readonly config: ConfigService,
   ) {}
 
-  private t(key: string): string {
-    const lang = I18nContext.current()?.lang ?? 'en';
-    return this.i18n.t(key, { lang }) as string;
-  }
-
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase();
     const username = dto.username ?? email;
@@ -32,7 +28,7 @@ export class RegistrationService {
 
     const isOtpValid = await this.otpService.verifyAndDelete('register', email, dto.otp);
     if (!isOtpValid) {
-      throw new BadRequestException(this.t('auth.INVALID_OTP'));
+      throw new BadRequestException(t(this.i18n,'auth.INVALID_OTP'));
     }
 
     const rounds = Number(this.config.get('BCRYPT_ROUNDS') ?? 12);
@@ -72,13 +68,13 @@ export class RegistrationService {
         const target = (err.meta as { target?: string[] | string })?.target;
         const fields = Array.isArray(target) ? target : typeof target === 'string' ? [target] : [];
         if (fields.some((f) => f.includes('email'))) {
-          throw new BadRequestException(this.t('auth.EMAIL_IN_USE'));
+          throw new BadRequestException(t(this.i18n,'auth.EMAIL_IN_USE'));
         }
         if (fields.some((f) => f.includes('username'))) {
-          throw new BadRequestException(this.t('auth.USERNAME_IN_USE'));
+          throw new BadRequestException(t(this.i18n,'auth.USERNAME_IN_USE'));
         }
         if (fields.some((f) => f.includes('phone'))) {
-          throw new BadRequestException(this.t('auth.PHONE_IN_USE'));
+          throw new BadRequestException(t(this.i18n,'auth.PHONE_IN_USE'));
         }
       }
       throw err;
@@ -91,13 +87,13 @@ export class RegistrationService {
     phone: string | undefined,
   ): Promise<void> {
     if (await this.userRepo.findByEmail(email)) {
-      throw new BadRequestException(this.t('auth.EMAIL_IN_USE'));
+      throw new BadRequestException(t(this.i18n,'auth.EMAIL_IN_USE'));
     }
     if (username && (await this.userRepo.findByUsername(username))) {
-      throw new BadRequestException(this.t('auth.USERNAME_IN_USE'));
+      throw new BadRequestException(t(this.i18n,'auth.USERNAME_IN_USE'));
     }
     if (phone && (await this.userRepo.findByPhone(phone))) {
-      throw new BadRequestException(this.t('auth.PHONE_IN_USE'));
+      throw new BadRequestException(t(this.i18n,'auth.PHONE_IN_USE'));
     }
   }
 }

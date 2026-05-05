@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { OutboxRelayService } from '@package/common';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService } from '../../core/database/prisma.service';
 
 const TABLE_NAME = 'outbox';
 const TOPIC_MAP: Record<string, string> = {

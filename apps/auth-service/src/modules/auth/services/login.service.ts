@@ -1,12 +1,14 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { I18nContext, I18nService } from 'nestjs-i18n';
-import { TokenBlacklistService } from '../../../security/services/token-blacklist.service';
-import { AttemptLimiterService } from '../../../security/services/attempt-limiter.service';
+import { I18nService } from 'nestjs-i18n';
+import { t } from '@package/common';
+import { TokenBlacklistService } from '../../../core/security/services/token-blacklist.service';
+import { AttemptLimiterService } from '../../../core/security/services/attempt-limiter.service';
 import { TokenService } from './token.service';
 import { LoginDto } from '../dto/login.dto';
 import { UserRepository } from '../repositories/user.repository';
@@ -14,6 +16,8 @@ import { PrimaryKey, toPrimaryKey } from 'src/types';
 
 @Injectable()
 export class LoginService {
+  private readonly logger = new Logger(LoginService.name);
+
   constructor(
     private readonly userRepo: UserRepository,
     private readonly tokenBlacklistService: TokenBlacklistService,
@@ -22,11 +26,6 @@ export class LoginService {
     private readonly i18n: I18nService,
   ) {}
 
-  private t(key: string, args?: Record<string, unknown>): string {
-    const lang = I18nContext.current()?.lang ?? 'en';
-    return this.i18n.t(key, { lang, args }) as string;
-  }
-
   async login(dto: LoginDto) {
     const identifier = dto.email.toLowerCase();
     const scope = 'auth:login';
@@ -34,7 +33,7 @@ export class LoginService {
     const lockout = await this.accountLockoutService.check(scope, identifier);
     if (lockout.isLocked) {
       throw new ForbiddenException(
-        this.t('auth.ACCOUNT_TEMPORARILY_LOCKED', { minutes: lockout.remainingMinutes }),
+        t(this.i18n,'auth.ACCOUNT_TEMPORARILY_LOCKED', { minutes: lockout.remainingMinutes }),
       );
     }
 
@@ -42,17 +41,17 @@ export class LoginService {
 
     if (!user || !user.password) {
       await this.accountLockoutService.add(scope, identifier);
-      throw new UnauthorizedException(this.t('auth.INVALID_CREDENTIALS'));
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_CREDENTIALS'));
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
       await this.accountLockoutService.add(scope, identifier);
-      throw new UnauthorizedException(this.t('auth.INVALID_CREDENTIALS'));
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_CREDENTIALS'));
     }
 
     if (user.status !== 'active') {
-      throw new ForbiddenException(this.t('auth.ACCOUNT_LOCKED'));
+      throw new ForbiddenException(t(this.i18n,'auth.ACCOUNT_LOCKED'));
     }
 
     await this.accountLockoutService.reset(scope, identifier);
@@ -110,19 +109,27 @@ export class LoginService {
 
   async refreshTokenByValue(refreshToken: string) {
     const decoded = await this.tokenService.decodeRefresh(refreshToken);
-    if (!decoded) throw new UnauthorizedException(this.t('auth.INVALID_TOKEN'));
+    if (!decoded) throw new UnauthorizedException(t(this.i18n,'auth.INVALID_TOKEN'));
 
     const sub = decoded.sub as string | undefined;
     const jti = (decoded as any).jti as string | undefined;
 
     if (!sub || !jti) {
-      throw new UnauthorizedException(this.t('auth.INVALID_REFRESH_TOKEN'));
+      throw new UnauthorizedException(t(this.i18n,'auth.INVALID_REFRESH_TOKEN'));
     }
 
     const userId: PrimaryKey = toPrimaryKey(sub);
     const isActive = await this.tokenService.isRefreshActive(userId, jti);
     if (!isActive) {
-      throw new UnauthorizedException(this.t('auth.REFRESH_TOKEN_REVOKED'));
+      // Refresh token reuse detection: a valid JWT whose JTI has already
+      // been consumed likely means the token was stolen and used by an
+      // attacker before the legitimate user. Revoke ALL sessions to protect
+      // the account.
+      this.logger.warn(
+        `Refresh token reuse detected for user ${sub}, jti ${jti} — revoking all sessions`,
+      );
+      await this.tokenService.revokeAllUserSessions(userId);
+      throw new UnauthorizedException(t(this.i18n,'auth.REFRESH_TOKEN_REUSE_DETECTED'));
     }
 
     await this.tokenService.revokeRefreshJti(userId, jti);

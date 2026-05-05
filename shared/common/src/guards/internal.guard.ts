@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { timingSafeEqual } from 'crypto';
 
 @Injectable()
 export class InternalGuard implements CanActivate {
@@ -28,7 +29,8 @@ export class InternalGuard implements CanActivate {
       throw new UnauthorizedException('Internal API secret not configured');
     }
 
-    if (secret !== expected) {
+    if (!secret || typeof secret !== 'string' || secret.length !== expected.length ||
+        !timingSafeEqual(Buffer.from(secret), Buffer.from(expected))) {
       throw new UnauthorizedException('Invalid or missing internal API secret');
     }
     return true;

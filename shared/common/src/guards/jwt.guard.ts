@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import * as jose from 'jose';
+import { timingSafeEqual } from 'crypto';
 
 const PERMS_KEY = 'perms_required';
 
@@ -87,9 +88,13 @@ export class JwtGuard implements CanActivate {
 
   private checkInternal(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    const secret = request.headers['x-internal-secret'];
+    const secret = request.headers['x-internal-secret'] as string | undefined;
     const expected = this.config.get<string>('INTERNAL_API_SECRET') || this.config.get<string>('app.internalApiSecret');
-    if (!expected || secret !== expected) {
+    if (!expected) {
+      throw new UnauthorizedException('Internal API secret not configured');
+    }
+    if (!secret || secret.length !== expected.length ||
+        !timingSafeEqual(Buffer.from(secret), Buffer.from(expected))) {
       throw new UnauthorizedException('Invalid internal secret');
     }
     return true;

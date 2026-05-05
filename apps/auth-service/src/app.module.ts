@@ -10,20 +10,20 @@ import cookieParser = require('cookie-parser');
 import { I18nModule, AcceptLanguageResolver, QueryResolver, I18nService } from 'nestjs-i18n';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { RedisModule } from '@package/redis';
-import { envValidationSchema } from './config/env.validation';
-import jwtConfig from './config/jwt.config';
+import { envValidationSchema } from './core/config/env.validation';
+import jwtConfig from './core/config/jwt.config';
 
-import { DatabaseModule } from './database/database.module';
-import { SecurityModule } from './security/security.module';
+import { DatabaseModule } from './core/database/database.module';
+import { SecurityModule } from './core/security/security.module';
+import { AuthJwtGuard } from './core/guards/auth-jwt.guard';
+import { TokenBlacklistService } from './core/security/services/token-blacklist.service';
+import { KafkaModule } from './kafka/kafka.module';
 import { JwksModule } from './jwks/jwks.module';
 import { JwksService } from './jwks/services/jwks.service';
-import { AuthJwtGuard } from './guards/auth-jwt.guard';
-import { TokenBlacklistService } from './security/services/token-blacklist.service';
 import { AuthModule } from './modules/auth/auth.module';
-import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
 import { InternalModule } from './internal/internal.module';
-import { KafkaModule } from './kafka/kafka.module';
 import { UserModule } from './modules/user/user.module';
+import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
 
 @Module({
   imports: [

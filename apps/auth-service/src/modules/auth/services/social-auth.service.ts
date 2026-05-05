@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
+import { t } from '@package/common';
 import { Prisma } from 'src/generated/prisma';
 import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
@@ -14,11 +15,6 @@ export class SocialAuthService {
     private readonly tokenService: TokenService,
     private readonly i18n: I18nService,
   ) {}
-
-  private t(key: string): string {
-    const lang = I18nContext.current()?.lang ?? 'en';
-    return this.i18n.t(key, { lang }) as string;
-  }
 
   async handleGoogleAuth(profile: {
     googleId: string;
@@ -36,13 +32,13 @@ export class SocialAuthService {
     // already been linked to a DIFFERENT Google account, refuse the link
     // attempt instead of overwriting the bound googleId.
     if (existing && existing.googleId && existing.googleId !== profile.googleId) {
-      throw new ForbiddenException(this.t('auth.ACCOUNT_LINKED_TO_OTHER'));
+      throw new ForbiddenException(t(this.i18n,'auth.ACCOUNT_LINKED_TO_OTHER'));
     }
 
     // Status must be checked BEFORE writing — locked/banned users should not
     // have profile fields refreshed by an attempted login.
     if (existing && existing.status !== 'active') {
-      throw new ForbiddenException(this.t('auth.ACCOUNT_LOCKED'));
+      throw new ForbiddenException(t(this.i18n,'auth.ACCOUNT_LOCKED'));
     }
 
     const fullName = this.resolveFullName(profile);
@@ -128,6 +124,6 @@ export class SocialAuthService {
         throw err;
       }
     }
-    throw new ConflictException(this.t('auth.USERNAME_GENERATION_FAILED'));
+    throw new ConflictException(t(this.i18n,'auth.USERNAME_GENERATION_FAILED'));
   }
 }

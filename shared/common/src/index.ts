@@ -23,6 +23,7 @@ export { createPaginationMeta, parseQueryOptions, DEFAULT_MAX_TAKE, MAX_PAGE, ty
 // Shared DTOs
 export { BaseListQueryDto } from './dtos/base-list-query.dto';
 export { parseDurationToSeconds } from './helpers/duration.helper';
+export { t } from './helpers/i18n.helper';
 export { SlugHelper } from './helpers/slug.helper';
 export { SanitizeHtmlPipe } from './pipes/sanitize-html.pipe';
 export { ParseBigIntPipe } from './pipes/parse-bigint.pipe';

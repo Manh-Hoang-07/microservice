@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService } from '../../core/database/prisma.service';
 import { Internal } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 
