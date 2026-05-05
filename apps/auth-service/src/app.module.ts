@@ -2,7 +2,8 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MetricsModule } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { I18nThrottlerGuard } from './core/guards/throttler.guard';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import * as path from 'path';
@@ -41,7 +42,7 @@ import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, Bi
       validationSchema: envValidationSchema,
     }),
     I18nModule.forRoot({
-      fallbackLanguage: 'en',
+      fallbackLanguage: 'vi',
       loaderOptions: {
         path: path.join(__dirname, 'i18n'),
         watch: process.env.NODE_ENV !== 'production',
@@ -71,11 +72,10 @@ import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, Bi
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
-    // Throttler MUST run before AuthJwtGuard so per-route `@Throttle()`
-    // decorators on /auth/login, /auth/refresh, /auth/forgot-password,
-    // /auth/register/send-otp actually bound brute-force attempts. Without
-    // this, every `@Throttle({...})` is just metadata.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { 
+      provide: APP_GUARD,
+      useClass: I18nThrottlerGuard
+    },
     {
       provide: APP_GUARD,
       useFactory: (

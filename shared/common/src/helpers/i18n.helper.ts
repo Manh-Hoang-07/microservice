@@ -14,6 +14,6 @@ export function t(
   key: string,
   args?: Record<string, unknown>,
 ): string {
-  const lang = I18nContext.current()?.lang ?? 'en';
+  const lang = I18nContext.current()?.lang ?? 'vi';
   return i18n.t(key, { lang, args }) as string;
 }
