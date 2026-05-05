@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { CountryRepository, CountryFilter } from '../../repositories/country.repository';
@@ -6,8 +6,6 @@ import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class CountryService {
-  private readonly logger = new Logger(CountryService.name);
-
   constructor(
     private readonly countryRepo: CountryRepository,
     private readonly i18n: I18nService,
@@ -76,10 +74,6 @@ export class CountryService {
   }
 
   private async clearCountryCaches(): Promise<void> {
-    try {
-      await this.redis?.del('config:public:countries');
-    } catch (err) {
-      this.logger.warn('Failed to clear country caches', (err as Error).message);
-    }
+    await this.redis?.del('config:public:countries');
   }
 }

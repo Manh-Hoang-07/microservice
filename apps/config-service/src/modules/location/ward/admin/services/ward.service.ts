@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { WardRepository, WardFilter } from '../../repositories/ward.repository';
@@ -6,8 +6,6 @@ import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class WardService {
-  private readonly logger = new Logger(WardService.name);
-
   constructor(
     private readonly wardRepo: WardRepository,
     private readonly i18n: I18nService,
@@ -68,12 +66,7 @@ export class WardService {
   }
 
   private async clearWardCaches(): Promise<void> {
-    try {
-      // Clear all ward-related cache keys (wards:all, wards:{provinceId})
-      const keys = await this.redis?.keys('config:public:wards:*');
-      if (keys?.length) await this.redis?.deleteMany(keys);
-    } catch (err) {
-      this.logger.warn('Failed to clear ward caches', (err as Error).message);
-    }
+    const keys = await this.redis?.keys('config:public:wards:*');
+    if (keys?.length) await this.redis?.deleteMany(keys);
   }
 }

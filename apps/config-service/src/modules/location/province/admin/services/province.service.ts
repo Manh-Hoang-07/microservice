@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { ProvinceRepository, ProvinceFilter } from '../../repositories/province.repository';
@@ -6,8 +6,6 @@ import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class ProvinceService {
-  private readonly logger = new Logger(ProvinceService.name);
-
   constructor(
     private readonly provinceRepo: ProvinceRepository,
     private readonly i18n: I18nService,
@@ -62,9 +60,6 @@ export class ProvinceService {
 
   async delete(id: any) {
     await this.getOne(id);
-    // Province → Ward FK is Cascade per schema, but we still warn the
-    // operator about destructive action by surfacing how many wards will
-    // be removed alongside, instead of silently cascading.
     const wardCount = await this.provinceRepo.countWards(id);
     if (wardCount > 0) {
       const lang = I18nContext.current()?.lang ?? 'en';
@@ -78,12 +73,7 @@ export class ProvinceService {
   }
 
   private async clearProvinceCaches(): Promise<void> {
-    try {
-      // Clear all province-related cache keys (provinces:all, provinces:{countryId})
-      const keys = await this.redis?.keys('config:public:provinces:*');
-      if (keys?.length) await this.redis?.deleteMany(keys);
-    } catch (err) {
-      this.logger.warn('Failed to clear province caches', (err as Error).message);
-    }
+    const keys = await this.redis?.keys('config:public:provinces:*');
+    if (keys?.length) await this.redis?.deleteMany(keys);
   }
 }

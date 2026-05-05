@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   NotFoundException,
   BadRequestException,
   Optional,
@@ -14,8 +13,6 @@ import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
 export class MenuService {
-  private readonly logger = new Logger(MenuService.name);
-
   constructor(
     private readonly menuRepo: MenuRepository,
     private readonly i18n: I18nService,
@@ -146,11 +143,7 @@ export class MenuService {
   }
 
   private async clearMenuCaches(): Promise<void> {
-    try {
-      await this.redis?.del('config:public:menu');
-    } catch (err) {
-      this.logger.warn('Failed to clear menu caches', (err as Error).message);
-    }
+    await this.redis?.del('config:public:menu');
   }
 
   /**
