@@ -57,7 +57,7 @@ export class MetricsMiddleware implements NestMiddleware {
 @Module({
   imports: [
     PrometheusModule.register({
-      // Path is relative to the global prefix (so it lands at /api/v1/metrics)
+      // Path is relative to the global prefix (e.g. /api/auth/metrics)
       path: '/metrics',
       defaultLabels: {
         service: process.env.SERVICE_NAME ?? 'unknown',

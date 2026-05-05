@@ -47,10 +47,7 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
   });
 
   const port = parseInt(process.env.PORT ?? String(options.defaultPort), 10);
-  // API versioning baked into the prefix: `/api/v1/<route>`. Changing the
-  // prefix env var is the supported way to bump major versions when a
-  // breaking change ships.
-  const prefix = process.env.GLOBAL_PREFIX ?? 'api/v1';
+  const prefix = process.env.GLOBAL_PREFIX ?? 'api';
   const isProd = process.env.NODE_ENV === 'production';
 
   if (options.excludePrefixes?.length) {

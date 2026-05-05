@@ -13,7 +13,7 @@ export class IamClient implements OnModuleInit {
   private breaker!: CircuitBreakerPolicy;
 
   constructor(private readonly config: ConfigService) {
-    this.baseUrl = config.get<string>('IAM_INTERNAL_URL', 'http://localhost:3004/api');
+    this.baseUrl = config.get<string>('IAM_INTERNAL_URL', 'http://localhost:3002/api/iam');
     this.internalSecret =
       config.get<string>('INTERNAL_API_SECRET') ||
       config.get<string>('app.internalApiSecret') ||

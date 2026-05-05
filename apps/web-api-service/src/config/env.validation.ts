@@ -22,8 +22,8 @@ export const envValidationSchema = Joi.object({
   }),
 
   // Upstream services
-  COMIC_SERVICE_URL: Joi.string().uri().default('http://localhost:3001/api'),
-  POST_SERVICE_URL: Joi.string().uri().default('http://localhost:3007/api'),
+  COMIC_SERVICE_URL: Joi.string().uri().default('http://localhost:3009/api/comics'),
+  POST_SERVICE_URL: Joi.string().uri().default('http://localhost:3008/api/posts'),
   SERVICE_TIMEOUT_MS: Joi.number().default(5000),
 
   // Redis (cache, optional)
