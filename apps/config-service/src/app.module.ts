@@ -7,10 +7,11 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { join } from 'path';
 import { createAppConfig } from '@package/config';
-import { envValidationSchema } from './config/env.validation';
+import { envValidationSchema } from './core/config/env.validation';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
 import { RedisModule } from '@package/redis';
-import { DatabaseModule } from './database/database.module';
+import { CoreModule } from './core/core.module';
+import { InternalModule } from './internal/internal.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { MenuModule } from './modules/menu/menu.module';
 import { LocationModule } from './modules/location/location.module';
@@ -37,9 +38,10 @@ import { CachePurgeModule } from './modules/cache-purge/cache-purge.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     RedisModule,
-    DatabaseModule,
+    CoreModule,
     HealthModule.register('config-service'),
     MetricsModule,
+    InternalModule,
     SystemConfigModule,
     MenuModule,
     LocationModule,
@@ -50,17 +52,16 @@ import { CachePurgeModule } from './modules/cache-purge/cache-purge.module';
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
-    // Bound abuse before any auth work runs.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new JwtGuard(reflector, config),
       inject: [Reflector, ConfigService],
     },
-    // RBAC must follow JwtGuard. Without this guard, `@Permission(...)`
-    // decorators are decoration-only and any authenticated user can call
-    // admin endpoints (incl. SMTP credentials, menu admin, location admin).
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) =>

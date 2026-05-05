@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { CachedService } from '../../../../../cache/cached.service';
+import { CachedService } from '../../../../../core/cache/cached.service';
 import { GeneralConfigService } from '../../admin/services/general-config.service';
 
 @Injectable()

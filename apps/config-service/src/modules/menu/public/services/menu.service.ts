@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { CachedService } from '../../../../cache/cached.service';
+import { CachedService } from '../../../../core/cache/cached.service';
 import { MenuRepository, MenuFilter } from '../../repositories/menu.repository';
 import { buildMenuTree, filterPublicMenus } from '../../helpers/menu.helper';
 
