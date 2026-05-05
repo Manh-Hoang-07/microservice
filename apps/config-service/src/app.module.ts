@@ -14,6 +14,7 @@ import { DatabaseModule } from './database/database.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { MenuModule } from './modules/menu/menu.module';
 import { LocationModule } from './modules/location/location.module';
+import { CachePurgeModule } from './modules/cache-purge/cache-purge.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { LocationModule } from './modules/location/location.module';
     SystemConfigModule,
     MenuModule,
     LocationModule,
+    CachePurgeModule,
   ],
   providers: [
     {

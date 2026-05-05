@@ -71,3 +71,16 @@ export function filterPublicMenus(menus: any[], userPermissions?: Set<string>): 
     return userPermissions.has(menu.required_permission_code);
   });
 }
+
+/**
+ * Pre-tree filter for authenticated user menus. Unlike the public filter,
+ * menus without `required_permission_code` are shown to any logged-in user.
+ * Menus with a code require the user to hold that permission.
+ */
+export function filterUserMenus(menus: any[], userPermissions: Set<string>): any[] {
+  return menus.filter((menu) => {
+    if (menu.is_public) return true;
+    if (!menu.required_permission_code) return true;
+    return userPermissions.has(menu.required_permission_code);
+  });
+}

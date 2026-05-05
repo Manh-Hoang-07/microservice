@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Query, ValidationPipe } from '@nestjs/common';
 import { RbacService } from '../../rbac/services/rbac.service';
 import { RbacCheckDto } from '../dtos/rbac-check.dto';
+import { RbacPermissionsQueryDto } from '../dtos/rbac-permissions-query.dto';
 import { Internal } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 
@@ -29,5 +30,20 @@ export class InternalRbacController {
       permissions,
     );
     return { allowed };
+  }
+
+  @Get('permissions')
+  async getPermissions(@Query(ValidationPipe) query: RbacPermissionsQueryDto) {
+    let parsedUser: bigint;
+    let parsedGroup: bigint | null;
+    try {
+      parsedUser = toPrimaryKey(query.userId);
+      parsedGroup = query.groupId ? toPrimaryKey(query.groupId) : null;
+    } catch {
+      throw new BadRequestException('Invalid id');
+    }
+
+    const permSet = await this.rbacService.getPermissions(parsedUser, parsedGroup);
+    return { permissions: Array.from(permSet) };
   }
 }

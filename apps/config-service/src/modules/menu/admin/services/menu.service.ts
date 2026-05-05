@@ -8,7 +8,7 @@ import { RedisService } from '@package/redis';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { MenuRepository, MenuFilter } from '../../repositories/menu.repository';
 import { MenuTreeItem } from '../../interfaces/menu-tree-item.interface';
-import { buildMenuTree, filterPublicMenus } from '../../helpers/menu.helper';
+import { buildMenuTree } from '../../helpers/menu.helper';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 
 @Injectable()
@@ -126,20 +126,6 @@ export class MenuService {
   async getTree(): Promise<MenuTreeItem[]> {
     const menus = await this.menuRepo.findAllWithChildren({});
     return buildMenuTree(menus);
-  }
-
-  /**
-   * Public menu tree. Drops orphan children whose ancestor chain was filtered
-   * out (no orphan promotion to root). For authenticated callers, gates
-   * non-public entries against the caller's permission set; absence of a
-   * permission set is treated as anonymous.
-   */
-  async getPublicMenuTree(userPermissions?: Set<string>): Promise<MenuTreeItem[]> {
-    const dbFilter: MenuFilter = { status: 'active', group: 'client' };
-    const allMenus = await this.menuRepo.findAllWithChildren(dbFilter);
-    const visible = allMenus.filter((m: any) => m.show_in_menu);
-    const filtered = filterPublicMenus(visible, userPermissions);
-    return buildMenuTree(filtered);
   }
 
   private async clearMenuCaches(): Promise<void> {

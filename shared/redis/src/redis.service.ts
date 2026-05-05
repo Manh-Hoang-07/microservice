@@ -190,6 +190,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  async flushDb(): Promise<void> {
+    if (!this.client) return;
+    await this.client.flushdb();
+  }
+
   async deleteMany(keys: string[]): Promise<void> {
     if (!this.client || !keys.length) return;
     await this.client.del(...keys);
