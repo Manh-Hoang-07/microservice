@@ -3,11 +3,13 @@ import { MetricsModule } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
+import { join } from 'path';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
-import { envValidationSchema } from './config/env.validation';
-import { DatabaseModule } from './database/database.module';
+import { envValidationSchema } from './core/config/env.validation';
+import { CoreModule } from './core/core.module';
 import { RedisModule } from '@package/redis';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, AuditModule, BigIntSerializationInterceptor } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -33,9 +35,20 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
       load: [createAppConfig(3001), createKafkaConfig(), createRedisConfig()],
       validationSchema: envValidationSchema,
     }),
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: join(__dirname, 'i18n'),
+        watch: process.env.NODE_ENV !== 'production',
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+      ],
+    }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
-    DatabaseModule,
+    CoreModule,
     RedisModule,
     HealthModule.register('comic-service'),
     MetricsModule,

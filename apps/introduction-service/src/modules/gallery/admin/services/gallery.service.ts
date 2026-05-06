@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { PrimaryKey } from 'src/types';
 import { CreateGalleryDto } from '../dtos/create-gallery.dto';
 import { UpdateGalleryDto } from '../dtos/update-gallery.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -14,10 +15,9 @@ export class AdminGalleryService {
   ) {}
 
   private async clearCache(slug?: string) {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('intro:public:gallery:list').catch(() => {});
+    await this.redis?.del('introduction:public:gallery:list').catch(() => {});
     if (slug) {
-      await this.redis.del(`intro:public:gallery:detail:${slug}`).catch(() => {});
+      await this.redis?.del(`introduction:public:gallery:detail:${slug}`).catch(() => {});
     }
   }
 
@@ -47,7 +47,7 @@ export class AdminGalleryService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const item = await this.galleryRepo.findById(id);
     if (!item) throw new NotFoundException('Gallery not found');
     return item;
@@ -66,7 +66,7 @@ export class AdminGalleryService {
     }
   }
 
-  async update(id: any, dto: UpdateGalleryDto) {
+  async update(id: PrimaryKey, dto: UpdateGalleryDto) {
     const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
@@ -91,7 +91,7 @@ export class AdminGalleryService {
     }
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     const item = await this.getOne(id);
     await this.galleryRepo.delete(id);
     await this.clearCache((item as any).slug);

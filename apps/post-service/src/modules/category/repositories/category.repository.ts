@@ -1,13 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 export interface CategoryFilter {
   search?: string;
   parent_id?: any;
   is_active?: boolean;
 }
+
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'slug',
+  'description',
+  'parent_id',
+  'sort_order',
+  'is_active',
+  'seo_title',
+  'seo_description',
+  'seo_keywords',
+  'created_user_id',
+  'updated_user_id',
+]);
+
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'sort_order',
+  'created_at',
+  'updated_at',
+]);
 
 const WITH_CHILDREN = {
   children: { orderBy: { sort_order: 'asc' as const } },
@@ -118,27 +139,30 @@ export class CategoryRepository {
     return this.prisma.category.delete({ where: { id: toPrimaryKey(id) } });
   }
 
+  private buildOrderBy(sort?: string): Prisma.CategoryOrderByWithRelationInput {
+    if (!sort) return { sort_order: 'asc' };
+    const [field, dirRaw] = sort.split(':');
+    if (!field || !SORTABLE_FIELDS.has(field)) return { sort_order: 'asc' };
+    const dir: 'asc' | 'desc' = dirRaw?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+    return { [field]: dir } as Prisma.CategoryOrderByWithRelationInput;
+  }
+
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const ALLOWED: ReadonlySet<string> = new Set([
-      'name',
-      'slug',
-      'description',
-      'parent_id',
-      'sort_order',
-      'is_active',
-      'seo_title',
-      'seo_description',
-      'seo_keywords',
-    ]);
     const payload: Record<string, any> = {};
     for (const key of Object.keys(data)) {
-      if (ALLOWED.has(key)) payload[key] = data[key];
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
     }
     if (payload.parent_id !== undefined) {
       payload.parent_id =
         payload.parent_id === null || payload.parent_id === ''
           ? null
           : toPrimaryKey(payload.parent_id);
+    }
+    const bigIntFields = ['created_user_id', 'updated_user_id'];
+    for (const field of bigIntFields) {
+      const value = payload[field];
+      if (value === undefined) continue;
+      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
     }
     return payload;
   }

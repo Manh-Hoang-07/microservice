@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -10,6 +10,26 @@ export interface ContactFilter {
   status?: string;
   email?: string;
 }
+
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'email',
+  'phone',
+  'message',
+  'status',
+  'reply',
+  'replied_at',
+  'replied_by',
+]);
+
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'email',
+  'status',
+  'created_at',
+  'updated_at',
+  'replied_at',
+]);
 
 @Injectable()
 export class ContactRepository {
@@ -29,10 +49,18 @@ export class ContactRepository {
     return where;
   }
 
-  findMany(filter: ContactFilter, options: { skip: number; take: number }) {
+  private buildOrderBy(sort?: string): Prisma.ContactOrderByWithRelationInput {
+    if (!sort) return { created_at: 'desc' };
+    const [field, dirRaw] = sort.split(':');
+    if (!field || !SORTABLE_FIELDS.has(field)) return { created_at: 'desc' };
+    const dir: 'asc' | 'desc' = dirRaw?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+    return { [field]: dir } as Prisma.ContactOrderByWithRelationInput;
+  }
+
+  findMany(filter: ContactFilter, options: { skip: number; take: number; sort?: string }) {
     return this.prisma.contact.findMany({
       where: this.buildWhere(filter),
-      orderBy: { created_at: 'desc' },
+      orderBy: this.buildOrderBy(options.sort),
       skip: options.skip,
       take: options.take,
     });
@@ -49,7 +77,7 @@ export class ContactRepository {
   create(data: Record<string, any>, tx?: Tx) {
     const client = tx ?? this.prisma;
     return client.contact.create({
-      data: data as Prisma.ContactUncheckedCreateInput,
+      data: this.normalizePayload(data) as Prisma.ContactUncheckedCreateInput,
     });
   }
 
@@ -58,6 +86,10 @@ export class ContactRepository {
       where: { id: toPrimaryKey(id) },
       data: this.normalizePayload(data) as Prisma.ContactUncheckedUpdateInput,
     });
+  }
+
+  delete(id: any) {
+    return this.prisma.contact.delete({ where: { id: toPrimaryKey(id) } });
   }
 
   createOutbox(event_type: string, payload: Record<string, any>, tx?: Tx) {
@@ -70,7 +102,10 @@ export class ContactRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
+    }
     if (payload.replied_by !== undefined && payload.replied_by !== null) {
       payload.replied_by = toPrimaryKey(payload.replied_by);
     }

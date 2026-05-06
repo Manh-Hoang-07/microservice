@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { CreateCertificateDto } from '../dtos/create-certificate.dto';
 import { UpdateCertificateDto } from '../dtos/update-certificate.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -13,10 +14,9 @@ export class AdminCertificateService {
   ) {}
 
   private async clearCache(id?: any) {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('intro:public:certificate:list').catch(() => {});
+    await this.redis?.del('introduction:public:certificate:list').catch(() => {});
     if (id !== undefined) {
-      await this.redis.del(`intro:public:certificate:detail:${id}`).catch(() => {});
+      await this.redis?.del(`introduction:public:certificate:detail:${id}`).catch(() => {});
     }
   }
 
@@ -37,7 +37,7 @@ export class AdminCertificateService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const item = await this.certificateRepo.findById(id);
     if (!item) throw new NotFoundException('Certificate not found');
     return item;
@@ -49,14 +49,14 @@ export class AdminCertificateService {
     return result;
   }
 
-  async update(id: any, dto: UpdateCertificateDto) {
+  async update(id: PrimaryKey, dto: UpdateCertificateDto) {
     await this.getOne(id);
     const result = await this.certificateRepo.update(id, dto);
     await this.clearCache(id);
     return result;
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.certificateRepo.delete(id);
     await this.clearCache(id);

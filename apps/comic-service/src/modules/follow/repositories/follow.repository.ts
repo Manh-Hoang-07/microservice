@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
-import { toPrimaryKey, PrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { toPrimaryKey } from 'src/types';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -58,20 +58,22 @@ export class FollowRepository {
     });
   }
 
-  incrementFollowCount(comicId: PrimaryKey, tx?: Tx) {
+  incrementFollowCount(comicId: any, tx?: Tx) {
     const client = tx ?? this.prisma;
+    const cid = toPrimaryKey(comicId);
     return client.stats.upsert({
-      where: { comic_id: comicId },
-      create: { comic_id: comicId, follow_count: BigInt(1) },
+      where: { comic_id: cid },
+      create: { comic_id: cid, follow_count: BigInt(1) },
       update: { follow_count: { increment: 1 } },
     });
   }
 
-  decrementFollowCount(comicId: PrimaryKey, tx?: Tx) {
+  decrementFollowCount(comicId: any, tx?: Tx) {
     const client = tx ?? this.prisma;
+    const cid = toPrimaryKey(comicId);
     return client.stats.upsert({
-      where: { comic_id: comicId },
-      create: { comic_id: comicId, follow_count: BigInt(0) },
+      where: { comic_id: cid },
+      create: { comic_id: cid, follow_count: BigInt(0) },
       update: { follow_count: { decrement: 1 } },
     });
   }

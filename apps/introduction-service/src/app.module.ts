@@ -6,9 +6,9 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { createAppConfig } from '@package/config';
-import { envValidationSchema } from './config/env.validation';
+import { envValidationSchema } from './core/config/env.validation';
 
-import { DatabaseModule } from './database/database.module';
+import { CoreModule } from './core/core.module';
 import { RedisModule } from '@package/redis';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -31,7 +31,7 @@ import { FaqModule } from './modules/faq/faq.module';
       validationSchema: envValidationSchema,
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
-    DatabaseModule,
+    CoreModule,
     RedisModule,
     HealthModule.register('introduction-service'),
     MetricsModule,

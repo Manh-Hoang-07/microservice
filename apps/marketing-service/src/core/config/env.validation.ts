@@ -3,8 +3,8 @@ import * as Joi from 'joi';
 const isProd = Joi.string().valid('production');
 
 export const envValidationSchema = Joi.object({
-  SERVICE_NAME: Joi.string().default('Comic Service'),
-  PORT: Joi.number().port().default(3001),
+  SERVICE_NAME: Joi.string().default('Marketing Service'),
+  PORT: Joi.number().port().default(3006),
   APP_URL: Joi.string().uri().optional(),
   APP_TIMEZONE: Joi.string().default('Asia/Ho_Chi_Minh'),
   NODE_ENV: Joi.string().valid('development', 'staging', 'production').default('development'),
@@ -22,12 +22,6 @@ export const envValidationSchema = Joi.object({
   }),
 
   DATABASE_URL: Joi.string().required(),
-
-  REDIS_URL: Joi.alternatives().conditional('NODE_ENV', {
-    is: isProd,
-    then: Joi.string().required(),
-    otherwise: Joi.string().optional().allow(''),
-  }),
 
   AUTH_JWKS_URL: Joi.alternatives().conditional('NODE_ENV', {
     is: isProd,

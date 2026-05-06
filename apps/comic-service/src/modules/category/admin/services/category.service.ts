@@ -1,8 +1,10 @@
 import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { RedisService } from '@package/redis';
+import { I18nService } from 'nestjs-i18n';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
-import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { SlugHelper, t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { CategoryFilter, CategoryRepository } from '../../repositories/category.repository';
 
 @Injectable()
@@ -11,6 +13,7 @@ export class AdminCategoryService {
 
   constructor(
     private readonly categoryRepo: CategoryRepository,
+    private readonly i18n: I18nService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -29,25 +32,26 @@ export class AdminCategoryService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const category = await this.categoryRepo.findById(id);
-    if (!category) throw new NotFoundException('Category not found');
+    if (!category) throw new NotFoundException(t(this.i18n, 'comic.CATEGORY_NOT_FOUND'));
     return category;
   }
 
-  async create(dto: CreateCategoryDto) {
+  async create(dto: CreateCategoryDto, actorId?: PrimaryKey) {
     const slug = await SlugHelper.uniqueSlug(dto.name, {
       findOne: (filter: any) => this.categoryRepo.findBySlug(filter.slug),
     });
 
-    const created = await this.categoryRepo.create({ ...dto, slug });
+    const created = await this.categoryRepo.create({ ...dto, slug, created_user_id: actorId, updated_user_id: actorId });
     await this.clearCategoryCaches();
     return created;
   }
 
-  async update(id: any, dto: UpdateCategoryDto) {
+  async update(id: PrimaryKey, dto: UpdateCategoryDto, actorId?: PrimaryKey) {
     await this.getOne(id);
     const data: Record<string, any> = { ...dto };
+    if (actorId) data.updated_user_id = actorId;
 
     if (dto.name) {
       data.slug = await SlugHelper.uniqueSlug(
@@ -62,7 +66,7 @@ export class AdminCategoryService {
     return updated;
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.categoryRepo.delete(id);
     await this.clearCategoryCaches();

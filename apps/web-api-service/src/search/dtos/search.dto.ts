@@ -1,7 +1,8 @@
 import { Transform, Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, MaxLength, Min, Max } from 'class-validator';
+import { BaseListQueryDto } from '@package/common';
 
-export class SearchQueryDto {
+export class SearchQueryDto extends BaseListQueryDto {
   /**
    * Search term. Capped at 200 chars and trimmed; control characters are
    * stripped to defeat header injection if it ever lands in a logged URL.
@@ -21,12 +22,12 @@ export class SearchQueryDto {
   @IsInt()
   @Min(1)
   @Max(1000)
-  page?: number = 1;
+  declare page?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(50)
-  limit?: number = 10;
+  declare limit?: number;
 }

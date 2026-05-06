@@ -1,21 +1,23 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { RedisService } from '@package/redis';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
-import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
-import { toPrimaryKey } from 'src/types';
+import { SlugHelper, t, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { CategoryFilter, CategoryRepository } from '../../repositories/category.repository';
 
 @Injectable()
 export class AdminCategoryService {
   constructor(
     private readonly categoryRepo: CategoryRepository,
+    private readonly i18n: I18nService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
   private async assertNoCycle(categoryId: any, candidateParentId: any): Promise<void> {
     if (String(categoryId) === String(candidateParentId)) {
-      throw new BadRequestException('Category cannot be its own parent');
+      throw new BadRequestException(t(this.i18n, 'post.CATEGORY_CANNOT_BE_OWN_PARENT'));
     }
     const visited = new Set<string>();
     let current: bigint | null = toPrimaryKey(candidateParentId);
@@ -24,7 +26,7 @@ export class AdminCategoryService {
       if (visited.has(key)) break;
       visited.add(key);
       if (key === String(categoryId)) {
-        throw new BadRequestException('Setting this parent would create a category cycle');
+        throw new BadRequestException(t(this.i18n, 'post.CATEGORY_CYCLE_DETECTED'));
       }
       current = await this.categoryRepo.getParentId(current);
     }
@@ -51,13 +53,13 @@ export class AdminCategoryService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const category = await this.categoryRepo.findById(id);
-    if (!category) throw new NotFoundException('Category not found');
+    if (!category) throw new NotFoundException(t(this.i18n, 'post.CATEGORY_NOT_FOUND'));
     return category;
   }
 
-  async create(dto: CreateCategoryDto) {
+  async create(dto: CreateCategoryDto, actorId?: PrimaryKey) {
     const slug = await SlugHelper.uniqueSlug(dto.name, {
       findOne: (filter: any) => this.categoryRepo.findBySlug(filter.slug),
     });
@@ -65,15 +67,18 @@ export class AdminCategoryService {
       // Refuse pointing at a non-existent parent at create-time. Cycles
       // can't exist yet because the new node has no descendants.
       const parent = await this.categoryRepo.findById((dto as any).parent_id);
-      if (!parent) throw new BadRequestException('Parent category not found');
+      if (!parent) throw new BadRequestException(t(this.i18n, 'post.PARENT_CATEGORY_NOT_FOUND'));
     }
 
-    const result = await this.categoryRepo.create({ ...dto, slug });
+    const data: Record<string, any> = { ...dto, slug };
+    if (actorId) data.created_user_id = actorId;
+
+    const result = await this.categoryRepo.create(data);
     await this.invalidateCategoryCache();
     return result;
   }
 
-  async update(id: any, dto: UpdateCategoryDto) {
+  async update(id: PrimaryKey, dto: UpdateCategoryDto, actorId?: PrimaryKey) {
     await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
@@ -87,13 +92,14 @@ export class AdminCategoryService {
     if ((dto as any).parent_id) {
       await this.assertNoCycle(id, (dto as any).parent_id);
     }
+    if (actorId) data.updated_user_id = actorId;
 
     const result = await this.categoryRepo.update(id, data);
     await this.invalidateCategoryCache();
     return result;
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.categoryRepo.delete(id);
     await this.invalidateCategoryCache();

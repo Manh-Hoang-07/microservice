@@ -13,17 +13,13 @@ export class PublicGalleryService {
   ) {}
 
   private async getOrSet<T>(key: string, ttl: number, loader: () => Promise<T>): Promise<T> {
-    if (this.redis?.isEnabled()) {
-      const cached = await this.redis.get(key);
-      if (cached) return JSON.parse(cached);
-    }
+    const cached = await this.redis?.get(key).catch(() => null);
+    if (cached) return JSON.parse(cached);
     const existing = this.inflight.get(key);
     if (existing) return existing;
     const promise = loader().then(async (result) => {
       this.inflight.delete(key);
-      if (this.redis?.isEnabled()) {
-        await this.redis.set(key, JSON.stringify(result), ttl).catch(() => {});
-      }
+      await this.redis?.set(key, JSON.stringify(result), ttl).catch(() => {});
       return result;
     }).catch((err) => {
       this.inflight.delete(key);
@@ -41,7 +37,7 @@ export class PublicGalleryService {
       filter.featured = query.featured === 'true' || query.featured === true;
     }
 
-    return this.getOrSet('intro:public:gallery:list', 300, async () => {
+    return this.getOrSet('introduction:public:gallery:list', 300, async () => {
       const [data, total] = await Promise.all([
         this.galleryRepo.findMany(filter, options),
         this.galleryRepo.count(filter),
@@ -51,7 +47,7 @@ export class PublicGalleryService {
   }
 
   async getBySlug(slug: string) {
-    return this.getOrSet(`intro:public:gallery:detail:${slug}`, 600, async () => {
+    return this.getOrSet(`introduction:public:gallery:detail:${slug}`, 600, async () => {
       const item = await this.galleryRepo.findActiveBySlug(slug);
       if (!item) throw new NotFoundException('Gallery not found');
       return item;

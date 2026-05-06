@@ -1,5 +1,6 @@
 import { Controller, Post, Put, Delete, Body, Param, Req } from '@nestjs/common';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { UserCommentService } from '../services/comments.service';
 import { CreateCommentDto } from '../dtos/create-comment.dto';
 
@@ -10,18 +11,21 @@ export class UserCommentController {
   @Permission('user')
   @Post()
   async create(@Req() req: any, @Body() dto: CreateCommentDto) {
-    return this.commentService.create(req.user.sub, dto);
+    const userId = toPrimaryKey(req.user.sub);
+    return this.commentService.create(userId, dto);
   }
 
   @Permission('user')
   @Put(':id')
   async update(@Req() req: any, @Param('id') id: string, @Body() body: { content: string }) {
-    return this.commentService.update(req.user.sub, id, body.content);
+    const userId = toPrimaryKey(req.user.sub);
+    return this.commentService.update(userId, toPrimaryKey(id), body.content);
   }
 
   @Permission('user')
   @Delete(':id')
   async delete(@Req() req: any, @Param('id') id: string) {
-    return this.commentService.delete(req.user.sub, id);
+    const userId = toPrimaryKey(req.user.sub);
+    return this.commentService.delete(userId, toPrimaryKey(id));
   }
 }

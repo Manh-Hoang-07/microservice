@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -13,10 +14,9 @@ export class AdminTestimonialService {
   ) {}
 
   private async clearCache(id?: any) {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('intro:public:testimonial:list').catch(() => {});
+    await this.redis?.del('introduction:public:testimonial:list').catch(() => {});
     if (id !== undefined) {
-      await this.redis.del(`intro:public:testimonial:detail:${id}`).catch(() => {});
+      await this.redis?.del(`introduction:public:testimonial:detail:${id}`).catch(() => {});
     }
   }
 
@@ -40,7 +40,7 @@ export class AdminTestimonialService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const item = await this.testimonialRepo.findById(id);
     if (!item) throw new NotFoundException('Testimonial not found');
     return item;
@@ -58,14 +58,14 @@ export class AdminTestimonialService {
     return result;
   }
 
-  async update(id: any, dto: UpdateTestimonialDto) {
+  async update(id: PrimaryKey, dto: UpdateTestimonialDto) {
     await this.getOne(id);
     const result = await this.testimonialRepo.update(id, dto);
     await this.clearCache(id);
     return result;
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.testimonialRepo.delete(id);
     await this.clearCache(id);

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 export interface AboutSectionFilter {
   search?: string;

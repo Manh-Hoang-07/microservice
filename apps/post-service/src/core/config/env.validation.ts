@@ -3,8 +3,9 @@ import * as Joi from 'joi';
 const isProd = Joi.string().valid('production');
 
 export const envValidationSchema = Joi.object({
-  SERVICE_NAME: Joi.string().default('Gateway Service'),
-  PORT: Joi.number().port().default(3006),
+  // App
+  SERVICE_NAME: Joi.string().default('Post Service'),
+  PORT: Joi.number().port().default(3008),
   APP_URL: Joi.string().uri().optional(),
   APP_TIMEZONE: Joi.string().default('Asia/Ho_Chi_Minh'),
   NODE_ENV: Joi.string().valid('development', 'staging', 'production').default('development'),
@@ -21,27 +22,39 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().default('*'),
   }),
 
-  // Upstream services
-  COMIC_SERVICE_URL: Joi.string().uri().default('http://localhost:3009/api/comics'),
-  POST_SERVICE_URL: Joi.string().uri().default('http://localhost:3008/api/posts'),
-  SERVICE_TIMEOUT_MS: Joi.number().default(5000),
+  // Database
+  DATABASE_URL: Joi.string().required(),
 
-  // Redis (cache, optional)
-  REDIS_URL: Joi.string().optional().allow(''),
+  // Redis
+  REDIS_URL: Joi.alternatives().conditional('NODE_ENV', {
+    is: isProd,
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
 
-  // JWT (consumer) — required in prod
+  // JWT (consumer) — required in prod so JwtGuard cannot fall back to bypass
   AUTH_JWKS_URL: Joi.alternatives().conditional('NODE_ENV', {
     is: isProd,
     then: Joi.string().uri().required(),
     otherwise: Joi.string().uri().optional().allow(''),
   }),
+  IAM_INTERNAL_URL: Joi.alternatives().conditional('NODE_ENV', {
+    is: isProd,
+    then: Joi.string().uri().required(),
+    otherwise: Joi.string().uri().optional().allow(''),
+  }),
 
-  // Internal — gateway forwards `x-internal-secret` to upstream services.
+  // Internal
   INTERNAL_API_SECRET: Joi.alternatives().conditional('NODE_ENV', {
     is: isProd,
     then: Joi.string().min(16).required(),
     otherwise: Joi.string().optional().allow(''),
   }),
 
+  // Kafka
+  EVENT_DRIVER: Joi.string().valid('kafka', 'local').default('local'),
+  KAFKA_BROKERS: Joi.string().optional().allow(''),
+
+  // Observability
   OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().optional().allow(''),
 }).unknown(true);

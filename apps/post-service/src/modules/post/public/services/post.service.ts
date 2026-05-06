@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { RedisService } from '@package/redis';
-import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PUBLIC_POST_STATUSES } from '../../enums/post-status.enum';
 import { PostFilter, PostRepository } from '../../repositories/post.repository';
 
@@ -10,7 +11,8 @@ export class PublicPostService {
 
   constructor(
     private readonly postRepo: PostRepository,
-    private readonly redis: RedisService,
+    private readonly i18n: I18nService,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   async getList(query: any = {}) {
@@ -51,9 +53,9 @@ export class PublicPostService {
   async getBySlug(slug: string, requesterKey?: string) {
     // View counting must happen outside getOrSet since it's per-request, not per-cache-miss
     const post = await this.postRepo.findBySlug(slug, PUBLIC_POST_STATUSES);
-    if (!post) throw new NotFoundException('Post not found');
+    if (!post) throw new NotFoundException(t(this.i18n, 'post.POST_NOT_FOUND'));
 
-    if (this.redis.isEnabled() && requesterKey) {
+    if (this.redis?.isEnabled() && requesterKey) {
       const dedupKey = `post:view:seen:${post.id}:${requesterKey}`;
       const acquired = await this.redis.setnx(dedupKey, '1', 300);
       if (acquired) {
@@ -84,7 +86,7 @@ export class PublicPostService {
 
   private async getVersion(key: string): Promise<string> {
     try {
-      if (this.redis.isEnabled()) {
+      if (this.redis?.isEnabled()) {
         return (await this.redis.get(key)) || '0';
       }
     } catch {}
@@ -108,7 +110,7 @@ export class PublicPostService {
 
   private async getOrSet<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T> {
     try {
-      if (this.redis.isEnabled()) {
+      if (this.redis?.isEnabled()) {
         const raw = await this.redis.get(key);
         if (raw) return JSON.parse(raw);
       }
@@ -119,7 +121,7 @@ export class PublicPostService {
 
     const promise = factory().then(async (result) => {
       try {
-        if (this.redis.isEnabled()) {
+        if (this.redis?.isEnabled()) {
           await this.redis.set(
             key,
             JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)),

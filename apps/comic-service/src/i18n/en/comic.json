@@ -1,0 +1,17 @@
+{
+  "NOT_FOUND": "Comic not found.",
+  "SLUG_IN_USE": "Slug already in use.",
+  "CATEGORY_NOT_FOUND": "Category not found.",
+  "CHAPTER_NOT_FOUND": "Chapter not found.",
+  "CHAPTER_INDEX_EXISTS": "Chapter index already exists for this comic.",
+  "CHAPTER_INVALID": "Chapter does not belong to this comic or is not published.",
+  "BOOKMARK_NOT_FOUND": "Bookmark not found.",
+  "REVIEW_NOT_FOUND": "Review not found.",
+  "COMMENT_NOT_FOUND": "Comment not found.",
+  "PARENT_COMMENT_NOT_FOUND": "Parent comment not found.",
+  "PARENT_COMMENT_MISMATCH": "Parent comment belongs to a different comic.",
+  "ALREADY_FOLLOWING": "Already following this comic.",
+  "NOT_FOLLOWING": "Not following this comic.",
+  "REPLY_DEPTH_EXCEEDED": "Reply depth exceeded.",
+  "FORBIDDEN": "You do not have permission to perform this action."
+}

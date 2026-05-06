@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminFaqService } from '../services/faq.service';
 import { CreateFaqDto } from '../dtos/create-faq.dto';
 import { UpdateFaqDto } from '../dtos/update-faq.dto';
@@ -18,7 +19,7 @@ export class AdminFaqController {
   @Permission('introduction.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.faqService.getOne(id);
+    return this.faqService.getOne(toPrimaryKey(id));
   }
 
   @Permission('introduction.manage')
@@ -28,14 +29,14 @@ export class AdminFaqController {
   }
 
   @Permission('introduction.manage')
-  @Put(':id')
+  @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateFaqDto) {
-    return this.faqService.update(id, dto);
+    return this.faqService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('introduction.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.faqService.delete(id);
+    return this.faqService.delete(toPrimaryKey(id));
   }
 }

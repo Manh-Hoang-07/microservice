@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminTagService } from '../services/tag.service';
 import { CreateTagDto } from '../dtos/create-tag.dto';
 import { UpdateTagDto } from '../dtos/update-tag.dto';
@@ -18,24 +19,26 @@ export class AdminTagController {
   @Permission('post.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.tagService.getOne(id);
+    return this.tagService.getOne(toPrimaryKey(id));
   }
 
   @Permission('post.manage')
   @Post()
-  async create(@Body() dto: CreateTagDto) {
-    return this.tagService.create(dto);
+  async create(@Body() dto: CreateTagDto, @Req() req: Request) {
+    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+    return this.tagService.create(dto, actorId);
   }
 
   @Permission('post.manage')
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateTagDto) {
-    return this.tagService.update(id, dto);
+  async update(@Param('id') id: string, @Body() dto: UpdateTagDto, @Req() req: Request) {
+    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+    return this.tagService.update(toPrimaryKey(id), dto, actorId);
   }
 
   @Permission('post.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.tagService.delete(id);
+    return this.tagService.delete(toPrimaryKey(id));
   }
 }

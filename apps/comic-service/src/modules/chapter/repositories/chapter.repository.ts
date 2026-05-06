@@ -1,9 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
+
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'comic_id',
+  'team_id',
+  'title',
+  'chapter_index',
+  'chapter_label',
+  'status',
+  'created_user_id',
+  'updated_user_id',
+]);
 
 export interface ChapterFilter {
   comic_id?: any;
@@ -209,9 +220,11 @@ export class ChapterRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
-    delete payload.pages;
-    const bigIntFields = ['comic_id', 'team_id', 'created_user_id', 'updated_user_id', 'group_id'];
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
+    }
+    const bigIntFields = ['comic_id', 'team_id', 'created_user_id', 'updated_user_id'];
     for (const field of bigIntFields) {
       const value = payload[field];
       if (value === undefined) continue;

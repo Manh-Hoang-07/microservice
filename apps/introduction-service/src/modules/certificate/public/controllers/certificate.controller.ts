@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { PublicCertificateService } from '../services/certificate.service';
 import { ListCertificatePublicQueryDto } from '../../admin/dtos/list-certificate.query.dto';
 
@@ -16,6 +17,6 @@ export class PublicCertificateController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.certificateService.getOne(id);
+    return this.certificateService.getOne(toPrimaryKey(id));
   }
 }

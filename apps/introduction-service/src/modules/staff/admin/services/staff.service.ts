@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { CreateStaffDto } from '../dtos/create-staff.dto';
 import { UpdateStaffDto } from '../dtos/update-staff.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -13,10 +14,9 @@ export class AdminStaffService {
   ) {}
 
   private async clearCache(id?: any) {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('intro:public:staff:list').catch(() => {});
+    await this.redis?.del('introduction:public:staff:list').catch(() => {});
     if (id !== undefined) {
-      await this.redis.del(`intro:public:staff:detail:${id}`).catch(() => {});
+      await this.redis?.del(`introduction:public:staff:detail:${id}`).catch(() => {});
     }
   }
 
@@ -37,7 +37,7 @@ export class AdminStaffService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const item = await this.staffRepo.findById(id);
     if (!item) throw new NotFoundException('Staff not found');
     return item;
@@ -54,14 +54,14 @@ export class AdminStaffService {
     return result;
   }
 
-  async update(id: any, dto: UpdateStaffDto) {
+  async update(id: PrimaryKey, dto: UpdateStaffDto) {
     await this.getOne(id);
     const result = await this.staffRepo.update(id, dto);
     await this.clearCache(id);
     return result;
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.staffRepo.delete(id);
     await this.clearCache(id);

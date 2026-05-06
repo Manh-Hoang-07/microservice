@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RedisService } from '@package/redis';
-import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { I18nService } from 'nestjs-i18n';
+import { t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PUBLIC_COMIC_STATUSES } from '../../enums/comic-status.enum';
 import { ComicFilter, ComicRepository } from '../../repositories/comic.repository';
 
@@ -10,6 +11,7 @@ export class PublicComicService {
 
   constructor(
     private readonly comicRepo: ComicRepository,
+    private readonly i18n: I18nService,
     private readonly redis: RedisService,
   ) {}
 
@@ -46,14 +48,14 @@ export class PublicComicService {
 
     return this.getOrSet(cacheKey, 120, async () => {
       const comic = await this.comicRepo.findBySlug(slug, PUBLIC_COMIC_STATUSES);
-      if (!comic) throw new NotFoundException('Comic not found');
+      if (!comic) throw new NotFoundException(t(this.i18n, 'comic.NOT_FOUND'));
       return this.transform(comic);
     });
   }
 
   async getChaptersBySlug(slug: string, query: any = {}, requesterKey?: string) {
     const comic = await this.comicRepo.findIdBySlug(slug, PUBLIC_COMIC_STATUSES);
-    if (!comic) throw new NotFoundException('Comic not found');
+    if (!comic) throw new NotFoundException(t(this.i18n, 'comic.NOT_FOUND'));
 
     // View-counter dedup: same requester (user id or IP) counts at most once
     // every 5 min per comic. Without this a single bot inflates view_count

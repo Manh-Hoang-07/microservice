@@ -4,7 +4,7 @@ const isProd = Joi.string().valid('production');
 
 export const envValidationSchema = Joi.object({
   SERVICE_NAME: Joi.string().default('Storage Service'),
-  PORT: Joi.number().port().default(3003),
+  PORT: Joi.number().port().default(3004),
   APP_TIMEZONE: Joi.string().default('Asia/Ho_Chi_Minh'),
   NODE_ENV: Joi.string().valid('development', 'staging', 'production').default('development'),
   GLOBAL_PREFIX: Joi.string().default('api'),

@@ -10,7 +10,7 @@ const SERVICE_NAME = process.env.SERVICE_NAME ?? 'Gateway Service';
 
 createApp({
   serviceName: SERVICE_NAME,
-  defaultPort: parseInt(process.env.PORT ?? '3006', 10),
+  defaultPort: parseInt(process.env.PORT ?? '3010', 10),
   module: GatewayAppModule,
 }).catch((err) => {
   console.error(`${SERVICE_NAME} failed to start`, err);

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { ReadingHistoryFilter, ReadingHistoryRepository } from '../../repositories/reading-history.repository';
 
@@ -6,7 +7,7 @@ import { ReadingHistoryFilter, ReadingHistoryRepository } from '../../repositori
 export class UserReadingHistoryService {
   constructor(private readonly historyRepo: ReadingHistoryRepository) {}
 
-  async getList(userId: any, query: any = {}) {
+  async getList(userId: PrimaryKey, query: any = {}) {
     const options = parseQueryOptions(query);
 
     const filter: ReadingHistoryFilter = { user_id: userId };
@@ -19,11 +20,11 @@ export class UserReadingHistoryService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async upsert(userId: any, comicId: any, chapterId: any) {
+  async upsert(userId: PrimaryKey, comicId: PrimaryKey, chapterId: PrimaryKey) {
     return this.historyRepo.upsert(userId, comicId, chapterId);
   }
 
-  async clear(userId: any, comicId: any) {
+  async clear(userId: PrimaryKey, comicId: PrimaryKey) {
     await this.historyRepo.deleteByUserComic({ user_id: userId, comic_id: comicId });
     return { success: true };
   }

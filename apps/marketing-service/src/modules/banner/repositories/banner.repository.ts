@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 export interface BannerFilter {
   search?: string;
@@ -10,6 +10,36 @@ export interface BannerFilter {
   location_code?: string;
   active_at?: Date;
 }
+
+// Allowlist: defeat mass-assignment via spread on update path. The
+// controller passes UpdateBannerDto = PartialType(CreateBannerDto)
+// straight in; without this allowlist any future column added to
+// schema (e.g. `view_count`) becomes client-controllable.
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'title',
+  'subtitle',
+  'image',
+  'mobile_image',
+  'link',
+  'link_target',
+  'description',
+  'button_text',
+  'button_color',
+  'text_color',
+  'location_id',
+  'sort_order',
+  'status',
+  'start_date',
+  'end_date',
+]);
+
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set([
+  'sort_order',
+  'created_at',
+  'updated_at',
+  'title',
+  'status',
+]);
 
 const PUBLIC_INCLUDE = {
   location: { select: { id: true, code: true, name: true } },
@@ -40,22 +70,29 @@ export class BannerRepository {
     return where;
   }
 
-  findMany(filter: BannerFilter, options: { skip: number; take: number }) {
+  private buildOrderBy(sort?: string): Prisma.BannerOrderByWithRelationInput[] {
+    if (!sort) return [{ sort_order: 'asc' }, { id: 'asc' }];
+    const [field, dirRaw] = sort.split(':');
+    if (!field || !SORTABLE_FIELDS.has(field)) return [{ sort_order: 'asc' }, { id: 'asc' }];
+    const dir: 'asc' | 'desc' = dirRaw?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+    return [{ [field]: dir } as Prisma.BannerOrderByWithRelationInput, { id: 'asc' }];
+  }
+
+  findMany(filter: BannerFilter, options: { skip: number; take: number; sort?: string }) {
     return this.prisma.banner.findMany({
       where: this.buildWhere(filter),
       include: { location: true },
-      // Tie-break by id so duplicate sort_order is deterministic across pages.
-      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
+      orderBy: this.buildOrderBy(options.sort),
       skip: options.skip,
       take: options.take,
     });
   }
 
-  findManyPublic(filter: BannerFilter, options: { skip: number; take: number }) {
+  findManyPublic(filter: BannerFilter, options: { skip: number; take: number; sort?: string }) {
     return this.prisma.banner.findMany({
       where: this.buildWhere(filter),
       include: PUBLIC_INCLUDE,
-      orderBy: [{ sort_order: 'asc' }, { id: 'asc' }],
+      orderBy: this.buildOrderBy(options.sort),
       skip: options.skip,
       take: options.take,
     });
@@ -90,30 +127,9 @@ export class BannerRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    // Allowlist: defeat mass-assignment via spread on update path. The
-    // controller passes UpdateBannerDto = PartialType(CreateBannerDto)
-    // straight in; without this allowlist any future column added to
-    // schema (e.g. `view_count`) becomes client-controllable.
-    const ALLOWED: ReadonlySet<string> = new Set([
-      'title',
-      'subtitle',
-      'image',
-      'mobile_image',
-      'link',
-      'link_target',
-      'description',
-      'button_text',
-      'button_color',
-      'text_color',
-      'location_id',
-      'sort_order',
-      'status',
-      'start_date',
-      'end_date',
-    ]);
     const payload: Record<string, any> = {};
     for (const key of Object.keys(data)) {
-      if (ALLOWED.has(key)) payload[key] = data[key];
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
     }
     if (payload.location_id !== undefined && payload.location_id !== null) {
       payload.location_id = toPrimaryKey(payload.location_id);

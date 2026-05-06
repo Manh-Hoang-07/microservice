@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
-import { toPrimaryKey, PrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { toPrimaryKey } from 'src/types';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -82,16 +82,16 @@ export class CommentRepository {
     return this.prisma.$transaction(fn);
   }
 
-  existsPublicComic(comicId: PrimaryKey, statuses: string[]) {
+  existsPublicComic(comicId: any, statuses: string[]) {
     return this.prisma.comic.findFirst({
-      where: { id: comicId, status: { in: statuses } },
+      where: { id: toPrimaryKey(comicId), status: { in: statuses } },
       select: { id: true },
     });
   }
 
-  existsPublishedChapter(chapterId: PrimaryKey, comicId: PrimaryKey) {
+  existsPublishedChapter(chapterId: any, comicId: any) {
     return this.prisma.chapter.findFirst({
-      where: { id: chapterId, comic_id: comicId, status: 'published' },
+      where: { id: toPrimaryKey(chapterId), comic_id: toPrimaryKey(comicId), status: 'published' },
       select: { id: true },
     });
   }

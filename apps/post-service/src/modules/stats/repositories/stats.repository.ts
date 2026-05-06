@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 @Injectable()
 export class StatsRepository {

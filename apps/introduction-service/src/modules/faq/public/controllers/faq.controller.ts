@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Public } from '@package/common';
 import { Throttle } from '@nestjs/throttler';
+import { toPrimaryKey } from 'src/types';
 import { PublicFaqService } from '../services/faq.service';
 import { ListFaqPublicQueryDto } from '../../admin/dtos/list-faq.query.dto';
 
@@ -17,7 +18,7 @@ export class PublicFaqController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.faqService.getOne(id);
+    return this.faqService.getOne(toPrimaryKey(id));
   }
 
   // Public counter increments are abuse magnets — without throttling, a
@@ -26,13 +27,13 @@ export class PublicFaqController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post(':id/view')
   async incrementViewCount(@Param('id') id: string) {
-    return this.faqService.incrementViewCount(id);
+    return this.faqService.incrementViewCount(toPrimaryKey(id));
   }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post(':id/helpful')
   async incrementHelpfulCount(@Param('id') id: string) {
-    return this.faqService.incrementHelpfulCount(id);
+    return this.faqService.incrementHelpfulCount(toPrimaryKey(id));
   }
 }

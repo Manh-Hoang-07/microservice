@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { PrimaryKey } from 'src/types';
 import { CreateAboutDto } from '../dtos/create-about.dto';
 import { UpdateAboutDto } from '../dtos/update-about.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -14,10 +15,9 @@ export class AdminAboutService {
   ) {}
 
   private async clearCache(slug?: string) {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('intro:public:about:list').catch(() => {});
+    await this.redis?.del('introduction:public:about:list').catch(() => {});
     if (slug) {
-      await this.redis.del(`intro:public:about:detail:${slug}`).catch(() => {});
+      await this.redis?.del(`introduction:public:about:detail:${slug}`).catch(() => {});
     }
   }
 
@@ -45,7 +45,7 @@ export class AdminAboutService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const item = await this.aboutRepo.findById(id);
     if (!item) throw new NotFoundException('About section not found');
     return item;
@@ -65,7 +65,7 @@ export class AdminAboutService {
     }
   }
 
-  async update(id: any, dto: UpdateAboutDto) {
+  async update(id: PrimaryKey, dto: UpdateAboutDto) {
     const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
@@ -91,7 +91,7 @@ export class AdminAboutService {
     }
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     const item = await this.getOne(id);
     await this.aboutRepo.delete(id);
     await this.clearCache((item as any).slug);

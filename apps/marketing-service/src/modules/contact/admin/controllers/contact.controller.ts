@@ -1,5 +1,7 @@
 import { Controller, Get, Param, Query, Patch, Body, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminContactService } from '../services/contact.service';
 import { ReplyContactDto } from '../dtos/reply-contact.dto';
 import { ListContactsAdminQueryDto } from '../dtos/list-contacts.query.dto';
@@ -17,7 +19,7 @@ export class AdminContactController {
   @Permission('marketing.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.contactService.getOne(id);
+    return this.contactService.getOne(toPrimaryKey(id));
   }
 
   @Permission('marketing.manage')
@@ -25,20 +27,21 @@ export class AdminContactController {
   async reply(
     @Param('id') id: string,
     @Body() body: ReplyContactDto,
-    @Req() req: any,
+    @Req() req: Request,
   ) {
-    return this.contactService.reply(id, body.reply, req.user?.sub ?? req.user?.id ?? 0);
+    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+    return this.contactService.reply(toPrimaryKey(id), body.reply, actorId);
   }
 
   @Permission('marketing.manage')
   @Patch(':id/read')
   async markAsRead(@Param('id') id: string) {
-    return this.contactService.markAsRead(id);
+    return this.contactService.markAsRead(toPrimaryKey(id));
   }
 
   @Permission('marketing.manage')
   @Patch(':id/close')
   async closeContact(@Param('id') id: string) {
-    return this.contactService.closeContact(id);
+    return this.contactService.closeContact(toPrimaryKey(id));
   }
 }

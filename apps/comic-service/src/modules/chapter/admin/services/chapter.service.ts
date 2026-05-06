@@ -1,10 +1,11 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '@package/redis';
+import { I18nService } from 'nestjs-i18n';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
-import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { toPrimaryKey } from 'src/types';
+import { t, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { ChapterFilter, ChapterRepository } from '../../repositories/chapter.repository';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class AdminChapterService {
 
   constructor(
     private readonly chapterRepo: ChapterRepository,
+    private readonly i18n: I18nService,
     private readonly config: ConfigService,
     @Optional() private readonly redis?: RedisService,
   ) {}
@@ -42,15 +44,15 @@ export class AdminChapterService {
     return { data };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const chapter = await this.chapterRepo.findById(id);
-    if (!chapter) throw new NotFoundException('Chapter not found');
+    if (!chapter) throw new NotFoundException(t(this.i18n, 'comic.CHAPTER_NOT_FOUND'));
     return chapter;
   }
 
-  async create(dto: CreateChapterDto) {
+  async create(dto: CreateChapterDto, actorId?: PrimaryKey) {
     const existing = await this.chapterRepo.findByIndex(dto.comic_id, dto.chapter_index);
-    if (existing) throw new BadRequestException('Chapter index already exists for this comic');
+    if (existing) throw new BadRequestException(t(this.i18n, 'comic.CHAPTER_INDEX_EXISTS'));
 
     const chapter = await this.chapterRepo.create({
       comic_id: dto.comic_id,
@@ -59,6 +61,8 @@ export class AdminChapterService {
       chapter_index: dto.chapter_index,
       chapter_label: dto.chapter_label,
       status: dto.status || 'draft',
+      created_user_id: actorId,
+      updated_user_id: actorId,
     });
 
     if (dto.pages?.length) {
@@ -82,7 +86,7 @@ export class AdminChapterService {
     return this.getOne(chapter.id);
   }
 
-  async update(id: any, dto: UpdateChapterDto) {
+  async update(id: PrimaryKey, dto: UpdateChapterDto, actorId?: PrimaryKey) {
     const existing = await this.getOne(id);
 
     const data: Record<string, any> = {};
@@ -90,6 +94,7 @@ export class AdminChapterService {
     if (dto.chapter_index !== undefined) data.chapter_index = dto.chapter_index;
     if (dto.chapter_label !== undefined) data.chapter_label = dto.chapter_label;
     if (dto.status !== undefined) data.status = dto.status;
+    if (actorId) data.updated_user_id = actorId;
 
     const chapter = await this.chapterRepo.update(id, data);
 
@@ -117,7 +122,7 @@ export class AdminChapterService {
     return this.getOne(id);
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     const chapter = await this.getOne(id);
     await this.chapterRepo.delete(id);
     await this.clearChapterCaches(id, chapter.comic_id);

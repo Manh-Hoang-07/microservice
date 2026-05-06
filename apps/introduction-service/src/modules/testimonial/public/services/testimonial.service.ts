@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { TestimonialFilter, TestimonialRepository } from '../../repositories/testimonial.repository';
@@ -13,17 +14,13 @@ export class PublicTestimonialService {
   ) {}
 
   private async getOrSet<T>(key: string, ttl: number, loader: () => Promise<T>): Promise<T> {
-    if (this.redis?.isEnabled()) {
-      const cached = await this.redis.get(key);
-      if (cached) return JSON.parse(cached);
-    }
+    const cached = await this.redis?.get(key).catch(() => null);
+    if (cached) return JSON.parse(cached);
     const existing = this.inflight.get(key);
     if (existing) return existing;
     const promise = loader().then(async (result) => {
       this.inflight.delete(key);
-      if (this.redis?.isEnabled()) {
-        await this.redis.set(key, JSON.stringify(result), ttl).catch(() => {});
-      }
+      await this.redis?.set(key, JSON.stringify(result), ttl).catch(() => {});
       return result;
     }).catch((err) => {
       this.inflight.delete(key);
@@ -42,7 +39,7 @@ export class PublicTestimonialService {
     }
     if (query.project_id) filter.project_id = query.project_id;
 
-    return this.getOrSet('intro:public:testimonial:list', 300, async () => {
+    return this.getOrSet('introduction:public:testimonial:list', 300, async () => {
       const [data, total] = await Promise.all([
         this.testimonialRepo.findMany(filter, options),
         this.testimonialRepo.count(filter),
@@ -51,8 +48,8 @@ export class PublicTestimonialService {
     });
   }
 
-  async getOne(id: any) {
-    return this.getOrSet(`intro:public:testimonial:detail:${id}`, 600, async () => {
+  async getOne(id: PrimaryKey) {
+    return this.getOrSet(`introduction:public:testimonial:detail:${id}`, 600, async () => {
       const item = await this.testimonialRepo.findActiveById(id);
       if (!item) throw new NotFoundException('Testimonial not found');
       return item;

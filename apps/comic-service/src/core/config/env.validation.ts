@@ -3,9 +3,8 @@ import * as Joi from 'joi';
 const isProd = Joi.string().valid('production');
 
 export const envValidationSchema = Joi.object({
-  // App
-  SERVICE_NAME: Joi.string().default('Post Service'),
-  PORT: Joi.number().port().default(3007),
+  SERVICE_NAME: Joi.string().default('Comic Service'),
+  PORT: Joi.number().port().default(3009),
   APP_URL: Joi.string().uri().optional(),
   APP_TIMEZONE: Joi.string().default('Asia/Ho_Chi_Minh'),
   NODE_ENV: Joi.string().valid('development', 'staging', 'production').default('development'),
@@ -22,17 +21,14 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().default('*'),
   }),
 
-  // Database
   DATABASE_URL: Joi.string().required(),
 
-  // Redis
   REDIS_URL: Joi.alternatives().conditional('NODE_ENV', {
     is: isProd,
     then: Joi.string().required(),
     otherwise: Joi.string().optional().allow(''),
   }),
 
-  // JWT (consumer) — required in prod so JwtGuard cannot fall back to bypass
   AUTH_JWKS_URL: Joi.alternatives().conditional('NODE_ENV', {
     is: isProd,
     then: Joi.string().uri().required(),
@@ -44,17 +40,14 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().uri().optional().allow(''),
   }),
 
-  // Internal
   INTERNAL_API_SECRET: Joi.alternatives().conditional('NODE_ENV', {
     is: isProd,
     then: Joi.string().min(16).required(),
     otherwise: Joi.string().optional().allow(''),
   }),
 
-  // Kafka
   EVENT_DRIVER: Joi.string().valid('kafka', 'local').default('local'),
   KAFKA_BROKERS: Joi.string().optional().allow(''),
 
-  // Observability
   OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().optional().allow(''),
 }).unknown(true);

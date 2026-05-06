@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { I18nService } from 'nestjs-i18n';
 import { RedisService } from '@package/redis';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
-import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { SlugHelper, t, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { PrimaryKey } from 'src/types';
 import { PostFilter, PostRepository } from '../../repositories/post.repository';
 
 @Injectable()
@@ -12,6 +14,7 @@ export class AdminPostService {
 
   constructor(
     private readonly postRepo: PostRepository,
+    private readonly i18n: I18nService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -39,9 +42,9 @@ export class AdminPostService {
     return { data };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const post = await this.postRepo.findById(id);
-    if (!post) throw new NotFoundException('Post not found');
+    if (!post) throw new NotFoundException(t(this.i18n, 'post.POST_NOT_FOUND'));
     return this.transform(post);
   }
 
@@ -53,16 +56,19 @@ export class AdminPostService {
    * slug pre-check also raced with concurrent creates and surfaced raw
    * `P2002` to the client — now caught and translated to 400 with retry.
    */
-  async create(dto: CreatePostDto) {
+  async create(dto: CreatePostDto, actorId?: PrimaryKey) {
     let attempt = 0;
     while (true) {
       const slug = await SlugHelper.uniqueSlug(dto.name, {
         findOne: (filter: any) => this.postRepo.findBySlugSimple(filter.slug),
       });
 
+      const data: Record<string, any> = { ...dto, slug };
+      if (actorId) data.created_user_id = actorId;
+
       try {
         const post = await this.postRepo.createWithRelations(
-          { ...dto, slug },
+          data,
           dto.category_ids,
           dto.tag_ids,
         );
@@ -79,14 +85,14 @@ export class AdminPostService {
           continue;
         }
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-          throw new BadRequestException('Slug already in use');
+          throw new BadRequestException(t(this.i18n, 'post.SLUG_ALREADY_IN_USE'));
         }
         throw err;
       }
     }
   }
 
-  async update(id: any, dto: UpdatePostDto) {
+  async update(id: PrimaryKey, dto: UpdatePostDto, actorId?: PrimaryKey) {
     const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
@@ -101,12 +107,13 @@ export class AdminPostService {
         id,
       );
     }
+    if (actorId) data.updated_user_id = actorId;
 
     try {
       await this.postRepo.updateWithRelations(id, data, dto.category_ids, dto.tag_ids);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new BadRequestException('Slug already in use');
+        throw new BadRequestException(t(this.i18n, 'post.SLUG_ALREADY_IN_USE'));
       }
       throw err;
     }
@@ -115,7 +122,7 @@ export class AdminPostService {
     return this.getOne(id);
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     const post = await this.getOne(id);
     await this.postRepo.delete(id);
     await this.clearPostCaches((post as any).slug);

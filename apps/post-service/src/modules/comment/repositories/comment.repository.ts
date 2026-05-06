@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrimaryKey, toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -11,6 +11,17 @@ export interface CommentFilter {
   status?: string;
   user_id?: any;
 }
+
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'post_id', 'parent_id', 'user_id', 'content', 'status',
+  'guest_name', 'guest_email',
+  'created_user_id', 'updated_user_id',
+]);
+
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set([
+  'created_at',
+  'updated_at',
+]);
 
 @Injectable()
 export class CommentRepository {
@@ -101,16 +112,11 @@ export class CommentRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    // Strict allowlist — defeat mass-assignment via spread.
-    const ALLOWED: ReadonlySet<string> = new Set([
-      'post_id', 'parent_id', 'user_id', 'content', 'status',
-      'guest_name', 'guest_email',
-    ]);
     const payload: Record<string, any> = {};
     for (const key of Object.keys(data)) {
-      if (ALLOWED.has(key)) payload[key] = data[key];
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
     }
-    const bigIntFields = ['post_id', 'parent_id', 'user_id'];
+    const bigIntFields = ['post_id', 'parent_id', 'user_id', 'created_user_id', 'updated_user_id'];
     for (const field of bigIntFields) {
       const value = payload[field];
       if (value === undefined) continue;

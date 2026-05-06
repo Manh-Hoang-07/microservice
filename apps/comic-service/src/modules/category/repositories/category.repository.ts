@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
+
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'slug',
+  'description',
+  'created_user_id',
+  'updated_user_id',
+]);
 
 export interface CategoryFilter {
   search?: string;
@@ -68,8 +76,11 @@ export class CategoryRepository {
   }
 
   private normalizePayload(data: Record<string, any>): Record<string, any> {
-    const payload = { ...data };
-    const bigIntFields = ['created_user_id', 'updated_user_id', 'group_id'];
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
+    }
+    const bigIntFields = ['created_user_id', 'updated_user_id'];
     for (const field of bigIntFields) {
       const value = payload[field];
       if (value === undefined) continue;

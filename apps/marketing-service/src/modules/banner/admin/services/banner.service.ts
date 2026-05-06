@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -14,9 +15,8 @@ export class AdminBannerService {
     @Optional() private readonly redis?: RedisService,
   ) {}
 
-  private async clearCache() {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('marketing:public:banners:list').catch(() => {});
+  private async clearCache(): Promise<void> {
+    await this.redis?.del('marketing:public:banners:list').catch(() => {});
   }
 
   async getList(query: any = {}) {
@@ -36,7 +36,7 @@ export class AdminBannerService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const banner = await this.bannerRepo.findById(id);
     if (!banner) throw new NotFoundException('Banner not found');
     return banner;
@@ -67,7 +67,7 @@ export class AdminBannerService {
     return this.getOne(banner.id);
   }
 
-  async update(id: any, dto: UpdateBannerDto) {
+  async update(id: PrimaryKey, dto: UpdateBannerDto) {
     await this.getOne(id);
 
     if (dto.location_id) {
@@ -79,7 +79,7 @@ export class AdminBannerService {
     return this.getOne(id);
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.bannerRepo.delete(id);
     await this.clearCache();

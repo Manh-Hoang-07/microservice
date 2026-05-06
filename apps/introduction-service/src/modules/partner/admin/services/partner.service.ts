@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -13,10 +14,9 @@ export class AdminPartnerService {
   ) {}
 
   private async clearCache(id?: any) {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('intro:public:partner:list').catch(() => {});
+    await this.redis?.del('introduction:public:partner:list').catch(() => {});
     if (id !== undefined) {
-      await this.redis.del(`intro:public:partner:detail:${id}`).catch(() => {});
+      await this.redis?.del(`introduction:public:partner:detail:${id}`).catch(() => {});
     }
   }
 
@@ -37,7 +37,7 @@ export class AdminPartnerService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const item = await this.partnerRepo.findById(id);
     if (!item) throw new NotFoundException('Partner not found');
     return item;
@@ -53,14 +53,14 @@ export class AdminPartnerService {
     return result;
   }
 
-  async update(id: any, dto: UpdatePartnerDto) {
+  async update(id: PrimaryKey, dto: UpdatePartnerDto) {
     await this.getOne(id);
     const result = await this.partnerRepo.update(id, dto);
     await this.clearCache(id);
     return result;
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.partnerRepo.delete(id);
     await this.clearCache(id);

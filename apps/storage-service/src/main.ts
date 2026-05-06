@@ -10,7 +10,7 @@ const SERVICE_NAME = process.env.SERVICE_NAME ?? 'Storage Service';
 
 createApp({
   serviceName: SERVICE_NAME,
-  defaultPort: parseInt(process.env.PORT ?? '3003', 10),
+  defaultPort: parseInt(process.env.PORT ?? '3004', 10),
   module: StorageAppModule,
 }).catch((err) => {
   console.error(`${SERVICE_NAME} failed to start`, err);

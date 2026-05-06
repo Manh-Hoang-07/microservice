@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { PrimaryKey } from 'src/types';
+import { RedisService } from '@package/redis';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
 import { ChangeStatusDto } from '../dtos/change-status.dto';
@@ -8,7 +10,14 @@ import { BannerLocationFilter, BannerLocationRepository } from '../../repositori
 
 @Injectable()
 export class AdminBannerLocationService {
-  constructor(private readonly locationRepo: BannerLocationRepository) {}
+  constructor(
+    private readonly locationRepo: BannerLocationRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(): Promise<void> {
+    await this.redis?.del('marketing:public:banners:list').catch(() => {});
+  }
 
   private mapP2002(err: unknown): never {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -33,7 +42,7 @@ export class AdminBannerLocationService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const location = await this.locationRepo.findById(id);
     if (!location) throw new NotFoundException('Banner location not found');
     return location;
@@ -44,19 +53,21 @@ export class AdminBannerLocationService {
     if (existing) throw new ConflictException('Banner location code already exists');
 
     try {
-      return await this.locationRepo.create({
+      const created = await this.locationRepo.create({
         code: dto.code,
         name: dto.name,
         description: dto.description,
         status: dto.status || 'active',
       });
+      await this.clearCache();
+      return created;
     } catch (err) {
       // Concurrent creates raced our `findByCode` check.
       this.mapP2002(err);
     }
   }
 
-  async update(id: any, dto: UpdateBannerLocationDto) {
+  async update(id: PrimaryKey, dto: UpdateBannerLocationDto) {
     await this.getOne(id);
 
     if (dto.code) {
@@ -65,20 +76,31 @@ export class AdminBannerLocationService {
     }
 
     try {
-      return await this.locationRepo.update(id, dto);
+      const updated = await this.locationRepo.update(id, dto);
+      await this.clearCache();
+      return updated;
     } catch (err) {
       this.mapP2002(err);
     }
   }
 
-  async delete(id: any) {
-    await this.getOne(id);
+  async delete(id: PrimaryKey) {
+    const location = await this.getOne(id);
+
+    const bannerCount = await this.locationRepo.countBanners(id);
+    if (bannerCount > 0) {
+      throw new ConflictException('Banner location has banners and cannot be deleted');
+    }
+
     await this.locationRepo.delete(id);
+    await this.clearCache();
     return { success: true };
   }
 
-  async changeStatus(id: any, dto: ChangeStatusDto) {
+  async changeStatus(id: PrimaryKey, dto: ChangeStatusDto) {
     await this.getOne(id);
-    return this.locationRepo.update(id, { status: dto.status });
+    const updated = await this.locationRepo.update(id, { status: dto.status });
+    await this.clearCache();
+    return updated;
   }
 }

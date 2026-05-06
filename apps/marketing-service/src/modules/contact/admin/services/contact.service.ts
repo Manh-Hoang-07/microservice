@@ -1,10 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
+import { RedisService } from '@package/redis';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { ContactFilter, ContactRepository } from '../../repositories/contact.repository';
 
 @Injectable()
 export class AdminContactService {
-  constructor(private readonly contactRepo: ContactRepository) {}
+  constructor(
+    private readonly contactRepo: ContactRepository,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
+
+  private async clearCache(): Promise<void> {
+    await this.redis?.del('marketing:admin:contacts:list').catch(() => {});
+  }
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -23,29 +32,35 @@ export class AdminContactService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const contact = await this.contactRepo.findById(id);
     if (!contact) throw new NotFoundException('Contact not found');
     return contact;
   }
 
-  async reply(id: any, replyText: string, userId: any) {
+  async reply(id: PrimaryKey, replyText: string, actorId?: PrimaryKey) {
     await this.getOne(id);
-    return this.contactRepo.update(id, {
+    const updated = await this.contactRepo.update(id, {
       reply: replyText,
       status: 'Replied',
       replied_at: new Date(),
-      replied_by: userId,
+      replied_by: actorId,
     });
+    await this.clearCache();
+    return updated;
   }
 
-  async markAsRead(id: any) {
+  async markAsRead(id: PrimaryKey) {
     await this.getOne(id);
-    return this.contactRepo.update(id, { status: 'Read' });
+    const updated = await this.contactRepo.update(id, { status: 'Read' });
+    await this.clearCache();
+    return updated;
   }
 
-  async closeContact(id: any) {
+  async closeContact(id: PrimaryKey) {
     await this.getOne(id);
-    return this.contactRepo.update(id, { status: 'Closed' });
+    const updated = await this.contactRepo.update(id, { status: 'Closed' });
+    await this.clearCache();
+    return updated;
   }
 }

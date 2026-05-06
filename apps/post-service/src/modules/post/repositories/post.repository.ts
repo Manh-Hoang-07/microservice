@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -26,6 +26,8 @@ const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
   'seo_title',
   'seo_description',
   'seo_keywords',
+  'created_user_id',
+  'updated_user_id',
 ]);
 
 const SORTABLE_FIELDS: ReadonlySet<string> = new Set([
@@ -283,6 +285,12 @@ export class PostRepository {
     }
     if (payload.published_at !== undefined) {
       payload.published_at = payload.published_at ? new Date(payload.published_at) : null;
+    }
+    const bigIntFields = ['created_user_id', 'updated_user_id'];
+    for (const field of bigIntFields) {
+      const value = payload[field];
+      if (value === undefined) continue;
+      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
     }
     return payload;
   }

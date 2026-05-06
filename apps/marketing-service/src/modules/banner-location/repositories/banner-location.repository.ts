@@ -1,13 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 export interface BannerLocationFilter {
   search?: string;
   status?: string;
   code?: string;
 }
+
+const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'code',
+  'name',
+  'description',
+  'status',
+]);
+
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'code',
+  'created_at',
+  'updated_at',
+  'status',
+]);
 
 @Injectable()
 export class BannerLocationRepository {
@@ -26,10 +41,18 @@ export class BannerLocationRepository {
     return where;
   }
 
-  findMany(filter: BannerLocationFilter, options: { skip: number; take: number }) {
+  private buildOrderBy(sort?: string): Prisma.BannerLocationOrderByWithRelationInput {
+    if (!sort) return { created_at: 'desc' };
+    const [field, dirRaw] = sort.split(':');
+    if (!field || !SORTABLE_FIELDS.has(field)) return { created_at: 'desc' };
+    const dir: 'asc' | 'desc' = dirRaw?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+    return { [field]: dir } as Prisma.BannerLocationOrderByWithRelationInput;
+  }
+
+  findMany(filter: BannerLocationFilter, options: { skip: number; take: number; sort?: string }) {
     return this.prisma.bannerLocation.findMany({
       where: this.buildWhere(filter),
-      orderBy: { created_at: 'desc' },
+      orderBy: this.buildOrderBy(options.sort),
       skip: options.skip,
       take: options.take,
     });
@@ -56,20 +79,32 @@ export class BannerLocationRepository {
     });
   }
 
+  countBanners(locationId: any) {
+    return this.prisma.banner.count({ where: { location_id: toPrimaryKey(locationId) } });
+  }
+
   create(data: Record<string, any>) {
     return this.prisma.bannerLocation.create({
-      data: data as Prisma.BannerLocationUncheckedCreateInput,
+      data: this.normalizePayload(data) as Prisma.BannerLocationUncheckedCreateInput,
     });
   }
 
   update(id: any, data: Record<string, any>) {
     return this.prisma.bannerLocation.update({
       where: { id: toPrimaryKey(id) },
-      data: data as Prisma.BannerLocationUncheckedUpdateInput,
+      data: this.normalizePayload(data) as Prisma.BannerLocationUncheckedUpdateInput,
     });
   }
 
   delete(id: any) {
     return this.prisma.bannerLocation.delete({ where: { id: toPrimaryKey(id) } });
+  }
+
+  private normalizePayload(data: Record<string, any>): Record<string, any> {
+    const payload: Record<string, any> = {};
+    for (const key of Object.keys(data)) {
+      if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
+    }
+    return payload;
   }
 }

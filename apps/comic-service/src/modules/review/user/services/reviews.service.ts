@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { RedisService } from '@package/redis';
-import { toPrimaryKey } from 'src/types';
+import { I18nService } from 'nestjs-i18n';
+import { t } from '@package/common';
 import { CreateReviewDto } from '../dtos/create-review.dto';
 import { ReviewRepository } from '../../repositories/review.repository';
 
@@ -8,10 +10,11 @@ import { ReviewRepository } from '../../repositories/review.repository';
 export class UserReviewService {
   constructor(
     private readonly reviewRepo: ReviewRepository,
+    private readonly i18n: I18nService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
-  async createOrUpdate(userId: any, dto: CreateReviewDto) {
+  async createOrUpdate(userId: PrimaryKey, dto: CreateReviewDto) {
     const review = await this.reviewRepo.upsert(userId, dto.comic_id, {
       rating: dto.rating,
       content: dto.content,
@@ -22,10 +25,10 @@ export class UserReviewService {
     return review;
   }
 
-  async delete(userId: any, id: any) {
+  async delete(userId: PrimaryKey, id: PrimaryKey) {
     const review = await this.reviewRepo.findById(id);
-    if (!review) throw new NotFoundException('Review not found');
-    if (review.user_id !== toPrimaryKey(userId)) throw new ForbiddenException('Not your review');
+    if (!review) throw new NotFoundException(t(this.i18n, 'comic.REVIEW_NOT_FOUND'));
+    if (String(review.user_id) !== String(userId)) throw new ForbiddenException(t(this.i18n, 'comic.FORBIDDEN'));
 
     await this.reviewRepo.delete(id);
     await this.reviewRepo.syncRatingStats(review.comic_id);

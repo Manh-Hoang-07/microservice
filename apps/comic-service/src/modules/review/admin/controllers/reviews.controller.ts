@@ -1,5 +1,6 @@
 import { Controller, Get, Delete, Param, Query } from '@nestjs/common';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminReviewService } from '../services/reviews.service';
 import { ListReviewsAdminQueryDto } from '../dtos/list-reviews.query.dto';
 
@@ -16,6 +17,6 @@ export class AdminReviewController {
   @Permission('comic.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.reviewService.delete(id);
+    return this.reviewService.delete(toPrimaryKey(id));
   }
 }

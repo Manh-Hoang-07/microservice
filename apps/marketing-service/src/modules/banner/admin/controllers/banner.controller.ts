@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { AdminBannerService } from '../services/banner.service';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
@@ -18,7 +19,7 @@ export class AdminBannerController {
   @Permission('marketing.manage')
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.bannerService.getOne(id);
+    return this.bannerService.getOne(toPrimaryKey(id));
   }
 
   @Permission('marketing.manage')
@@ -30,12 +31,12 @@ export class AdminBannerController {
   @Permission('marketing.manage')
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
-    return this.bannerService.update(id, dto);
+    return this.bannerService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('marketing.manage')
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.bannerService.delete(id);
+    return this.bannerService.delete(toPrimaryKey(id));
   }
 }

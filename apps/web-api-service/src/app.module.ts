@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import webApiConfig from './config/web-api.config';
-import { envValidationSchema } from './config/env.validation';
-import { JwtGuard, GlobalExceptionFilter, HealthModule } from '@package/common';
+import webApiConfig from './core/config/web-api.config';
+import { envValidationSchema } from './core/config/env.validation';
+import { CoreModule } from './core/core.module';
+import { JwtGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
 import { ClientsModule } from './clients/clients.module';
 import { CacheModule } from './cache/cache.module';
 import { GatewayHomepageModule } from './homepage/homepage.module';
@@ -20,6 +21,7 @@ import { GatewaySearchModule } from './search/search.module';
       load: [webApiConfig],
       validationSchema: envValidationSchema,
     }),
+    CoreModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
     ClientsModule,
     CacheModule,
@@ -38,6 +40,10 @@ import { GatewaySearchModule } from './search/search.module';
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService) => new JwtGuard(reflector, config),
       inject: [Reflector, ConfigService],
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: BigIntSerializationInterceptor,
     },
   ],
 })

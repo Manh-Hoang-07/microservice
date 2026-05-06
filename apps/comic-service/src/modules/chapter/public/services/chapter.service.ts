@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { RedisService } from '@package/redis';
+import { I18nService } from 'nestjs-i18n';
+import { t } from '@package/common';
 import { ChapterRepository } from '../../repositories/chapter.repository';
 
 @Injectable()
@@ -8,49 +11,50 @@ export class PublicChapterService {
 
   constructor(
     private readonly chapterRepo: ChapterRepository,
+    private readonly i18n: I18nService,
     private readonly redis: RedisService,
   ) {}
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const cacheKey = `comic:public:chapter:${id}`;
 
     return this.getOrSet(cacheKey, 120, async () => {
       const chapter = await this.chapterRepo.findPublicOne(id);
-      if (!chapter) throw new NotFoundException('Chapter not found');
+      if (!chapter) throw new NotFoundException(t(this.i18n, 'comic.CHAPTER_NOT_FOUND'));
       return chapter;
     });
   }
 
-  async getPages(id: any) {
+  async getPages(id: PrimaryKey) {
     const cacheKey = `comic:public:pages:${id}`;
 
     return this.getOrSet(cacheKey, 300, async () => {
       const chapter = await this.chapterRepo.findPublicOne(id);
-      if (!chapter) throw new NotFoundException('Chapter not found');
+      if (!chapter) throw new NotFoundException(t(this.i18n, 'comic.CHAPTER_NOT_FOUND'));
 
       const pages = await this.chapterRepo.findPages(id);
       return { data: pages };
     });
   }
 
-  async getNext(id: any) {
+  async getNext(id: PrimaryKey) {
     const version = await this.getVersion('comic:public:nav:v');
     const cacheKey = `comic:public:chapternav:${version}:${id}:next`;
 
     return this.getOrSetRaw(cacheKey, 300, async () => {
       const current = await this.chapterRepo.findById(id);
-      if (!current) throw new NotFoundException('Chapter not found');
+      if (!current) throw new NotFoundException(t(this.i18n, 'comic.CHAPTER_NOT_FOUND'));
       return (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'next')) || null;
     });
   }
 
-  async getPrev(id: any) {
+  async getPrev(id: PrimaryKey) {
     const version = await this.getVersion('comic:public:nav:v');
     const cacheKey = `comic:public:chapternav:${version}:${id}:prev`;
 
     return this.getOrSetRaw(cacheKey, 300, async () => {
       const current = await this.chapterRepo.findById(id);
-      if (!current) throw new NotFoundException('Chapter not found');
+      if (!current) throw new NotFoundException(t(this.i18n, 'comic.CHAPTER_NOT_FOUND'));
       return (await this.chapterRepo.findPublishedNeighbor(current.comic_id, current.chapter_index, 'prev')) || null;
     });
   }

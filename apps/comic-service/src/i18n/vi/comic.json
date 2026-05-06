@@ -1,0 +1,17 @@
+{
+  "NOT_FOUND": "Khong tim thay truyen.",
+  "SLUG_IN_USE": "Slug da duoc su dung.",
+  "CATEGORY_NOT_FOUND": "Khong tim thay danh muc.",
+  "CHAPTER_NOT_FOUND": "Khong tim thay chuong.",
+  "CHAPTER_INDEX_EXISTS": "So chuong da ton tai cho truyen nay.",
+  "CHAPTER_INVALID": "Chuong khong thuoc truyen nay hoac chua duoc xuat ban.",
+  "BOOKMARK_NOT_FOUND": "Khong tim thay danh dau.",
+  "REVIEW_NOT_FOUND": "Khong tim thay danh gia.",
+  "COMMENT_NOT_FOUND": "Khong tim thay binh luan.",
+  "PARENT_COMMENT_NOT_FOUND": "Khong tim thay binh luan goc.",
+  "PARENT_COMMENT_MISMATCH": "Binh luan goc thuoc truyen khac.",
+  "ALREADY_FOLLOWING": "Ban da theo doi truyen nay.",
+  "NOT_FOLLOWING": "Ban chua theo doi truyen nay.",
+  "REPLY_DEPTH_EXCEEDED": "Do sau tra loi vuot qua gioi han.",
+  "FORBIDDEN": "Ban khong co quyen thuc hien hanh dong nay."
+}

@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { PrimaryKey } from 'src/types';
 import { RedisService } from '@package/redis';
+import { I18nService } from 'nestjs-i18n';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
-import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
+import { SlugHelper, t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { ComicFilter, ComicRepository } from '../../repositories/comic.repository';
 
 @Injectable()
@@ -12,6 +14,7 @@ export class AdminComicService {
 
   constructor(
     private readonly comicRepo: ComicRepository,
+    private readonly i18n: I18nService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -39,9 +42,9 @@ export class AdminComicService {
     return { data };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const comic = await this.comicRepo.findById(id);
-    if (!comic) throw new NotFoundException('Comic not found');
+    if (!comic) throw new NotFoundException(t(this.i18n, 'comic.NOT_FOUND'));
     return this.transform(comic);
   }
 
@@ -52,7 +55,7 @@ export class AdminComicService {
    * and surfaced raw `P2002` to the client — now caught and translated to
    * 400 with one retry on the unique-slug collision.
    */
-  async create(dto: CreateComicDto) {
+  async create(dto: CreateComicDto, actorId?: PrimaryKey) {
     let attempt = 0;
     while (true) {
       const slug = await SlugHelper.uniqueSlug(dto.title, {
@@ -61,7 +64,7 @@ export class AdminComicService {
 
       try {
         const created = await this.comicRepo.createWithRelations(
-          { ...dto, slug },
+          { ...dto, slug, created_user_id: actorId, updated_user_id: actorId },
           dto.category_ids,
         );
         await this.clearComicCaches(slug);
@@ -76,14 +79,14 @@ export class AdminComicService {
           continue;
         }
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-          throw new BadRequestException('Slug already in use');
+          throw new BadRequestException(t(this.i18n, 'comic.SLUG_IN_USE'));
         }
         throw err;
       }
     }
   }
 
-  async update(id: any, dto: UpdateComicDto) {
+  async update(id: PrimaryKey, dto: UpdateComicDto, actorId?: PrimaryKey) {
     const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
@@ -99,12 +102,14 @@ export class AdminComicService {
       );
     }
 
+    if (actorId) data.updated_user_id = actorId;
+
     let updated: any;
     try {
       updated = await this.comicRepo.updateWithRelations(id, data, dto.category_ids);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new BadRequestException('Slug already in use');
+        throw new BadRequestException(t(this.i18n, 'comic.SLUG_IN_USE'));
       }
       throw err;
     }
@@ -113,7 +118,7 @@ export class AdminComicService {
     return this.transform(updated);
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     const comic = await this.getOne(id);
     await this.comicRepo.delete(id);
     await this.clearComicCaches((comic as any).slug);

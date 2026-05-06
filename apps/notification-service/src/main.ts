@@ -10,7 +10,7 @@ const SERVICE_NAME = process.env.SERVICE_NAME ?? 'Notification Service';
 
 createApp({
   serviceName: SERVICE_NAME,
-  defaultPort: parseInt(process.env.PORT ?? '3004', 10),
+  defaultPort: parseInt(process.env.PORT ?? '3005', 10),
   module: NotificationAppModule,
 }).catch((err) => {
   console.error(`${SERVICE_NAME} failed to start`, err);

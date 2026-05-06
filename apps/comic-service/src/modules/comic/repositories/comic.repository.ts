@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
-import { PrismaService } from '../../../database/prisma.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -13,6 +13,8 @@ const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
   'author',
   'status',
   'is_featured',
+  'created_user_id',
+  'updated_user_id',
 ]);
 
 const SORTABLE_TOP_LEVEL: ReadonlySet<string> = new Set([
@@ -291,6 +293,12 @@ export class ComicRepository {
     const payload: Record<string, any> = {};
     for (const key of Object.keys(data)) {
       if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
+    }
+    const bigIntFields = ['created_user_id', 'updated_user_id'];
+    for (const field of bigIntFields) {
+      const value = payload[field];
+      if (value === undefined) continue;
+      payload[field] = value === null || value === '' ? null : toPrimaryKey(value);
     }
     return payload;
   }

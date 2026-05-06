@@ -13,17 +13,13 @@ export class PublicAboutService {
   ) {}
 
   private async getOrSet<T>(key: string, ttl: number, loader: () => Promise<T>): Promise<T> {
-    if (this.redis?.isEnabled()) {
-      const cached = await this.redis.get(key);
-      if (cached) return JSON.parse(cached);
-    }
+    const cached = await this.redis?.get(key).catch(() => null);
+    if (cached) return JSON.parse(cached);
     const existing = this.inflight.get(key);
     if (existing) return existing;
     const promise = loader().then(async (result) => {
       this.inflight.delete(key);
-      if (this.redis?.isEnabled()) {
-        await this.redis.set(key, JSON.stringify(result), ttl).catch(() => {});
-      }
+      await this.redis?.set(key, JSON.stringify(result), ttl).catch(() => {});
       return result;
     }).catch((err) => {
       this.inflight.delete(key);
@@ -39,7 +35,7 @@ export class PublicAboutService {
     const filter: AboutSectionFilter = { status: 'active' };
     if (query.section_type) filter.section_type = query.section_type;
 
-    return this.getOrSet('intro:public:about:list', 300, async () => {
+    return this.getOrSet('introduction:public:about:list', 300, async () => {
       const [data, total] = await Promise.all([
         this.aboutRepo.findMany(filter, options),
         this.aboutRepo.count(filter),
@@ -49,7 +45,7 @@ export class PublicAboutService {
   }
 
   async getBySlug(slug: string) {
-    return this.getOrSet(`intro:public:about:detail:${slug}`, 600, async () => {
+    return this.getOrSet(`introduction:public:about:detail:${slug}`, 600, async () => {
       const item = await this.aboutRepo.findActiveBySlug(slug);
       if (!item) throw new NotFoundException('About section not found');
       return item;

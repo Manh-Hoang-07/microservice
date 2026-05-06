@@ -1,12 +1,15 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrimaryKey } from 'src/types';
 import { RedisService } from '@package/redis';
-import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { I18nService } from 'nestjs-i18n';
+import { t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { ReviewFilter, ReviewRepository } from '../../repositories/review.repository';
 
 @Injectable()
 export class AdminReviewService {
   constructor(
     private readonly reviewRepo: ReviewRepository,
+    private readonly i18n: I18nService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -27,9 +30,9 @@ export class AdminReviewService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     const review = await this.reviewRepo.findById(id);
-    if (!review) throw new NotFoundException('Review not found');
+    if (!review) throw new NotFoundException(t(this.i18n, 'comic.REVIEW_NOT_FOUND'));
 
     await this.reviewRepo.delete(id);
     await this.reviewRepo.syncRatingStats(review.comic_id);

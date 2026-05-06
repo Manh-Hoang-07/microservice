@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/common';
 import { Permission } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { UserReadingHistoryService } from '../services/reading-history.service';
 import { ListReadingHistoryQueryDto } from '../dtos/list-reading-history.query.dto';
 
@@ -10,18 +11,21 @@ export class UserReadingHistoryController {
   @Permission('user')
   @Get()
   async getList(@Req() req: any, @Query() query: ListReadingHistoryQueryDto) {
-    return this.historyService.getList(req.user.sub, query);
+    const userId = toPrimaryKey(req.user.sub);
+    return this.historyService.getList(userId, query);
   }
 
   @Permission('user')
   @Post()
   async upsert(@Req() req: any, @Body() body: { comic_id: number; chapter_id: number }) {
-    return this.historyService.upsert(req.user.sub, body.comic_id, body.chapter_id);
+    const userId = toPrimaryKey(req.user.sub);
+    return this.historyService.upsert(userId, toPrimaryKey(body.comic_id), toPrimaryKey(body.chapter_id));
   }
 
   @Permission('user')
   @Delete(':comicId')
   async clear(@Req() req: any, @Param('comicId') comicId: string) {
-    return this.historyService.clear(req.user.sub, comicId);
+    const userId = toPrimaryKey(req.user.sub);
+    return this.historyService.clear(userId, toPrimaryKey(comicId));
   }
 }

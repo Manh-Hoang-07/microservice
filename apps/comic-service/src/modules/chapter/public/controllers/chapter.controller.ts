@@ -1,5 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { Public } from '@package/common';
+import { toPrimaryKey } from 'src/types';
 import { PublicChapterService } from '../services/chapter.service';
 
 @Controller('public/chapters')
@@ -9,24 +10,24 @@ export class PublicChapterController {
   @Public()
   @Get(':id')
   async getOne(@Param('id') id: string) {
-    return this.chapterService.getOne(id);
+    return this.chapterService.getOne(toPrimaryKey(id));
   }
 
   @Public()
   @Get(':id/pages')
   async getPages(@Param('id') id: string) {
-    return this.chapterService.getPages(id);
+    return this.chapterService.getPages(toPrimaryKey(id));
   }
 
   @Public()
   @Get(':id/next')
   async getNext(@Param('id') id: string) {
-    return this.chapterService.getNext(id);
+    return this.chapterService.getNext(toPrimaryKey(id));
   }
 
   @Public()
   @Get(':id/prev')
   async getPrev(@Param('id') id: string) {
-    return this.chapterService.getPrev(id);
+    return this.chapterService.getPrev(toPrimaryKey(id));
   }
 }

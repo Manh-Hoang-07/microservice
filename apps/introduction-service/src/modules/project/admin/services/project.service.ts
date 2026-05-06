@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { PrimaryKey } from 'src/types';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
 import { SlugHelper, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -14,10 +15,9 @@ export class AdminProjectService {
   ) {}
 
   private async clearCache(slug?: string) {
-    if (!this.redis?.isEnabled()) return;
-    await this.redis.del('intro:public:project:list').catch(() => {});
+    await this.redis?.del('introduction:public:project:list').catch(() => {});
     if (slug) {
-      await this.redis.del(`intro:public:project:detail:${slug}`).catch(() => {});
+      await this.redis?.del(`introduction:public:project:detail:${slug}`).catch(() => {});
     }
   }
 
@@ -47,7 +47,7 @@ export class AdminProjectService {
     return { data, meta: createPaginationMeta(options, total) };
   }
 
-  async getOne(id: any) {
+  async getOne(id: PrimaryKey) {
     const item = await this.projectRepo.findById(id);
     if (!item) throw new NotFoundException('Project not found');
     return item;
@@ -67,7 +67,7 @@ export class AdminProjectService {
     }
   }
 
-  async update(id: any, dto: UpdateProjectDto) {
+  async update(id: PrimaryKey, dto: UpdateProjectDto) {
     const current = await this.getOne(id);
 
     const data: Record<string, any> = { ...dto };
@@ -93,7 +93,7 @@ export class AdminProjectService {
     }
   }
 
-  async delete(id: any) {
+  async delete(id: PrimaryKey) {
     const item = await this.getOne(id);
     await this.projectRepo.delete(id);
     await this.clearCache((item as any).slug);
