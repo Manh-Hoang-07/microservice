@@ -1,8 +1,7 @@
 # docker-compose.dev.yml — 1 lệnh chạy toàn bộ stack
 #
-# DB, Redis, Kafka đã có ngoài (remote) → không cần ở đây.
-# Mỗi service tự đọc file .env của nó, chỉ override những biến
-# cần dùng tên container thay vì localhost.
+# DB, Redis dùng remote (từ .env của từng service).
+# Kafka chạy trong Docker.
 #
 # Cách dùng:
 #   docker compose -f docker-compose.dev.yml up -d --build
@@ -10,6 +9,58 @@
 #   docker compose -f docker-compose.dev.yml logs -f <service-name>
 
 services:
+  # ── Kafka (KRaft, không cần Zookeeper) ────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:8.2.0
+    container_name: comic-kafka
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9092:9092"
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ── Kafka UI ───────────────────────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: comic-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: comic-platform
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      AUTH_TYPE: LOGIN_FORM
+      SPRING_SECURITY_USER_NAME: admin
+      SPRING_SECURITY_USER_PASSWORD: admin
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
   # ── Nginx — API Gateway ────────────────────────────────────────────────────
   nginx:
     image: nginx:1.25-alpine
@@ -51,6 +102,14 @@ services:
     environment:
       GLOBAL_PREFIX: api/auth
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_REPLICATION_FACTOR: "1"
+      KAFKA_CA_CERTIFICATE: ""
+      KAFKA_ACCESS_CERTIFICATE: ""
+      KAFKA_ACCESS_KEY: ""
+    depends_on:
+      kafka:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -133,6 +192,13 @@ services:
     environment:
       GLOBAL_PREFIX: api/notifications
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CA_CERTIFICATE: ""
+      KAFKA_ACCESS_CERTIFICATE: ""
+      KAFKA_ACCESS_KEY: ""
+    depends_on:
+      kafka:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -153,6 +219,13 @@ services:
     environment:
       GLOBAL_PREFIX: api/marketing
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CA_CERTIFICATE: ""
+      KAFKA_ACCESS_CERTIFICATE: ""
+      KAFKA_ACCESS_KEY: ""
+    depends_on:
+      kafka:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -193,6 +266,13 @@ services:
     environment:
       GLOBAL_PREFIX: api/posts
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CA_CERTIFICATE: ""
+      KAFKA_ACCESS_CERTIFICATE: ""
+      KAFKA_ACCESS_KEY: ""
+    depends_on:
+      kafka:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -213,6 +293,13 @@ services:
     environment:
       GLOBAL_PREFIX: api/comics
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CA_CERTIFICATE: ""
+      KAFKA_ACCESS_CERTIFICATE: ""
+      KAFKA_ACCESS_KEY: ""
+    depends_on:
+      kafka:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -240,4 +327,5 @@ services:
           memory: 256M
 
 volumes:
+  kafka_data:
   storage_uploads:
