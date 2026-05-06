@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { KafkaJS } from '@confluentinc/kafka-javascript';
+import { createKafkaInstance } from '@package/kafka-client';
 import { IdempotencyService, LruSet } from '@package/common';
 import { FileLogger } from '@package/bootstrap';
 
@@ -66,12 +67,12 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
     const groupId = this.config.get<string>('kafka.groupId');
     if (!brokers?.length) return;
 
-    const kafka = new KafkaJS.Kafka({
-      kafkaJS: {
-        clientId: 'notification-service',
-        brokers,
-        retry: { retries: 8, initialRetryTime: 300, maxRetryTime: 30_000 },
-      },
+    const ssl = this.config.get<any>('kafka.ssl');
+    const kafka = createKafkaInstance({
+      clientId: 'notification-service',
+      brokers,
+      ssl,
+      retry: { retries: 8, initialRetryTime: 300, maxRetryTime: 30_000 },
     });
     this.consumer = kafka.consumer({
       kafkaJS: {
@@ -89,11 +90,15 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
 
     const admin = kafka.admin();
     await admin.connect();
+    const replicationFactor = this.config.get<number>('kafka.replicationFactor') ?? 1;
     const topics = Array.from(this.handlers.keys());
     try {
-      await admin.createTopics({ topics: topics.map((t) => ({ topic: t, numPartitions: 1, replicationFactor: 1 })) });
-    } catch {
-      // Ignore "topic already exists" errors
+      await admin.createTopics({ topics: topics.map((t) => ({ topic: t, numPartitions: 1, replicationFactor })) });
+    } catch (err) {
+      const log = this.fileLogger.create('kafka/create-topics', {});
+      log.addException(err);
+      log.addDebug('createTopics failed — topics may already exist or require manual creation on Aiven');
+      log.save();
     }
     await admin.disconnect();
 

@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { KafkaJS } from '@confluentinc/kafka-javascript';
 import { KafkaClientOptions } from './kafka-client.module';
+import { createKafkaInstance } from './kafka-factory';
 
 type Producer = KafkaJS.Producer;
 
@@ -14,14 +15,9 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   private readonly RETRY_BASE_MS = 200;
 
   constructor(
-    @Inject('KAFKA_OPTIONS') private readonly options: KafkaClientOptions,
+    @Inject('KAFKA_OPTIONS') options: KafkaClientOptions,
   ) {
-    this.kafka = new KafkaJS.Kafka({
-      kafkaJS: {
-        clientId: options.clientId,
-        brokers: options.brokers,
-      },
-    });
+    this.kafka = createKafkaInstance(options);
     this.producer = this.kafka.producer();
   }
 

@@ -1,9 +1,17 @@
 import { Module, DynamicModule } from '@nestjs/common';
 import { KafkaProducerService } from './kafka-producer.service';
 
+export interface KafkaSslOptions {
+  rejectUnauthorized: boolean;
+  ca: string;
+  cert: string;
+  key: string;
+}
+
 export interface KafkaClientOptions {
   brokers: string[];
   clientId: string;
+  ssl?: KafkaSslOptions;
 }
 
 export interface KafkaClientAsyncOptions {

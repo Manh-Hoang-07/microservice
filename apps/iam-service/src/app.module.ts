@@ -6,11 +6,12 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { join } from 'path';
-import { createAppConfig, createRedisConfig } from '@package/config';
+import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import {
   JwtGuard,
   GlobalExceptionFilter,
   HealthModule,
+  CommonKafkaModule,
   AuditModule,
   BigIntSerializationInterceptor,
 } from '@package/common';
@@ -35,6 +36,7 @@ import { KafkaModule } from './kafka/kafka.module';
         createAppConfig(3008, {
           internalApiSecret: process.env.INTERNAL_API_SECRET || '',
         }),
+        createKafkaConfig('iam-service'),
         createRedisConfig(),
       ],
       validationSchema: envValidationSchema,
@@ -56,6 +58,7 @@ import { KafkaModule } from './kafka/kafka.module';
     RbacModule,
     HealthModule.register('iam-service'),
     MetricsModule,
+    CommonKafkaModule,
     AuditModule,
     InternalModule,
     PermissionModule,
