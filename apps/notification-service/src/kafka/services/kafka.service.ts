@@ -1,13 +1,13 @@
 import { Injectable, OnModuleInit, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { KafkaJS } from '@confluentinc/kafka-javascript';
-import { IdempotencyService } from '@package/common';
+import { IdempotencyService, LruSet } from '@package/common';
 import { FileLogger } from '@package/bootstrap';
 
 type Consumer = KafkaJS.Consumer;
 type EachMessagePayload = KafkaJS.EachMessagePayload;
 type Producer = KafkaJS.Producer;
-import { KafkaHandler } from '../handlers/kafka-handler.interface';
+import { KafkaHandler } from '../interfaces/kafka-handler.interface';
 import { ChapterPublishedHandler } from '../handlers/chapter-published.handler';
 import { CommentCreatedHandler } from '../handlers/comment-created.handler';
 import { UserFollowedHandler } from '../handlers/user-followed.handler';
@@ -20,27 +20,6 @@ import { MailSendHandler } from '../handlers/mail-send.handler';
 
 const MAX_PAYLOAD_BYTES = 256 * 1024;
 const DEDUP_LRU_SIZE = 5_000;
-
-/** Tiny in-memory LRU for at-least-once dedup. */
-class LruSet {
-  private readonly set = new Set<string>();
-  constructor(private readonly capacity: number) {}
-  has(key: string): boolean {
-    return this.set.has(key);
-  }
-  add(key: string): void {
-    if (this.set.has(key)) {
-      this.set.delete(key);
-      this.set.add(key);
-      return;
-    }
-    if (this.set.size >= this.capacity) {
-      const oldest = this.set.values().next().value;
-      if (oldest !== undefined) this.set.delete(oldest);
-    }
-    this.set.add(key);
-  }
-}
 
 const MAX_HANDLER_ATTEMPTS = 5;
 const DLQ_TOPIC_SUFFIX = '.dlq';
@@ -151,22 +130,15 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
     if (this.shuttingDown) return;
     if (!message.value) return;
 
-    const log = this.fileLogger.create(`kafka/${topic}`, {
-      topic, partition, offset: message.offset,
-    });
-
     if (message.value.length > MAX_PAYLOAD_BYTES) {
+      const log = this.fileLogger.create(`kafka/${topic}`, { topic, partition, offset: message.offset });
       log.addDebug('skipped oversize message', { size: message.value.length });
       log.save();
       return;
     }
 
     const dedupKey = `${topic}:${partition}:${message.offset}`;
-    if (this.seen.has(dedupKey)) {
-      log.addDebug('skipped duplicate (in-memory LRU)');
-      log.save();
-      return;
-    }
+    if (this.seen.has(dedupKey)) return;
 
     const handler = this.handlers.get(topic);
     if (!handler) return;
@@ -175,6 +147,7 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
     try {
       payload = JSON.parse(message.value.toString());
     } catch (err) {
+      const log = this.fileLogger.create(`kafka/${topic}`, { topic, partition, offset: message.offset });
       log.addException(err);
       log.addDebug('skipped malformed JSON');
       log.save();
@@ -187,24 +160,20 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
       payload?.event_id?.toString() ||
       `${partition}:${message.offset}`;
     const claimed = await this.idempotency.claim(topic, eventId);
-    if (!claimed) {
-      log.addDebug('skipped duplicate (Redis idempotency)', { eventId });
-      log.save();
-      return;
-    }
+    if (!claimed) return;
 
     this.inFlight++;
     try {
-      log.addDebug('handler started');
       await handler.handle(payload);
       this.attempts.delete(dedupKey);
-      log.addDebug('handler succeeded');
-      log.save();
     } catch (err) {
       const attempt = (this.attempts.get(dedupKey) ?? 0) + 1;
       this.attempts.set(dedupKey, attempt);
+
+      const log = this.fileLogger.create(`kafka/${topic}`, {
+        topic, partition, offset: message.offset, eventId, attempt,
+      });
       log.addException(err);
-      log.addDebug('handler failed', { attempt, maxAttempts: MAX_HANDLER_ATTEMPTS });
 
       if (attempt >= MAX_HANDLER_ATTEMPTS) {
         log.addDebug('shipped to DLQ');

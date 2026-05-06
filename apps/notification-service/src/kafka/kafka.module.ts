@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { KafkaService } from './services/kafka.service';
 import { NotificationModule } from '../modules/notification/notification.module';
 import { QueueModule } from '../queue/queue.module';
-import { FollowersProjectionRepository } from './repositories/followers-projection.repository';
 import { ChapterPublishedHandler } from './handlers/chapter-published.handler';
 import { CommentCreatedHandler } from './handlers/comment-created.handler';
 import { UserFollowedHandler } from './handlers/user-followed.handler';
@@ -16,7 +15,6 @@ import { MailSendHandler } from './handlers/mail-send.handler';
 @Module({
   imports: [NotificationModule, QueueModule],
   providers: [
-    FollowersProjectionRepository,
     ChapterPublishedHandler,
     CommentCreatedHandler,
     UserFollowedHandler,

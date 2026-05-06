@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AdminNotificationService } from '../../modules/notification/admin/services/notification.service';
-import { KafkaHandler } from './kafka-handler.interface';
+import { KafkaHandler } from '../interfaces/kafka-handler.interface';
 
 @Injectable()
 export class PostCommentCreatedHandler implements KafkaHandler {

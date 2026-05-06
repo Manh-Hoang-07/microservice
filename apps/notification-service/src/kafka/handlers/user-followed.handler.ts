@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { FollowersProjectionRepository } from '../repositories/followers-projection.repository';
-import { KafkaHandler } from './kafka-handler.interface';
+import { FollowersProjectionRepository } from '../../modules/notification/repositories/followers-projection.repository';
+import { KafkaHandler } from '../interfaces/kafka-handler.interface';
 
 @Injectable()
 export class UserFollowedHandler implements KafkaHandler {
