@@ -100,6 +100,7 @@ services:
     env_file:
       - apps/auth-service/.env
     environment:
+      SERVICE_NAME: auth-service
       GLOBAL_PREFIX: api/auth
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -128,6 +129,7 @@ services:
     env_file:
       - apps/iam-service/.env
     environment:
+      SERVICE_NAME: iam-service
       GLOBAL_PREFIX: api/iam
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
     deploy:
@@ -148,6 +150,7 @@ services:
     env_file:
       - apps/config-service/.env
     environment:
+      SERVICE_NAME: config-service
       GLOBAL_PREFIX: api/config
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
     deploy:
@@ -168,6 +171,7 @@ services:
     env_file:
       - apps/storage-service/.env
     environment:
+      SERVICE_NAME: storage-service
       GLOBAL_PREFIX: api/storage
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
     volumes:
@@ -190,6 +194,7 @@ services:
     env_file:
       - apps/notification-service/.env
     environment:
+      SERVICE_NAME: notification-service
       GLOBAL_PREFIX: api/notifications
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -217,6 +222,7 @@ services:
     env_file:
       - apps/marketing-service/.env
     environment:
+      SERVICE_NAME: marketing-service
       GLOBAL_PREFIX: api/marketing
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -244,6 +250,7 @@ services:
     env_file:
       - apps/introduction-service/.env
     environment:
+      SERVICE_NAME: introduction-service
       GLOBAL_PREFIX: api/introduction
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
     deploy:
@@ -264,6 +271,7 @@ services:
     env_file:
       - apps/post-service/.env
     environment:
+      SERVICE_NAME: post-service
       GLOBAL_PREFIX: api/posts
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -291,6 +299,7 @@ services:
     env_file:
       - apps/comic-service/.env
     environment:
+      SERVICE_NAME: comic-service
       GLOBAL_PREFIX: api/comics
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
@@ -318,6 +327,7 @@ services:
     env_file:
       - apps/web-api-service/.env
     environment:
+      SERVICE_NAME: web-api-service
       GLOBAL_PREFIX: api/web
       COMIC_SERVICE_URL: http://comic-service:3009/api/comics
       POST_SERVICE_URL: http://post-service:3008/api/posts
