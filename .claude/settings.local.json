@@ -110,7 +110,9 @@
       "Bash(awk '{print $1}')",
       "Bash(node -e \"const l=require\\('./package-lock.json'\\); console.log\\(Object.keys\\(l.packages\\).filter\\(k=>k.includes\\('@package'\\)\\).slice\\(0,10\\)\\)\")",
       "Bash(awk '/^[a-z][a-z0-9_-]*:$/{name=$0; getline; if\\(/build:/\\) print name}' docker-compose.yml)",
-      "Bash(awk '/^  [a-z][a-z0-9_-]*:$/{name=$0; svc=name} /context:/{print svc, \":\", $0}' docker-compose.yml)"
+      "Bash(awk '/^  [a-z][a-z0-9_-]*:$/{name=$0; svc=name} /context:/{print svc, \":\", $0}' docker-compose.yml)",
+      "Bash([ -f \"/d/Sources/microservice/apps/$service/prisma/schema.prisma\" ])",
+      "Bash(xargs wc *)"
     ]
   }
 }

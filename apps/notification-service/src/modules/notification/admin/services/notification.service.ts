@@ -80,9 +80,8 @@ export class AdminNotificationService {
   private async invalidateUnreadCounts(userIds: Array<string | bigint>): Promise<void> {
     try {
       if (!this.redis) return;
-      await Promise.all(
-        userIds.map((uid) => this.redis!.del(`notif:unread:${uid}`)),
-      );
+      const keys = [...new Set(userIds.map(String))].map((uid) => `notif:unread:${uid}`);
+      if (keys.length) await this.redis.deleteMany(keys);
     } catch {}
   }
 }

@@ -104,6 +104,8 @@ model Post {
   // ordering is by `published_at DESC` — without this composite, Postgres
   // can use only one of the two single-column indexes per query.
   @@index([status, published_at(sort: Desc)], map: "posts_idx_status_published_at")
+  @@index([status, is_featured], map: "posts_idx_status_featured")
+  @@index([status, is_pinned], map: "posts_idx_status_pinned")
   @@index([created_at], map: "posts_idx_created_at")
   @@index([created_user_id], map: "posts_idx_created_user_id")
   @@index([updated_user_id], map: "posts_idx_updated_user_id")

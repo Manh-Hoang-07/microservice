@@ -205,6 +205,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.del(...keys);
   }
 
+  async pfadd(key: string, ...elements: string[]): Promise<number> {
+    if (!this.client) return 0;
+    return this.client.pfadd(key, ...elements);
+  }
+
   async rename(source: string, destination: string): Promise<void> {
     if (!this.client) return;
     await this.client.rename(source, destination);

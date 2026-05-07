@@ -45,6 +45,8 @@ model Comic {
   @@index([is_featured], map: "comics_idx_is_featured")
   @@index([group_id], map: "comics_idx_group_id")
   @@index([status, last_chapter_updated_at(sort: Desc)], map: "comics_idx_status_last_chapter_updated")
+  @@index([status, is_featured], map: "comics_idx_status_featured")
+  @@index([status, created_at(sort: Desc)], map: "comics_idx_status_created")
   @@map("comics")
 }
 

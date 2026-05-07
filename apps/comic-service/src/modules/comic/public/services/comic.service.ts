@@ -5,6 +5,9 @@ import { t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PUBLIC_COMIC_STATUSES } from '../../enums/comic-status.enum';
 import { ComicFilter, ComicRepository } from '../../repositories/comic.repository';
 
+const LIST_KEYS = ['search', 'is_featured', 'comic_category_id', 'category_id', 'sort', 'page', 'limit'];
+const CHAPTER_KEYS = ['search', 'sort', 'page', 'limit'];
+
 @Injectable()
 export class PublicComicService {
   private readonly inflight = new Map<string, Promise<any>>();
@@ -17,7 +20,7 @@ export class PublicComicService {
 
   async getList(query: any = {}) {
     const version = await this.getVersion('comic:public:list:v');
-    const cacheKey = `comic:public:list:${version}:${this.hashQuery(query)}`;
+    const cacheKey = `comic:public:list:${version}:${this.hashQuery(query, LIST_KEYS)}`;
 
     return this.getOrSet(cacheKey, 60, async () => {
       const options = parseQueryOptions(query);
@@ -57,20 +60,24 @@ export class PublicComicService {
     const comic = await this.comicRepo.findIdBySlug(slug, PUBLIC_COMIC_STATUSES);
     if (!comic) throw new NotFoundException(t(this.i18n, 'comic.NOT_FOUND'));
 
-    // View-counter dedup: same requester (user id or IP) counts at most once
-    // every 5 min per comic. Without this a single bot inflates view_count
-    // arbitrarily by replaying GET. Skip increment if we can't identify the
-    // requester at all to keep the counter honest.
+    // View-counter dedup: use a per-day HyperLogLog per comic so each unique
+    // requester (user id or IP) is counted at most once per calendar day.
+    // HLL uses ~12 KB/key regardless of cardinality, far cheaper than one
+    // setnx key per (comic, requester) pair. Keys auto-expire after 48 h.
     if (this.redis.isEnabled() && requesterKey) {
-      const dedupKey = `comic:view:seen:${comic.id}:${requesterKey}`;
-      const acquired = await this.redis.setnx(dedupKey, '1', 300);
-      if (acquired) {
-        await this.redis.hincrby('comic:views:buffer', comic.id.toString(), 1);
+      const today = new Date().toISOString().slice(0, 10);
+      const hllKey = `comic:views:hll:${comic.id}:${today}`;
+      const isNew = await this.redis.pfadd(hllKey, requesterKey);
+      if (isNew) {
+        await Promise.all([
+          this.redis.hincrby('comic:views:buffer', comic.id.toString(), 1),
+          this.redis.expire(hllKey, 172800),
+        ]);
       }
     }
 
     const chaptersVersion = await this.getVersion('comic:public:chapters:v');
-    const cacheKey = `comic:public:chapters:${chaptersVersion}:${slug}:${this.hashQuery(query)}`;
+    const cacheKey = `comic:public:chapters:${chaptersVersion}:${slug}:${this.hashQuery(query, CHAPTER_KEYS)}`;
 
     return this.getOrSet(cacheKey, 60, async () => {
       // Hard cap chapter list at 200 per page (was effectively unbounded with
@@ -121,9 +128,12 @@ export class PublicComicService {
     return '0';
   }
 
-  private hashQuery(query: any): string {
-    const stableStr = JSON.stringify(
-      query,
+  private hashQuery(query: any, allowedKeys?: string[]): string {
+    const src = allowedKeys
+      ? Object.fromEntries(allowedKeys.filter((k) => query[k] !== undefined).map((k) => [k, query[k]]))
+      : query;
+    let stableStr = JSON.stringify(
+      src,
       (_, v) => {
         if (v && typeof v === 'object' && !Array.isArray(v)) {
           return Object.keys(v).sort().reduce((o: any, k) => { o[k] = v[k]; return o; }, {});
@@ -131,6 +141,7 @@ export class PublicComicService {
         return typeof v === 'bigint' ? Number(v) : v;
       },
     );
+    if (stableStr.length > 512) stableStr = stableStr.slice(0, 512);
     let hash = 5381;
     for (let i = 0; i < stableStr.length; i++) hash = ((hash << 5) + hash + stableStr.charCodeAt(i)) | 0;
     return (hash >>> 0).toString(36);
@@ -164,6 +175,7 @@ export class PublicComicService {
       this.inflight.delete(key);
     });
 
+    if (this.inflight.size >= 1000) this.inflight.clear();
     this.inflight.set(key, promise);
     return promise;
   }
