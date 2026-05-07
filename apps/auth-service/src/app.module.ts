@@ -8,8 +8,10 @@ import * as path from 'path';
 import cookieParser = require('cookie-parser');
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
-import { RedisModule } from '@package/redis';
+import { RedisModule, RedisService } from '@package/redis';
 import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { KafkaProducerService } from '@package/kafka-client';
+import { PrismaService } from './core/database/prisma.service';
 import { CoreModule } from './core/core.module';
 import { envValidationSchema } from './core/config/env.validation';
 import jwtConfig from './core/config/jwt.config';
@@ -53,12 +55,31 @@ import { InternalModule } from './internal/internal.module';
     RedisModule,
     JwksModule,
     AuthModule,
-    HealthModule.register('auth-service'),
-    MetricsModule,
     CommonKafkaModule,
+    KafkaModule,
+    HealthModule.register({
+      serviceName: 'auth-service',
+      probes: [
+        {
+          provide: 'HEALTH_DB_PROBE',
+          inject: [PrismaService],
+          useFactory: (prisma: PrismaService) => () => prisma.$queryRawUnsafe('SELECT 1').then(() => {}),
+        },
+        {
+          provide: 'HEALTH_REDIS_PROBE',
+          inject: [RedisService],
+          useFactory: (redis: RedisService) => () => redis.ping(),
+        },
+        {
+          provide: 'HEALTH_KAFKA_PROBE',
+          inject: [KafkaProducerService],
+          useFactory: (kafka: KafkaProducerService) => () => kafka.ping(),
+        },
+      ],
+    }),
+    MetricsModule,
     AuditModule,
     InternalModule,
-    KafkaModule,
     UserModule,
   ],
   providers: [
@@ -79,6 +100,6 @@ import { InternalModule } from './internal/internal.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(cookieParser()).forRoutes('*');
+    consumer.apply(cookieParser()).forRoutes('*path');
   }
 }

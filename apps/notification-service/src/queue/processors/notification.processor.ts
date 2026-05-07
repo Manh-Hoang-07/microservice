@@ -13,7 +13,7 @@ export class NotificationProcessor {
   @Process({ name: 'send_email_template', concurrency: 5 })
   async handleSendEmail(job: Job) {
     const { templateCode, options } = job.data;
-    const log = this.fileLogger.create('queue/send-email', {
+    const log = this.fileLogger.create('queue/send_email', {
       jobId: job.id,
       templateCode,
       to: options?.to,
@@ -21,14 +21,13 @@ export class NotificationProcessor {
     });
 
     try {
-      log.addDebug('sending template');
       await this.mail.sendTemplate(templateCode, options);
-      log.addDebug('sent successfully');
+      log.addDebug('done');
       log.save();
     } catch (err) {
       log.addException(err);
       if (err instanceof PermanentMailError) {
-        log.addDebug('permanent failure — not retrying');
+        log.addDebug('permanent_failure');
         log.save();
         await job.moveToFailed(
           { message: err.message },
@@ -36,6 +35,7 @@ export class NotificationProcessor {
         );
         return;
       }
+      log.addDebug('failed');
       log.save();
       throw err;
     }

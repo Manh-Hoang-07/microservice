@@ -15,6 +15,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   private readonly RETRY_BASE_MS = 200;
 
   private readonly enabled: boolean;
+  private connected = false;
 
   constructor(
     @Inject('KAFKA_OPTIONS') options: KafkaClientOptions,
@@ -27,10 +28,12 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     if (!this.enabled) return;
     await this.producer.connect();
+    this.connected = true;
   }
 
   async onModuleDestroy() {
     if (!this.enabled) return;
+    this.connected = false;
     await this.producer.disconnect();
   }
 
@@ -106,6 +109,20 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
       `Kafka send to "${record.topic}" failed after ${this.MAX_RETRIES + 1} attempts: ${lastError?.message}`,
     );
     throw lastError;
+  }
+
+  /**
+   * Lightweight health check — verifies the producer connected successfully.
+   */
+  async ping(): Promise<void> {
+    if (!this.enabled) return;
+    if (!this.connected) {
+      throw new Error('Kafka producer is not connected');
+    }
+  }
+
+  isEnabled(): boolean {
+    return this.enabled;
   }
 
   private sleep(ms: number): Promise<void> {

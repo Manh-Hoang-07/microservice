@@ -60,7 +60,8 @@ export class IamClient implements OnModuleInit {
         return null;
       }
 
-      return await res.json();
+      const body = await res.json();
+      return body?.data ?? body;
     } catch (err) {
       this.logger.warn(`IamClient GET ${url} failed: ${(err as Error).message}`);
       throw err;

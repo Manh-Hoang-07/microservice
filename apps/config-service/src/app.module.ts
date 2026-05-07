@@ -9,8 +9,9 @@ import { join } from 'path';
 import { createAppConfig } from '@package/config';
 import { envValidationSchema } from './core/config/env.validation';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
-import { RedisModule } from '@package/redis';
+import { RedisModule, RedisService } from '@package/redis';
 import { CoreModule } from './core/core.module';
+import { PrismaService } from './core/database/prisma.service';
 import { InternalModule } from './internal/internal.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { MenuModule } from './modules/menu/menu.module';
@@ -39,7 +40,21 @@ import { CachePurgeModule } from './modules/cache-purge/cache-purge.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     RedisModule,
     CoreModule,
-    HealthModule.register('config-service'),
+    HealthModule.register({
+      serviceName: 'config-service',
+      probes: [
+        {
+          provide: 'HEALTH_DB_PROBE',
+          inject: [PrismaService],
+          useFactory: (prisma: PrismaService) => () => prisma.$queryRawUnsafe('SELECT 1').then(() => {}),
+        },
+        {
+          provide: 'HEALTH_REDIS_PROBE',
+          inject: [RedisService],
+          useFactory: (redis: RedisService) => () => redis.ping(),
+        },
+      ],
+    }),
     MetricsModule,
     InternalModule,
     SystemConfigModule,

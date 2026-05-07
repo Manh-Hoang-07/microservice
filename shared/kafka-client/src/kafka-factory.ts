@@ -17,6 +17,8 @@ export function createKafkaInstance(options: KafkaInstanceOptions): InstanceType
       ...(retry ? { retry } : {}),
       ...(ssl ? { ssl: true } : {}),
     },
+    // Force IPv4 to avoid noisy IPv6 connection failures on Windows/local dev
+    'broker.address.family': 'v4',
     ...(ssl ? {
       'ssl.ca.pem': ssl.ca,
       'ssl.certificate.pem': ssl.cert,

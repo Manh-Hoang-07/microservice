@@ -7,9 +7,10 @@ import { Reflector } from '@nestjs/core';
 import { I18nModule, QueryResolver, AcceptLanguageResolver } from 'nestjs-i18n';
 import { join } from 'path';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
-import { RedisModule } from '@package/redis';
+import { RedisModule, RedisService } from '@package/redis';
 import { envValidationSchema } from './core/config/env.validation';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { PrismaService } from './core/database/prisma.service';
 import { CoreModule } from './core/core.module';
 import { ClientsModule } from './clients/clients.module';
 import { InternalModule } from './internal/internal.module';
@@ -43,13 +44,27 @@ import { KafkaModule } from './kafka/kafka.module';
     CoreModule,
     ClientsModule,
     MailModule,
-    HealthModule.register('notification-service'),
-    MetricsModule,
     CommonKafkaModule,
+    KafkaModule,
+    HealthModule.register({
+      serviceName: 'notification-service',
+      probes: [
+        {
+          provide: 'HEALTH_DB_PROBE',
+          inject: [PrismaService],
+          useFactory: (prisma: PrismaService) => () => prisma.$queryRawUnsafe('SELECT 1').then(() => {}),
+        },
+        {
+          provide: 'HEALTH_REDIS_PROBE',
+          inject: [RedisService],
+          useFactory: (redis: RedisService) => () => redis.ping(),
+        },
+      ],
+    }),
+    MetricsModule,
     NotificationModule,
     ContentTemplateModule,
     QueueModule,
-    KafkaModule,
     InternalModule,
   ],
   providers: [

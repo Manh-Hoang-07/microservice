@@ -95,7 +95,8 @@ export class IamClient implements OnModuleInit {
           return { allowed: false };
         }
 
-        return await res.json();
+        const json = await res.json();
+        return json?.data ?? json;
       });
     } catch (err) {
       throw err;

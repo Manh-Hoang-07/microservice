@@ -18,7 +18,7 @@ export interface BootstrapOptions {
   serviceName: string;
   defaultPort: number;
   module: any;
-  /** Paths to exclude from global prefix (e.g. ['.well-known/(.*)'] for auth-service JWKS) */
+  /** Paths to exclude from global prefix (e.g. ['.well-known/*path'] for auth-service JWKS) */
   excludePrefixes?: string[];
 }
 

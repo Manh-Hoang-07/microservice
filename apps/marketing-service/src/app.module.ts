@@ -9,8 +9,10 @@ import { createAppConfig, createKafkaConfig } from '@package/config';
 import { envValidationSchema } from './core/config/env.validation';
 
 import { CoreModule } from './core/core.module';
-import { RedisModule } from '@package/redis';
+import { RedisModule, RedisService } from '@package/redis';
+import { KafkaProducerService } from '@package/kafka-client';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { PrismaService } from './core/database/prisma.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
 
@@ -30,10 +32,29 @@ import { ContactModule } from './modules/contact/contact.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     CoreModule,
     RedisModule,
-    HealthModule.register('marketing-service'),
-    MetricsModule,
     CommonKafkaModule,
     KafkaModule,
+    HealthModule.register({
+      serviceName: 'marketing-service',
+      probes: [
+        {
+          provide: 'HEALTH_DB_PROBE',
+          inject: [PrismaService],
+          useFactory: (prisma: PrismaService) => () => prisma.$queryRawUnsafe('SELECT 1').then(() => {}),
+        },
+        {
+          provide: 'HEALTH_REDIS_PROBE',
+          inject: [RedisService],
+          useFactory: (redis: RedisService) => () => redis.ping(),
+        },
+        {
+          provide: 'HEALTH_KAFKA_PROBE',
+          inject: [KafkaProducerService],
+          useFactory: (kafka: KafkaProducerService) => () => kafka.ping(),
+        },
+      ],
+    }),
+    MetricsModule,
     BannerModule,
     BannerLocationModule,
     ContactModule,

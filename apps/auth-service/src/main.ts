@@ -12,7 +12,7 @@ createApp({
   serviceName: SERVICE_NAME,
   defaultPort: parseInt(process.env.PORT ?? '3001', 10),
   module: AppModule,
-  excludePrefixes: ['.well-known/(.*)'],
+  excludePrefixes: ['.well-known/*path'],
 }).catch((err) => {
   console.error(`${SERVICE_NAME} failed to start`, err);
   process.exit(1);

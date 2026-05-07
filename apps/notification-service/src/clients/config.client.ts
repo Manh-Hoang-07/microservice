@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FileLogger } from '@package/bootstrap';
 import { createCircuitBreaker } from '@package/circuit-breaker';
 
 export interface EmailConfig {
@@ -15,21 +16,30 @@ export interface EmailConfig {
 
 @Injectable()
 export class ConfigClient {
-  private readonly logger = new Logger(ConfigClient.name);
   private readonly breaker = createCircuitBreaker({
     halfOpenAfterMs: 10_000,
     maxConsecutiveFailures: 5,
   });
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly fileLogger: FileLogger,
+  ) {
     this.breaker.onBreak(() => {
-      this.logger.warn('Config-service circuit opened — service unavailable');
+      const log = this.fileLogger.create('config-client/circuit-break', {});
+      log.addDebug('circuit_opened');
+      log.save();
     });
   }
 
   async getEmailConfig(): Promise<EmailConfig | null> {
     const configUrl = this.config.get<string>('CONFIG_INTERNAL_URL');
-    if (!configUrl) return null;
+    if (!configUrl) {
+      const log = this.fileLogger.create('config-client/get-email-config', {});
+      log.addDebug('config_url_missing');
+      log.save();
+      return null;
+    }
 
     try {
       return await this.breaker.execute(async () => {
@@ -45,16 +55,27 @@ export class ConfigClient {
             signal: ac.signal,
           });
           if (!res.ok) {
-            this.logger.warn(`Config-service returned ${res.status} when fetching email config`);
+            const log = this.fileLogger.create('config-client/get-email-config', {
+              url: `${configUrl}/config/email`,
+              status: res.status,
+            });
+            log.addDebug('config_service_error', { status: res.status });
+            log.save();
             return null;
           }
-          return (await res.json()) as EmailConfig;
+          const body = await res.json();
+          return (body?.data ?? body) as EmailConfig;
         } finally {
           clearTimeout(timer);
         }
       });
     } catch (err: any) {
-      this.logger.warn(`Failed to fetch email config: ${err?.message ?? err}`);
+      const log = this.fileLogger.create('config-client/get-email-config', {
+        url: `${configUrl}/config/email`,
+      });
+      log.addException(err);
+      log.addDebug('fetch_failed');
+      log.save();
       return null;
     }
   }

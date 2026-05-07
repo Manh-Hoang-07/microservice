@@ -36,7 +36,7 @@ import {
   setAuthCookies,
 } from '../utils/auth-cookies.util';
 
-@Controller('auth')
+@Controller()
 export class AuthController {
   constructor(
     private readonly authService: AuthService,

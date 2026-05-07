@@ -15,8 +15,10 @@ import {
   AuditModule,
   BigIntSerializationInterceptor,
 } from '@package/common';
-import { RedisModule } from '@package/redis';
+import { RedisModule, RedisService } from '@package/redis';
+import { KafkaProducerService } from '@package/kafka-client';
 import { envValidationSchema } from './core/config/env.validation';
+import { PrismaService } from './core/database/prisma.service';
 import { CoreModule } from './core/core.module';
 import { RbacModule } from './rbac/rbac.module';
 import { InternalModule } from './internal/internal.module';
@@ -56,9 +58,29 @@ import { KafkaModule } from './kafka/kafka.module';
     CoreModule,
     RedisModule,
     RbacModule,
-    HealthModule.register('iam-service'),
-    MetricsModule,
     CommonKafkaModule,
+    KafkaModule,
+    HealthModule.register({
+      serviceName: 'iam-service',
+      probes: [
+        {
+          provide: 'HEALTH_DB_PROBE',
+          inject: [PrismaService],
+          useFactory: (prisma: PrismaService) => () => prisma.$queryRawUnsafe('SELECT 1').then(() => {}),
+        },
+        {
+          provide: 'HEALTH_REDIS_PROBE',
+          inject: [RedisService],
+          useFactory: (redis: RedisService) => () => redis.ping(),
+        },
+        {
+          provide: 'HEALTH_KAFKA_PROBE',
+          inject: [KafkaProducerService],
+          useFactory: (kafka: KafkaProducerService) => () => kafka.ping(),
+        },
+      ],
+    }),
+    MetricsModule,
     AuditModule,
     InternalModule,
     PermissionModule,
@@ -66,7 +88,6 @@ import { KafkaModule } from './kafka/kafka.module';
     ContextModule,
     GroupModule,
     UserRoleModule,
-    KafkaModule,
   ],
   providers: [
     {

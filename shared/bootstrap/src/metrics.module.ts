@@ -82,6 +82,6 @@ export class MetricsMiddleware implements NestMiddleware {
 })
 export class MetricsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(MetricsMiddleware).forRoutes('*');
+    consumer.apply(MetricsMiddleware).forRoutes('*path');
   }
 }

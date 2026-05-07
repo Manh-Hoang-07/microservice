@@ -72,9 +72,10 @@ export class AuthService {
   async sendOtpForRegister(dto: SendOtpDto) {
     const email = dto.email.toLowerCase();
     const existing = await this.userRepo.findByEmail(email);
-    if (!existing) {
-      await this.otpService.sendRegisterOtp(email);
+    if (existing) {
+      throw new BadRequestException(t(this.i18n, 'auth.EMAIL_IN_USE'));
     }
+    await this.otpService.sendRegisterOtp(email);
     return { message: t(this.i18n, 'auth.OTP_SENT') };
   }
 

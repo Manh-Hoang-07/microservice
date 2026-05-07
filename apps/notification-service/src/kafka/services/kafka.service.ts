@@ -92,13 +92,17 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
     await admin.connect();
     const replicationFactor = this.config.get<number>('kafka.replicationFactor') ?? 1;
     const topics = Array.from(this.handlers.keys());
-    try {
-      await admin.createTopics({ topics: topics.map((t) => ({ topic: t, numPartitions: 1, replicationFactor })) });
-    } catch (err) {
-      const log = this.fileLogger.create('kafka/create-topics', {});
-      log.addException(err);
-      log.addDebug('createTopics failed — topics may already exist or require manual creation on Aiven');
-      log.save();
+    const existingTopics = await admin.listTopics();
+    const newTopics = topics.filter((t) => !existingTopics.includes(t));
+    if (newTopics.length) {
+      try {
+        await admin.createTopics({ topics: newTopics.map((t) => ({ topic: t, numPartitions: 1, replicationFactor })) });
+      } catch (err) {
+        const log = this.fileLogger.create('kafka/create-topics', {});
+        log.addException(err);
+        log.addDebug('create_topics_failed');
+        log.save();
+      }
     }
     await admin.disconnect();
 
@@ -135,26 +139,38 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
     if (this.shuttingDown) return;
     if (!message.value) return;
 
+    const msgCtx = { topic, partition, offset: message.offset };
+
     if (message.value.length > MAX_PAYLOAD_BYTES) {
-      const log = this.fileLogger.create(`kafka/${topic}`, { topic, partition, offset: message.offset });
-      log.addDebug('skipped oversize message', { size: message.value.length });
+      const log = this.fileLogger.create(`kafka/${topic}`, msgCtx);
+      log.addDebug('skipped_oversize', { size: message.value.length });
       log.save();
       return;
     }
 
     const dedupKey = `${topic}:${partition}:${message.offset}`;
-    if (this.seen.has(dedupKey)) return;
+    if (this.seen.has(dedupKey)) {
+      const log = this.fileLogger.create(`kafka/${topic}`, msgCtx);
+      log.addDebug('skipped_dedup');
+      log.save();
+      return;
+    }
 
     const handler = this.handlers.get(topic);
-    if (!handler) return;
+    if (!handler) {
+      const log = this.fileLogger.create(`kafka/${topic}`, msgCtx);
+      log.addDebug('skipped_no_handler');
+      log.save();
+      return;
+    }
 
     let payload: any;
     try {
       payload = JSON.parse(message.value.toString());
     } catch (err) {
-      const log = this.fileLogger.create(`kafka/${topic}`, { topic, partition, offset: message.offset });
+      const log = this.fileLogger.create(`kafka/${topic}`, msgCtx);
       log.addException(err);
-      log.addDebug('skipped malformed JSON');
+      log.addDebug('skipped_malformed_json');
       log.save();
       return;
     }
@@ -165,11 +181,22 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
       payload?.event_id?.toString() ||
       `${partition}:${message.offset}`;
     const claimed = await this.idempotency.claim(topic, eventId);
-    if (!claimed) return;
+    if (!claimed) {
+      const log = this.fileLogger.create(`kafka/${topic}`, { ...msgCtx, eventId });
+      log.addDebug('skipped_idempotent');
+      log.save();
+      return;
+    }
 
     this.inFlight++;
+    const dispatchLog = this.fileLogger.create(`kafka/${topic}`, {
+      topic, partition, offset: message.offset, eventId,
+    });
+    dispatchLog.addDebug('dispatching');
     try {
       await handler.handle(payload);
+      dispatchLog.addDebug('handler_ok');
+      dispatchLog.save();
       this.attempts.delete(dedupKey);
     } catch (err) {
       const attempt = (this.attempts.get(dedupKey) ?? 0) + 1;
@@ -181,7 +208,7 @@ export class KafkaService implements OnModuleInit, OnApplicationShutdown {
       log.addException(err);
 
       if (attempt >= MAX_HANDLER_ATTEMPTS) {
-        log.addDebug('shipped to DLQ');
+        log.addDebug('shipped_to_dlq');
         await this.shipToDlq(topic, partition, message, payload, err as Error);
         this.attempts.delete(dedupKey);
         log.save();

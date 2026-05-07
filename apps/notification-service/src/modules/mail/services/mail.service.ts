@@ -1,6 +1,7 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { RedisService } from '@package/redis';
+import { FileLogger } from '@package/bootstrap';
 import { ConfigClient } from '../../../clients/config.client';
 import { ContentTemplateRepository } from '../../content-template/repositories/content-template.repository';
 import { SendMailOptions } from '../interfaces/send-mail-options.interface';
@@ -40,7 +41,6 @@ function safeHeader(value: string): string {
 
 @Injectable()
 export class MailService implements OnModuleInit {
-  private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter | null = null;
   private fromAddress: string | undefined;
   private fromName: string | undefined;
@@ -53,6 +53,7 @@ export class MailService implements OnModuleInit {
     private readonly configClient: ConfigClient,
     private readonly contentTemplateRepo: ContentTemplateRepository,
     private readonly redis: RedisService,
+    private readonly fileLogger: FileLogger,
   ) {}
 
   async onModuleInit() {
@@ -65,8 +66,6 @@ export class MailService implements OnModuleInit {
 
   async ensureFreshConfig(): Promise<void> {
     if (Date.now() - this.lastConfigLoadMs > this.configReloadIntervalMs) {
-      // Dedup concurrent callers — all await the same in-flight reload
-      // instead of hammering config-service in parallel.
       if (this.reloadInFlight) {
         await this.reloadInFlight;
         return;
@@ -81,11 +80,17 @@ export class MailService implements OnModuleInit {
   }
 
   async reloadConfig(): Promise<void> {
+    const log = this.fileLogger.create('mail/reload_config', {});
     const cfg = await this.configClient.getEmailConfig();
-    if (!cfg) return;
+    if (!cfg) {
+      log.addDebug('config_null');
+      log.save();
+      return;
+    }
 
     if (!cfg.smtp_host || !cfg.smtp_username) {
-      this.logger.warn('Email config incomplete — mail disabled');
+      log.addDebug('config_incomplete', { smtp_host: cfg.smtp_host ?? '', smtp_username: cfg.smtp_username ?? '' });
+      log.save();
       return;
     }
 
@@ -110,16 +115,57 @@ export class MailService implements OnModuleInit {
       socketTimeout: 30_000,
     });
     this.lastConfigLoadMs = Date.now();
+    log.addDebug('transport_ready', { host: cfg.smtp_host, port: cfg.smtp_port, from: this.fromAddress });
+    log.save();
+  }
+
+  async sendTemplate(
+    templateCode: string,
+    options: { to: string | string[]; variables?: Record<string, any>; subject?: string },
+  ): Promise<void> {
+    const to = Array.isArray(options.to) ? options.to.join(',') : options.to;
+    const log = this.fileLogger.create('mail/send_template', { templateCode, to });
+
+    const template = await this.contentTemplateRepo.findActiveByCode(templateCode);
+    if (!template?.content) {
+      log.addDebug('template_not_found');
+      log.save();
+      return;
+    }
+
+    log.addDebug('template_resolved', { templateName: template.name });
+    const rendered = this.render(template.content, options.variables ?? {});
+    const metadata = template.metadata as any;
+    const subject = options.subject ?? metadata?.subject ?? template.name;
+
+    try {
+      await this.send({ to: options.to, subject, html: rendered });
+      log.addDebug('done');
+    } catch (err) {
+      log.addException(err);
+      log.addDebug('failed');
+      throw err;
+    } finally {
+      log.save();
+    }
   }
 
   async send(options: SendMailOptions): Promise<void> {
     await this.ensureFreshConfig();
-    if (!this.transporter) throw new Error('Mail transport not configured');
+    const to = Array.isArray(options.to) ? options.to.join(',') : options.to;
+    const log = this.fileLogger.create('mail/send', { to, subject: options.subject });
+
+    if (!this.transporter) {
+      log.addDebug('transport_not_configured');
+      log.save();
+      throw new Error('Mail transport not configured');
+    }
 
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
     const allowed = await this.filterRateLimited(recipients);
     if (!allowed.length) {
-      this.logger.warn(`All recipients rate-limited; skipping ${recipients.join(',')}`);
+      log.addDebug('all_rate_limited');
+      log.save();
       return;
     }
 
@@ -131,7 +177,10 @@ export class MailService implements OnModuleInit {
         html: options.html,
         text: options.text,
       });
+      log.addDebug('smtp_sent');
     } catch (err) {
+      log.addException(err);
+      log.addDebug('smtp_failed');
       if (isPermanentSmtpError(err)) {
         throw new PermanentMailError(
           `SMTP permanent failure: ${(err as Error).message}`,
@@ -139,6 +188,8 @@ export class MailService implements OnModuleInit {
         );
       }
       throw err;
+    } finally {
+      log.save();
     }
   }
 
@@ -154,32 +205,12 @@ export class MailService implements OnModuleInit {
         }
         if (count <= RECIPIENT_RATE_LIMIT_PER_HOUR) {
           survivors.push(to);
-        } else {
-          this.logger.warn(`Rate-limited recipient ${to} (${count}/${RECIPIENT_RATE_LIMIT_PER_HOUR})`);
         }
-      } catch (err) {
-        this.logger.warn(`Rate-limit check failed for ${to}: ${(err as Error).message}`);
+      } catch {
         survivors.push(to);
       }
     }
     return survivors;
-  }
-
-  async sendTemplate(
-    templateCode: string,
-    options: { to: string | string[]; variables?: Record<string, any>; subject?: string },
-  ): Promise<void> {
-    const template = await this.contentTemplateRepo.findActiveByCode(templateCode);
-    if (!template?.content) {
-      this.logger.warn(`Template ${templateCode} not found or empty`);
-      return;
-    }
-
-    const rendered = this.render(template.content, options.variables ?? {});
-    const metadata = template.metadata as any;
-    const subject = options.subject ?? metadata?.subject ?? template.name;
-
-    await this.send({ to: options.to, subject, html: rendered });
   }
 
   private render(content: string, variables: Record<string, any>): string {
