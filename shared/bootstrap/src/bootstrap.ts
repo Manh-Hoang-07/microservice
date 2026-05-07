@@ -30,14 +30,7 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
     initTracing(options.serviceName);
   }
 
-  // Force the Node process TZ to UTC so `Date` objects serialize identically
-  // regardless of the host's locale. `APP_TIMEZONE` is still honored — but
-  // it's now an APPLICATION-level concern (date formatting in I/O), not a
-  // node-runtime one. Setting `TZ=Asia/Ho_Chi_Minh` previously caused
-  // pg-adapter to write "local-wall-clock" strings into `timestamp without
-  // time zone` columns, then read them back as if UTC, producing a silent
-  // ±7-hour drift on every login/audit/notification timestamp.
-  process.env.TZ = 'UTC';
+  process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Ho_Chi_Minh';
 
   const serviceName = process.env.SERVICE_NAME ?? options.serviceName;
 
