@@ -101,7 +101,7 @@ ENV NODE_ENV=production \
     PORT=${SERVICE_PORT} \
     SERVICE_NAME=${SERVICE_NAME} \
     UV_THREADPOOL_SIZE=16 \
-    NODE_OPTIONS="--max-old-space-size=192"
+    NODE_OPTIONS="--max-old-space-size=512"
 
 RUN apk add --no-cache dumb-init curl && \
     addgroup -S app && adduser -S app -G app
