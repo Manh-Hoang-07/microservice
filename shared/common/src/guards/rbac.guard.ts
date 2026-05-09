@@ -16,7 +16,7 @@ import { RedisService } from '@package/redis';
 import { PERMS_KEY } from '../decorators/permission.decorator';
 
 const RBAC_TIMEOUT_MS = 5_000;
-const RBAC_CACHE_TTL_S = 60;
+const RBAC_CACHE_TTL_S = 300;
 
 @Injectable()
 export class RbacGuard implements CanActivate {
