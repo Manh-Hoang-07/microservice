@@ -109,8 +109,9 @@ export class AdminPostService {
     }
     if (actorId) data.updated_user_id = actorId;
 
+    let updated: any;
     try {
-      await this.postRepo.updateWithRelations(id, data, dto.category_ids, dto.tag_ids);
+      updated = await this.postRepo.updateWithRelations(id, data, dto.category_ids, dto.tag_ids);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new BadRequestException(t(this.i18n, 'post.SLUG_ALREADY_IN_USE'));
@@ -119,7 +120,7 @@ export class AdminPostService {
     }
 
     await this.clearPostCaches(data.slug || (current as any).slug);
-    return this.getOne(id);
+    return updated;
   }
 
   async delete(id: PrimaryKey) {

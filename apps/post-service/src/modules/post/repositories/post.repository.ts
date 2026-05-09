@@ -223,6 +223,10 @@ export class PostRepository {
       if (tagIds !== undefined) {
         await this.syncTags(id, tagIds, tx);
       }
+      return tx.post.findUnique({
+        where: { id: toPrimaryKey(id) },
+        include: WITH_RELATIONS,
+      });
     });
   }
 
