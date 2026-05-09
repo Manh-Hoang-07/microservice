@@ -22,8 +22,8 @@ export class OutboxCronService implements OnModuleInit {
     });
   }
 
-  // 30s instead of 5s — see comment in auth-service outbox cron.
-  @Cron('*/30 * * * * *')
+  // 5s relay — see auth-service outbox cron for rationale.
+  @Cron('*/5 * * * * *')
   async relayOutbox() {
     await this.outboxRelay.relay(TABLE_NAME, TOPIC_MAP);
   }

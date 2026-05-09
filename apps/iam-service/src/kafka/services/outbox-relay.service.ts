@@ -27,7 +27,7 @@ export class IamOutboxCronService implements OnModuleInit {
     });
   }
 
-  @Cron('*/30 * * * * *')
+  @Cron('*/5 * * * * *')
   async relayOutbox() {
     await this.outboxRelay.relay(TABLE_NAME, TOPIC_MAP);
   }
