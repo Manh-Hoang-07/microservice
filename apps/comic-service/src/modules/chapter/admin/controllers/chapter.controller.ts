@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminChapterService } from '../services/chapter.service';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
@@ -30,15 +30,17 @@ export class AdminChapterController {
 
   @Permission('comic.manage')
   @Post()
-  async create(@Body() dto: CreateChapterDto, @Req() req: Request) {
-    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+  async create(@Body() dto: CreateChapterDto) {
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.chapterService.create(dto, actorId);
   }
 
   @Permission('comic.manage')
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateChapterDto, @Req() req: Request) {
-    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+  async update(@Param('id') id: string, @Body() dto: UpdateChapterDto) {
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.chapterService.update(toPrimaryKey(id), dto, actorId);
   }
 

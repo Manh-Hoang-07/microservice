@@ -1,5 +1,5 @@
-import { Controller, Post, Delete, Body, Param, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Post, Delete, Body, Param } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserReviewService } from '../services/reviews.service';
 import { CreateReviewDto } from '../dtos/create-review.dto';
@@ -10,15 +10,15 @@ export class UserReviewController {
 
   @Permission('user')
   @Post()
-  async createOrUpdate(@Req() req: any, @Body() dto: CreateReviewDto) {
-    const userId = toPrimaryKey(req.user.sub);
+  async createOrUpdate(@Body() dto: CreateReviewDto) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.reviewService.createOrUpdate(userId, dto);
   }
 
   @Permission('user')
   @Delete(':id')
-  async delete(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
+  async delete(@Param('id') id: string) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.reviewService.delete(userId, toPrimaryKey(id));
   }
 }

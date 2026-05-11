@@ -115,7 +115,28 @@
       "Bash(xargs wc *)",
       "Bash(node -e 'try{JSON.parse\\(require\\('\\\\''fs'\\\\''\\).readFileSync\\('\\\\''__TRACKED_VAR__'\\\\'','\\\\''utf8'\\\\''\\)\\);console.log\\('\\\\''OK'\\\\''\\)}catch\\(e\\){console.log\\('\\\\''ERROR: '\\\\''+e.message\\)}')",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\MANH HOANG\\\\.claude\\\\projects\" -Recurse | Where-Object { $_.Extension -eq \".jsonl\" } | Sort-Object LastWriteTime -Descending | Select-Object -First 50 -ExpandProperty FullName)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git show *)",
+      "Bash(git -C \"D:/Sources/microservice\" checkout -b perf/performance-improvements)",
+      "Bash(git -C \"D:/Sources/microservice\" checkout perf/performance-improvements)",
+      "Bash(git -C \"D:/Sources/microservice\" add package.json package-lock.json shared/bootstrap/src/bootstrap.ts)",
+      "Bash(git -C \"D:/Sources/microservice\" status)",
+      "Bash(git -C D:/Sources/microservice commit -m ' *)",
+      "Bash(git -C \"D:/Sources/microservice\" add shared/redis/src/redis.service.ts apps/introduction-service/src/modules/testimonial/public/services/testimonial.service.ts apps/marketing-service/src/modules/banner/public/services/banner.service.ts)",
+      "Bash(git -C \"D:/Sources/microservice\" add shared/kafka-client/src/kafka-client.module.ts shared/kafka-client/src/kafka-producer.service.ts shared/config/src/kafka.config.ts .env.docker)",
+      "Bash(git -C \"D:/Sources/microservice\" add shared/kafka-client/src/kafka-client.module.ts shared/kafka-client/src/kafka-producer.service.ts shared/config/src/kafka.config.ts)",
+      "Bash(find /d/Sources/microservice/apps/comic-service/src/modules/*/public -name \"*.service.ts\")",
+      "Bash(grep -rn '$transaction' '/d/Sources/microservice/apps/comic-service/src/modules/*/repositories/*.ts')",
+      "Bash(xargs -I {} grep -l \"Interceptor\\\\|guard\" {})",
+      "Bash(grep -rn 'insertOutboxEvent\\\\|outbox.create\\\\|$transaction' d:/Sources/microservice/apps/auth-service/src '--include=*.ts')",
+      "Bash(npx jest *)",
+      "Bash(node -e \"const j = require\\('./node_modules/jest/package.json'\\); console.log\\(j.version\\)\")",
+      "Bash(xargs head *)",
+      "Bash(npm test *)",
+      "Bash(git merge *)",
+      "Bash(grep -v \"^worktree D:/Sources/microservice$\")",
+      "Bash(git worktree *)",
+      "Bash(xargs git *)"
     ]
   }
 }

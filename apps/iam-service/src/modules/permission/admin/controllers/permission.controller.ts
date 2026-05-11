@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { PermissionService } from '../services/permission.service';
 import { CreatePermissionDto } from '../dtos/create-permission.dto';
@@ -24,14 +24,16 @@ export class PermissionController {
 
   @Permission('permission.manage')
   @Post()
-  create(@Body() dto: CreatePermissionDto, @Req() req: any) {
-    return this.service.create(dto, toPrimaryKey(req.user.sub));
+  create(@Body() dto: CreatePermissionDto) {
+    const ctx = session()!;
+    return this.service.create(dto, toPrimaryKey(ctx.userId!));
   }
 
   @Permission('permission.manage')
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdatePermissionDto, @Req() req: any) {
-    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(req.user.sub));
+  update(@Param('id') id: string, @Body() dto: UpdatePermissionDto) {
+    const ctx = session()!;
+    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(ctx.userId!));
   }
 
   @Permission('permission.manage')

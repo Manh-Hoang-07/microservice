@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { ContextService } from '../services/context.service';
 import { CreateContextDto } from '../dtos/create-context.dto';
@@ -25,14 +25,16 @@ export class ContextController {
 
   @Permission('context.manage')
   @Post()
-  create(@Body() dto: CreateContextDto, @Req() req: any) {
-    return this.service.create(dto, toPrimaryKey(req.user.sub));
+  create(@Body() dto: CreateContextDto) {
+    const ctx = session()!;
+    return this.service.create(dto, toPrimaryKey(ctx.userId!));
   }
 
   @Permission('context.manage')
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateContextDto, @Req() req: any) {
-    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(req.user.sub));
+  update(@Param('id') id: string, @Body() dto: UpdateContextDto) {
+    const ctx = session()!;
+    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(ctx.userId!));
   }
 
   @Permission('context.manage')

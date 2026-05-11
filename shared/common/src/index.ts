@@ -54,3 +54,10 @@ export { CommonKafkaModule } from './kafka/kafka-common.module';
 export { AuditLog, AUDIT_LOG_KEY, AuditLogMeta } from './audit/audit-log.decorator';
 export { AuditLogInterceptor } from './audit/audit-log.interceptor';
 export { AuditModule } from './audit/audit.module';
+
+// Session context
+export { SessionContext, SessionServerInfo } from './session/session-context';
+export { SessionContextService } from './session/session-context.service';
+export { SessionContextMiddleware } from './session/session-context.middleware';
+export { SessionModule } from './session/session.module';
+export { session } from './session/session-context.storage';

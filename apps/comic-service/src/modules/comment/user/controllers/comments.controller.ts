@@ -1,5 +1,5 @@
-import { Controller, Post, Put, Delete, Body, Param, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Post, Put, Delete, Body, Param } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserCommentService } from '../services/comments.service';
 import { CreateCommentDto } from '../dtos/create-comment.dto';
@@ -10,22 +10,22 @@ export class UserCommentController {
 
   @Permission('user')
   @Post()
-  async create(@Req() req: any, @Body() dto: CreateCommentDto) {
-    const userId = toPrimaryKey(req.user.sub);
+  async create(@Body() dto: CreateCommentDto) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.commentService.create(userId, dto);
   }
 
   @Permission('user')
   @Put(':id')
-  async update(@Req() req: any, @Param('id') id: string, @Body() body: { content: string }) {
-    const userId = toPrimaryKey(req.user.sub);
+  async update(@Param('id') id: string, @Body() body: { content: string }) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.commentService.update(userId, toPrimaryKey(id), body.content);
   }
 
   @Permission('user')
   @Delete(':id')
-  async delete(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
+  async delete(@Param('id') id: string) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.commentService.delete(userId, toPrimaryKey(id));
   }
 }

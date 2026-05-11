@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MetricsModule } from "@package/bootstrap";
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -11,7 +11,7 @@ import { envValidationSchema } from './core/config/env.validation';
 import { CoreModule } from './core/core.module';
 import { RedisModule, RedisService } from '@package/redis';
 import { KafkaProducerService } from '@package/kafka-client';
-import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { PrismaService } from './core/database/prisma.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
@@ -55,6 +55,7 @@ import { ContactModule } from './modules/contact/contact.module';
       ],
     }),
     MetricsModule,
+    SessionModule,
     BannerModule,
     BannerLocationModule,
     ContactModule,
@@ -85,4 +86,8 @@ import { ContactModule } from './modules/contact/contact.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(SessionContextMiddleware).forRoutes('*path');
+  }
+}

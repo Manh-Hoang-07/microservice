@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Delete, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get, Post, Delete, Param, Query } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserFollowService } from '../services/follows.service';
 import { ListFollowsQueryDto } from '../dtos/list-follows.query.dto';
@@ -10,22 +10,22 @@ export class UserFollowController {
 
   @Permission('user')
   @Get('follows')
-  async getList(@Req() req: any, @Query() query: ListFollowsQueryDto) {
-    const userId = toPrimaryKey(req.user.sub);
+  async getList(@Query() query: ListFollowsQueryDto) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.followService.getList(userId, query);
   }
 
   @Permission('user')
   @Post('comics/:id/follow')
-  async follow(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
+  async follow(@Param('id') id: string) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.followService.follow(userId, toPrimaryKey(id));
   }
 
   @Permission('user')
   @Delete('comics/:id/follow')
-  async unfollow(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
+  async unfollow(@Param('id') id: string) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.followService.unfollow(userId, toPrimaryKey(id));
   }
 }

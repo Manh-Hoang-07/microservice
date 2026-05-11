@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { RoleService } from '../services/role.service';
 import { CreateRoleDto } from '../dtos/create-role.dto';
@@ -25,14 +25,16 @@ export class RoleController {
 
   @Permission('role.manage')
   @Post()
-  create(@Body() dto: CreateRoleDto, @Req() req: any) {
-    return this.service.create(dto, toPrimaryKey(req.user.sub));
+  create(@Body() dto: CreateRoleDto) {
+    const ctx = session()!;
+    return this.service.create(dto, toPrimaryKey(ctx.userId!));
   }
 
   @Permission('role.manage')
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateRoleDto, @Req() req: any) {
-    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(req.user.sub));
+  update(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
+    const ctx = session()!;
+    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(ctx.userId!));
   }
 
   @Permission('role.manage')
@@ -44,8 +46,9 @@ export class RoleController {
   @Permission('role.manage')
   @Put(':id/permissions')
   syncPermissions(@Param('id') id: string, @Body() dto: SyncPermissionsDto, @Req() req: any) {
+    const ctx = session()!;
     return this.service.syncPermissions(toPrimaryKey(id), dto, {
-      id: String(req?.user?.sub ?? req?.user?.id ?? ''),
+      id: ctx.userId ?? '',
       groupId: (req?.headers?.['x-group-id'] as string | undefined) ?? null,
     });
   }

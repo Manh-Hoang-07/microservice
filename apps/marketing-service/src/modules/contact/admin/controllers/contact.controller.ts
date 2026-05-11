@@ -1,6 +1,5 @@
-import { Controller, Get, Param, Query, Patch, Body, Req } from '@nestjs/common';
-import { Request } from 'express';
-import { Permission } from '@package/common';
+import { Controller, Get, Param, Query, Patch, Body } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminContactService } from '../services/contact.service';
 import { ReplyContactDto } from '../dtos/reply-contact.dto';
@@ -8,7 +7,9 @@ import { ListContactsAdminQueryDto } from '../dtos/list-contacts.query.dto';
 
 @Controller('admin/contacts')
 export class AdminContactController {
-  constructor(private readonly contactService: AdminContactService) {}
+  constructor(
+    private readonly contactService: AdminContactService,
+  ) {}
 
   @Permission('marketing.manage')
   @Get()
@@ -27,9 +28,9 @@ export class AdminContactController {
   async reply(
     @Param('id') id: string,
     @Body() body: ReplyContactDto,
-    @Req() req: Request,
   ) {
-    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.contactService.reply(toPrimaryKey(id), body.reply, actorId);
   }
 

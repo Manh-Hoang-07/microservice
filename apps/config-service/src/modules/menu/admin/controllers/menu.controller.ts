@@ -8,17 +8,18 @@ import {
   Param,
   Query,
   ValidationPipe,
-  Req,
 } from '@nestjs/common';
 import { MenuService } from '../services/menu.service';
 import { CreateMenuDto } from '../dtos/create-menu.dto';
 import { UpdateMenuDto } from '../dtos/update-menu.dto';
 import { QueryMenuDto } from '../dtos/query-menu.dto';
-import { Permission } from '@package/common';
+import { Permission, session } from '@package/common';
 
 @Controller()
 export class AdminMenuController {
-  constructor(private readonly service: MenuService) {}
+  constructor(
+    private readonly service: MenuService,
+  ) {}
 
   @Permission('menu.manage')
   @Get('menus/admin')
@@ -40,8 +41,9 @@ export class AdminMenuController {
 
   @Permission('menu.manage')
   @Post('menus')
-  async create(@Body() dto: CreateMenuDto, @Req() req: any) {
-    const userId = req.user?.sub ?? req.user?.id;
+  async create(@Body() dto: CreateMenuDto) {
+    const ctx = session()!;
+    const userId = ctx.userId;
     return this.service.createWithUser(dto, userId);
   }
 
@@ -50,9 +52,9 @@ export class AdminMenuController {
   async update(
     @Param('id') id: any,
     @Body() dto: UpdateMenuDto,
-    @Req() req: any,
   ) {
-    const userId = req.user?.sub ?? req.user?.id;
+    const ctx = session()!;
+    const userId = ctx.userId;
     return this.service.updateById(id, dto, userId);
   }
 

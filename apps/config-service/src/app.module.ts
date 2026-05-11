@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -8,7 +8,7 @@ import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { join } from 'path';
 import { createAppConfig } from '@package/config';
 import { envValidationSchema } from './core/config/env.validation';
-import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { RedisModule, RedisService } from '@package/redis';
 import { CoreModule } from './core/core.module';
 import { PrismaService } from './core/database/prisma.service';
@@ -56,6 +56,7 @@ import { CachePurgeModule } from './modules/cache-purge/cache-purge.module';
       ],
     }),
     MetricsModule,
+    SessionModule,
     InternalModule,
     SystemConfigModule,
     MenuModule,
@@ -89,4 +90,8 @@ import { CachePurgeModule } from './modules/cache-purge/cache-purge.module';
     },
   ],
 })
-export class ConfigAppModule {}
+export class ConfigAppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(SessionContextMiddleware).forRoutes('*path');
+  }
+}

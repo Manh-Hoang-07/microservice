@@ -1,5 +1,5 @@
-import { Controller, Get, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { UserGroupService } from '../services/user-group.service';
 
 @Controller('user/groups')
@@ -8,7 +8,8 @@ export class UserGroupController {
 
   @Permission('user')
   @Get()
-  getUserGroups(@Req() req: any) {
-    return this.service.getUserGroups(String(req.user.sub));
+  getUserGroups() {
+    const ctx = session()!;
+    return this.service.getUserGroups(ctx.userId ?? '');
   }
 }

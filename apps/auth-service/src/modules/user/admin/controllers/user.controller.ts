@@ -8,10 +8,8 @@ import {
   Post,
   Put,
   Query,
-  Req,
 } from '@nestjs/common';
-import { Request } from 'express';
-import { Permission } from '@package/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminUserService } from '../services/user.service';
 import { UserQueryDto } from '../dtos/user-query.dto';
@@ -22,7 +20,9 @@ import { ChangeStatusDto } from '../dtos/change-status.dto';
 
 @Controller('admin/users')
 export class AdminUserController {
-  constructor(private readonly adminUserService: AdminUserService) {}
+  constructor(
+    private readonly adminUserService: AdminUserService,
+  ) {}
 
   @Permission('user.manage')
   @Get()
@@ -44,10 +44,9 @@ export class AdminUserController {
 
   @Permission('user.manage')
   @Post()
-  create(@Body() dto: CreateUserDto, @Req() req: Request) {
-    const actorId = (req as any).user?.sub
-      ? toPrimaryKey((req as any).user.sub)
-      : undefined;
+  create(@Body() dto: CreateUserDto) {
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.adminUserService.create(dto, actorId);
   }
 
@@ -56,11 +55,9 @@ export class AdminUserController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
-    @Req() req: Request,
   ) {
-    const actorId = (req as any).user?.sub
-      ? toPrimaryKey((req as any).user.sub)
-      : undefined;
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.adminUserService.update(toPrimaryKey(id), dto, actorId);
   }
 

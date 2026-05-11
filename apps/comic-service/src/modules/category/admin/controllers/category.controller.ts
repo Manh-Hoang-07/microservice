@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminCategoryService } from '../services/category.service';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
@@ -24,15 +24,17 @@ export class AdminCategoryController {
 
   @Permission('comic.manage')
   @Post()
-  async create(@Body() dto: CreateCategoryDto, @Req() req: Request) {
-    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+  async create(@Body() dto: CreateCategoryDto) {
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.categoryService.create(dto, actorId);
   }
 
   @Permission('comic.manage')
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto, @Req() req: Request) {
-    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.categoryService.update(toPrimaryKey(id), dto, actorId);
   }
 

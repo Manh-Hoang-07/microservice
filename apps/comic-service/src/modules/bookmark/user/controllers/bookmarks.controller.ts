@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserBookmarkService } from '../services/bookmarks.service';
 import { CreateBookmarkDto } from '../dtos/create-bookmark.dto';
@@ -11,22 +11,22 @@ export class UserBookmarkController {
 
   @Permission('user')
   @Get()
-  async getList(@Req() req: any, @Query() query: ListBookmarksQueryDto) {
-    const userId = toPrimaryKey(req.user.sub);
+  async getList(@Query() query: ListBookmarksQueryDto) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.bookmarkService.getList(userId, query);
   }
 
   @Permission('user')
   @Post()
-  async create(@Req() req: any, @Body() dto: CreateBookmarkDto) {
-    const userId = toPrimaryKey(req.user.sub);
+  async create(@Body() dto: CreateBookmarkDto) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.bookmarkService.create(userId, dto);
   }
 
   @Permission('user')
   @Delete(':id')
-  async delete(@Req() req: any, @Param('id') id: string) {
-    const userId = toPrimaryKey(req.user.sub);
+  async delete(@Param('id') id: string) {
+    const userId = toPrimaryKey(session()!.userId!);
     return this.bookmarkService.delete(userId, toPrimaryKey(id));
   }
 }

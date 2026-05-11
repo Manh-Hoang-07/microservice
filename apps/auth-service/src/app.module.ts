@@ -9,7 +9,7 @@ import cookieParser = require('cookie-parser');
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { RedisModule, RedisService } from '@package/redis';
-import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { KafkaProducerService } from '@package/kafka-client';
 import { PrismaService } from './core/database/prisma.service';
 import { CoreModule } from './core/core.module';
@@ -79,6 +79,7 @@ import { InternalModule } from './internal/internal.module';
     }),
     MetricsModule,
     AuditModule,
+    SessionModule,
     InternalModule,
     UserModule,
   ],
@@ -100,6 +101,6 @@ import { InternalModule } from './internal/internal.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(cookieParser()).forRoutes('*path');
+    consumer.apply(cookieParser(), SessionContextMiddleware).forRoutes('*path');
   }
 }

@@ -3,10 +3,8 @@ import {
   Controller,
   Get,
   Patch,
-  Req,
 } from '@nestjs/common';
-import { Request } from 'express';
-import { Permission } from '@package/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { ProfileService } from '../services/profile.service';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
@@ -14,22 +12,25 @@ import { ChangePasswordDto } from '../dtos/change-password.dto';
 
 @Controller('user/profile')
 export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
+  constructor(
+    private readonly profileService: ProfileService,
+  ) {}
 
   @Permission('user')
   @Get()
-  async getProfile(@Req() req: Request) {
-    return this.profileService.getProfile(toPrimaryKey((req as any).user.sub));
+  async getProfile() {
+    const ctx = session()!;
+    return this.profileService.getProfile(toPrimaryKey(ctx.userId!));
   }
 
   @Permission('user')
   @Patch()
   async updateProfile(
-    @Req() req: Request,
     @Body() dto: UpdateProfileDto,
   ) {
+    const ctx = session()!;
     return this.profileService.updateProfile(
-      toPrimaryKey((req as any).user.sub),
+      toPrimaryKey(ctx.userId!),
       dto,
     );
   }
@@ -37,11 +38,11 @@ export class ProfileController {
   @Permission('user')
   @Patch('change-password')
   async changePassword(
-    @Req() req: Request,
     @Body() dto: ChangePasswordDto,
   ) {
+    const ctx = session()!;
     return this.profileService.changePassword(
-      toPrimaryKey((req as any).user.sub),
+      toPrimaryKey(ctx.userId!),
       dto,
     );
   }

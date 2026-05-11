@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -9,7 +9,7 @@ import { join } from 'path';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { RedisModule, RedisService } from '@package/redis';
 import { envValidationSchema } from './core/config/env.validation';
-import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { PrismaService } from './core/database/prisma.service';
 import { CoreModule } from './core/core.module';
 import { ClientsModule } from './clients/clients.module';
@@ -62,6 +62,7 @@ import { KafkaModule } from './kafka/kafka.module';
       ],
     }),
     MetricsModule,
+    SessionModule,
     NotificationModule,
     ContentTemplateModule,
     QueueModule,
@@ -91,4 +92,8 @@ import { KafkaModule } from './kafka/kafka.module';
     },
   ],
 })
-export class NotificationAppModule {}
+export class NotificationAppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(SessionContextMiddleware).forRoutes('*path');
+  }
+}

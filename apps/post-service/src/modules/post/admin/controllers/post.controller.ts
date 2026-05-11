@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminPostService } from '../services/post.service';
 import { CreatePostDto } from '../dtos/create-post.dto';
@@ -30,15 +30,17 @@ export class AdminPostController {
 
   @Permission('post.manage')
   @Post()
-  async create(@Body() dto: CreatePostDto, @Req() req: Request) {
-    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+  async create(@Body() dto: CreatePostDto) {
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.postService.create(dto, actorId);
   }
 
   @Permission('post.manage')
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdatePostDto, @Req() req: Request) {
-    const actorId = (req as any).user?.sub ? toPrimaryKey((req as any).user.sub) : undefined;
+  async update(@Param('id') id: string, @Body() dto: UpdatePostDto) {
+    const ctx = session()!;
+    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
     return this.postService.update(toPrimaryKey(id), dto, actorId);
   }
 

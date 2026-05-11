@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MetricsModule } from '@package/bootstrap';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -14,6 +14,8 @@ import {
   CommonKafkaModule,
   AuditModule,
   BigIntSerializationInterceptor,
+  SessionModule,
+  SessionContextMiddleware,
 } from '@package/common';
 import { RedisModule, RedisService } from '@package/redis';
 import { KafkaProducerService } from '@package/kafka-client';
@@ -82,6 +84,7 @@ import { KafkaModule } from './kafka/kafka.module';
     }),
     MetricsModule,
     AuditModule,
+    SessionModule,
     InternalModule,
     PermissionModule,
     RoleModule,
@@ -110,4 +113,8 @@ import { KafkaModule } from './kafka/kafka.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(SessionContextMiddleware).forRoutes('*path');
+  }
+}
