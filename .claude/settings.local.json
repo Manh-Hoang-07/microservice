@@ -136,7 +136,9 @@
       "Bash(git merge *)",
       "Bash(grep -v \"^worktree D:/Sources/microservice$\")",
       "Bash(git worktree *)",
-      "Bash(xargs git *)"
+      "Bash(xargs git *)",
+      "Bash(grep -r 'transaction\\\\|$transaction' /d/Sources/microservice/apps/comic-service/src '--include=*.ts')",
+      "Bash(grep -r \"maxConnections\\\\|pool\\\\|DATABASE_URL\" /d/Sources/microservice -type f -name \"*.env*\")"
     ]
   }
 }
