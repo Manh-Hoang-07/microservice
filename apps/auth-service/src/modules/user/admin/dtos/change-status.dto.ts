@@ -1,9 +1,7 @@
-import { IsString, Matches } from 'class-validator';
+import { IsEnum } from 'class-validator';
+import { UserStatus } from '../../enums/user-status.enum';
 
 export class ChangeStatusDto {
-  @IsString()
-  @Matches(/^(active|inactive|locked)$/, {
-    message: 'status must be one of: active, inactive, locked',
-  })
-  status: string;
+  @IsEnum(UserStatus)
+  status: UserStatus;
 }

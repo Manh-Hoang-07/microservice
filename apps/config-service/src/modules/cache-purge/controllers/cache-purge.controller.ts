@@ -3,13 +3,13 @@ import { Throttle } from '@nestjs/throttler';
 import { Public } from '@package/common';
 import { RedisService } from '@package/redis';
 
-@Controller()
+@Controller('cache')
 export class CachePurgeController {
   constructor(@Optional() private readonly redis?: RedisService) {}
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @Get('cache/flush')
+  @Get('flush')
   @HttpCode(HttpStatus.OK)
   async flush() {
     if (!this.redis?.isEnabled()) {

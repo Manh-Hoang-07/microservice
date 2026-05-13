@@ -3,6 +3,7 @@ import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { PartnerFilter, PartnerRepository } from '../../repositories/partner.repository';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
 export class PublicPartnerService {
@@ -33,7 +34,7 @@ export class PublicPartnerService {
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const filter: PartnerFilter = { status: 'active' };
+    const filter: PartnerFilter = { status: BasicStatus.active };
     if (query.type) filter.type = query.type;
 
     return this.getOrSet('introduction:public:partner:list', 300, async () => {

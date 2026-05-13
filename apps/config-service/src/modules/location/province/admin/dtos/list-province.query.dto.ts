@@ -1,5 +1,6 @@
-import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { BasicStatus } from '../../../../../common/enums/basic-status.enum';
 
 export class ListProvincesAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
@@ -8,8 +9,8 @@ export class ListProvincesAdminQueryDto extends BaseListQueryDto {
   name?: string;
 
   @IsOptional()
-  @IsIn(['active', 'inactive'])
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 
   @IsOptional()
   @IsString()

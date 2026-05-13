@@ -1,10 +1,11 @@
-import { IsBooleanString, IsIn, IsOptional } from 'class-validator';
+import { IsBooleanString, IsEnum, IsOptional } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { ProjectStatus } from '../../enums/project-status.enum';
 
 export class ListProjectAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsIn(['planning', 'in_progress', 'completed', 'cancelled'])
-  status?: string;
+  @IsEnum(ProjectStatus)
+  status?: ProjectStatus;
 
   @IsOptional()
   @IsBooleanString()

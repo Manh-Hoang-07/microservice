@@ -3,6 +3,7 @@ import { RedisService } from '@package/redis';
 import { CachedService } from '../../../../../core/cache/cached.service';
 import { ProvinceService } from '../../admin/services/province.service';
 import { WardService } from '../../../ward/admin/services/ward.service';
+import { BasicStatus } from '../../../../../common/enums/basic-status.enum';
 
 @Injectable()
 export class PublicProvinceService extends CachedService {
@@ -16,7 +17,7 @@ export class PublicProvinceService extends CachedService {
 
   async getList(query: any = {}) {
     return this.getOrSet('config:public:provinces:all', 86400, async () => {
-      return this.provinceService.getList({ ...query, status: 'active' });
+      return this.provinceService.getList({ ...query, status: BasicStatus.active });
     });
   }
 
@@ -25,7 +26,7 @@ export class PublicProvinceService extends CachedService {
       return this.provinceService.getList({
         ...query,
         countryId,
-        status: 'active',
+        status: BasicStatus.active,
       });
     });
   }
@@ -35,7 +36,7 @@ export class PublicProvinceService extends CachedService {
       return this.wardService.getList({
         ...query,
         provinceId,
-        status: 'active',
+        status: BasicStatus.active,
       });
     });
   }

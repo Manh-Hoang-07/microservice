@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { ComicStatus } from '../enums/comic-status.enum';
+import { ChapterStatus } from '../../chapter/enums/chapter-status.enum';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -64,7 +66,7 @@ const PUBLIC_SELECT = {
     select: { category: { select: { id: true, name: true, slug: true } } },
   },
   chapters: {
-    where: { status: 'published' as const },
+    where: { status: ChapterStatus.published },
     orderBy: { chapter_index: 'desc' as const },
     take: 1,
     select: {
@@ -262,7 +264,7 @@ export class ComicRepository {
 
   findPublicChapters(comicId: any, options: { skip: number; take: number }) {
     return this.prisma.chapter.findMany({
-      where: { comic_id: toPrimaryKey(comicId), status: 'published' },
+      where: { comic_id: toPrimaryKey(comicId), status: ChapterStatus.published },
       select: {
         id: true,
         comic_id: true,
@@ -282,7 +284,7 @@ export class ComicRepository {
 
   countPublicChapters(comicId: any) {
     return this.prisma.chapter.count({
-      where: { comic_id: toPrimaryKey(comicId), status: 'published' },
+      where: { comic_id: toPrimaryKey(comicId), status: ChapterStatus.published },
     });
   }
 

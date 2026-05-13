@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { BasicStatus } from '../../../common/enums/status.enum';
 
 export interface ProjectFilter {
   search?: string;
@@ -11,7 +12,7 @@ export interface ProjectFilter {
 }
 
 const PUBLIC_INCLUDE = {
-  testimonials: { where: { status: 'active' as const }, orderBy: { sort_order: 'asc' as const } },
+  testimonials: { where: { status: BasicStatus.active }, orderBy: { sort_order: 'asc' as const } },
 } as const;
 
 @Injectable()

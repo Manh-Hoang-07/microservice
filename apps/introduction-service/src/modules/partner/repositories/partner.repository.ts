@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { BasicStatus } from '../../../common/enums/status.enum';
 
 export interface PartnerFilter {
   search?: string;
@@ -45,7 +46,7 @@ export class PartnerRepository {
 
   findActiveById(id: any) {
     return this.prisma.partner.findFirst({
-      where: { id: toPrimaryKey(id), status: 'active' },
+      where: { id: toPrimaryKey(id), status: BasicStatus.active },
     });
   }
 

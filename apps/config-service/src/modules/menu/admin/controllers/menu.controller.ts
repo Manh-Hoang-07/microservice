@@ -15,32 +15,32 @@ import { UpdateMenuDto } from '../dtos/update-menu.dto';
 import { QueryMenuDto } from '../dtos/query-menu.dto';
 import { Permission, session } from '@package/common';
 
-@Controller()
+@Controller('admin/menus')
 export class AdminMenuController {
   constructor(
     private readonly service: MenuService,
   ) {}
 
   @Permission('menu.manage')
-  @Get('menus/admin')
+  @Get()
   async getList(@Query(ValidationPipe) query: QueryMenuDto) {
     return this.service.getList(query);
   }
 
   @Permission('menu.manage')
-  @Get('menus/admin/tree')
+  @Get('tree')
   async getTree() {
     return this.service.getTree();
   }
 
   @Permission('menu.manage')
-  @Get('menus/admin/:id')
+  @Get(':id')
   async getOne(@Param('id') id: any) {
     return this.service.getOne(id);
   }
 
   @Permission('menu.manage')
-  @Post('menus')
+  @Post()
   async create(@Body() dto: CreateMenuDto) {
     const ctx = session()!;
     const userId = ctx.userId;
@@ -48,7 +48,7 @@ export class AdminMenuController {
   }
 
   @Permission('menu.manage')
-  @Put('menus/:id')
+  @Put(':id')
   async update(
     @Param('id') id: any,
     @Body() dto: UpdateMenuDto,
@@ -59,7 +59,7 @@ export class AdminMenuController {
   }
 
   @Permission('menu.manage')
-  @Delete('menus/:id')
+  @Delete(':id')
   async delete(@Param('id') id: any) {
     return this.service.delete(id);
   }

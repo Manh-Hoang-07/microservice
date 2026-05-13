@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { CommentStatus } from '../enums/comment-status.enum';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -52,7 +53,7 @@ export class CommentRepository {
       where: this.buildWhere(filter),
       include: {
         replies: {
-          where: { status: 'visible' },
+          where: { status: CommentStatus.visible },
           orderBy: { created_at: 'asc' },
           // Cap replies per parent so a hot thread can't return megabytes
           // per request (the include used to be unbounded).

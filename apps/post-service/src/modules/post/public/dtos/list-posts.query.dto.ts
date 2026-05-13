@@ -1,10 +1,11 @@
-import { IsBooleanString, IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsBooleanString, IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { PostType } from '../../enums/post-type.enum';
 
 export class ListPostsPublicQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsIn(['text', 'video', 'image', 'audio'])
-  post_type?: string;
+  @IsEnum(PostType)
+  post_type?: PostType;
 
   @IsOptional()
   @IsBooleanString()

@@ -1,5 +1,6 @@
-import { IsIn, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { StatsSortBy } from '../../enums/stats-sort-by.enum';
 
 /**
  * Query for the admin "top comics" leaderboard.
@@ -10,6 +11,6 @@ import { BaseListQueryDto } from '@package/common';
  */
 export class TopComicsAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsIn(['views', 'follows', 'rating'])
-  sort_by?: string;
+  @IsEnum(StatsSortBy)
+  sort_by?: StatsSortBy;
 }

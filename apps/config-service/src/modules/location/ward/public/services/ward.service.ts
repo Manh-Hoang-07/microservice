@@ -2,6 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { RedisService } from '@package/redis';
 import { CachedService } from '../../../../../core/cache/cached.service';
 import { WardService } from '../../admin/services/ward.service';
+import { BasicStatus } from '../../../../../common/enums/basic-status.enum';
 
 @Injectable()
 export class PublicWardService extends CachedService {
@@ -14,7 +15,7 @@ export class PublicWardService extends CachedService {
 
   async getList(query: any = {}) {
     return this.getOrSet('config:public:wards:all', 86400, async () => {
-      return this.wardService.getList({ ...query, status: 'active' });
+      return this.wardService.getList({ ...query, status: BasicStatus.active });
     });
   }
 
@@ -23,7 +24,7 @@ export class PublicWardService extends CachedService {
       return this.wardService.getList({
         ...query,
         provinceId,
-        status: 'active',
+        status: BasicStatus.active,
       });
     });
   }

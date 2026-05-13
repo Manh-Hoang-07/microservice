@@ -9,6 +9,7 @@ import { UserRepository } from '../repositories/user.repository';
 import { AuthOtpService } from './auth-otp.service';
 import { RegisterDto } from '../dto/register.dto';
 import { safeUser } from '../utils/user.util';
+import { UserStatus } from '../../user/enums/user-status.enum';
 
 @Injectable()
 export class RegistrationService {
@@ -49,7 +50,7 @@ export class RegistrationService {
             phone: dto.phone ?? null,
             password: hashedPassword,
             name: dto.name,
-            status: 'active',
+            status: UserStatus.active,
             email_verified_at: new Date(),
           },
           tx,

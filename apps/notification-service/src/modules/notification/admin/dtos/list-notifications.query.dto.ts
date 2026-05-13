@@ -1,5 +1,7 @@
-import { IsBooleanString, IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsBooleanString, IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { NotificationType } from '../../enums/notification-type.enum';
+import { NotificationStatus } from '../../enums/notification-status.enum';
 
 export class ListNotificationsAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
@@ -8,12 +10,12 @@ export class ListNotificationsAdminQueryDto extends BaseListQueryDto {
   user_id?: string;
 
   @IsOptional()
-  @IsIn(['info', 'success', 'warning', 'error'])
-  type?: string;
+  @IsEnum(NotificationType)
+  type?: NotificationType;
 
   @IsOptional()
-  @IsIn(['active', 'archived', 'deleted'])
-  status?: string;
+  @IsEnum(NotificationStatus)
+  status?: NotificationStatus;
 
   @IsOptional()
   @IsBooleanString()

@@ -1,14 +1,16 @@
-import { IsBooleanString, IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsBooleanString, IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { PostStatus } from '../../enums/post-status.enum';
+import { PostType } from '../../enums/post-type.enum';
 
 export class ListPostsAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsIn(['draft', 'scheduled', 'published', 'archived'])
-  status?: string;
+  @IsEnum(PostStatus)
+  status?: PostStatus;
 
   @IsOptional()
-  @IsIn(['text', 'video', 'image', 'audio'])
-  post_type?: string;
+  @IsEnum(PostType)
+  post_type?: PostType;
 
   @IsOptional()
   @IsBooleanString()

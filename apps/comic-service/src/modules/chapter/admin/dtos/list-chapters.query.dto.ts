@@ -1,5 +1,6 @@
-import { IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { ChapterStatus } from '../../enums/chapter-status.enum';
 
 export class ListChaptersAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
@@ -8,8 +9,8 @@ export class ListChaptersAdminQueryDto extends BaseListQueryDto {
   comic_id?: string;
 
   @IsOptional()
-  @IsIn(['draft', 'published', 'scheduled'])
-  status?: string;
+  @IsEnum(ChapterStatus)
+  status?: ChapterStatus;
 
   @IsOptional()
   @IsString()

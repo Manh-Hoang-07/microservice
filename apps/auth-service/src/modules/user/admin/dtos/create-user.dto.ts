@@ -6,7 +6,9 @@ import {
   MaxLength,
   ValidateNested,
   IsEmail,
+  IsEnum,
 } from 'class-validator';
+import { Gender } from '../../enums/gender.enum';
 
 export class ProfileDto {
   @IsOptional()
@@ -14,8 +16,8 @@ export class ProfileDto {
   birthday?: string;
 
   @IsOptional()
-  @IsString()
-  gender?: string;
+  @IsEnum(Gender)
+  gender?: Gender;
 
   @IsOptional()
   @IsString()

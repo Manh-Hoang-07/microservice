@@ -1,19 +1,19 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { TemplateType } from '../../enums/template-type.enum';
+import { TemplateCategory } from '../../enums/template-category.enum';
+import { TemplateStatus } from '../../enums/template-status.enum';
 
 export class ListContentTemplatesAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  type?: string;
+  @IsEnum(TemplateType)
+  type?: TemplateType;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  category?: string;
+  @IsEnum(TemplateCategory)
+  category?: TemplateCategory;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  status?: string;
+  @IsEnum(TemplateStatus)
+  status?: TemplateStatus;
 }

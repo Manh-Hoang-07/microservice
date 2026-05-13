@@ -1,4 +1,5 @@
-import { IsIn, IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty } from 'class-validator';
+import { CommentStatus } from '../../enums/comment-status.enum';
 
 /**
  * Public comment listing filters by `status='visible'`. Allowing arbitrary
@@ -7,8 +8,7 @@ import { IsIn, IsNotEmpty, IsString } from 'class-validator';
  * typo. Constrain to the documented values.
  */
 export class UpdateCommentStatusDto {
-  @IsString()
   @IsNotEmpty()
-  @IsIn(['visible', 'hidden', 'spam', 'deleted'])
-  status: string;
+  @IsEnum(CommentStatus)
+  status: CommentStatus;
 }

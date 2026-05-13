@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { CommentStatus } from '../enums/comment-status.enum';
+import { ChapterStatus } from '../../chapter/enums/chapter-status.enum';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -47,7 +49,7 @@ export class CommentRepository {
         // Cap replies per parent — hot threads with thousands of replies
         // would otherwise return megabytes per request.
         replies: {
-          where: { status: 'visible' },
+          where: { status: CommentStatus.visible },
           orderBy: { created_at: 'asc' },
           take: 50,
         },
@@ -91,7 +93,7 @@ export class CommentRepository {
 
   existsPublishedChapter(chapterId: any, comicId: any) {
     return this.prisma.chapter.findFirst({
-      where: { id: toPrimaryKey(chapterId), comic_id: toPrimaryKey(comicId), status: 'published' },
+      where: { id: toPrimaryKey(chapterId), comic_id: toPrimaryKey(comicId), status: ChapterStatus.published },
       select: { id: true },
     });
   }

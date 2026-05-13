@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { AboutSectionFilter, AboutSectionRepository } from '../../repositories/about-section.repository';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
 export class PublicAboutService {
@@ -32,7 +33,7 @@ export class PublicAboutService {
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const filter: AboutSectionFilter = { status: 'active' };
+    const filter: AboutSectionFilter = { status: BasicStatus.active };
     if (query.section_type) filter.section_type = query.section_type;
 
     return this.getOrSet('introduction:public:about:list', 300, async () => {

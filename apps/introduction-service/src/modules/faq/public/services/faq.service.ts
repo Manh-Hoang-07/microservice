@@ -3,6 +3,7 @@ import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { FaqFilter, FaqRepository } from '../../repositories/faq.repository';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
 export class PublicFaqService {
@@ -33,7 +34,7 @@ export class PublicFaqService {
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const filter: FaqFilter = { status: 'active' };
+    const filter: FaqFilter = { status: BasicStatus.active };
     if (query.search) filter.search = query.search;
 
     return this.getOrSet('introduction:public:faq:list', 300, async () => {

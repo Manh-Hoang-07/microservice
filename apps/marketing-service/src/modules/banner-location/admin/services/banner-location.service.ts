@@ -7,6 +7,7 @@ import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
 import { ChangeStatusDto } from '../dtos/change-status.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { BannerLocationFilter, BannerLocationRepository } from '../../repositories/banner-location.repository';
+import { BannerStatus } from '../../../banner/enums/banner-status.enum';
 
 @Injectable()
 export class AdminBannerLocationService {
@@ -57,7 +58,7 @@ export class AdminBannerLocationService {
         code: dto.code,
         name: dto.name,
         description: dto.description,
-        status: dto.status || 'active',
+        status: dto.status || BannerStatus.active,
       });
       await this.clearCache();
       return created;

@@ -1,4 +1,1 @@
-export enum BasicStatus {
-  active = 'active',
-  inactive = 'inactive',
-}
+export { BasicStatus } from '../../../common/enums/basic-status.enum';

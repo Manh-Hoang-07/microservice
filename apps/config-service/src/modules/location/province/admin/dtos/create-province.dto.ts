@@ -1,11 +1,12 @@
 import {
-  IsIn,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
 } from 'class-validator';
+import { BasicStatus } from '../../../../../common/enums/basic-status.enum';
 
 export class CreateProvinceDto {
   @IsNotEmpty()
@@ -34,8 +35,8 @@ export class CreateProvinceDto {
   countryId: string;
 
   @IsOptional()
-  @IsIn(['active', 'inactive'])
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 
   @IsOptional()
   @IsString()

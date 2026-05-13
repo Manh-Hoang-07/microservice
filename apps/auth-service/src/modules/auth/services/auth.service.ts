@@ -18,6 +18,7 @@ import { LoginService } from './login.service';
 import { safeUser } from '../utils/user.util';
 import { UserRepository } from '../repositories/user.repository';
 import { PrimaryKey } from 'src/types';
+import { UserStatus } from '../../user/enums/user-status.enum';
 
 @Injectable()
 export class AuthService {
@@ -85,7 +86,7 @@ export class AuthService {
   async sendOtpForForgotPassword(dto: SendOtpDto) {
     const email = dto.email.toLowerCase();
     const existing = await this.userRepo.findByEmail(email);
-    if (existing && existing.status === 'active') {
+    if (existing && existing.status === UserStatus.active) {
       await this.otpService.sendForgotPasswordOtp(email);
     }
     return { message: t(this.i18n, 'auth.OTP_SENT') };

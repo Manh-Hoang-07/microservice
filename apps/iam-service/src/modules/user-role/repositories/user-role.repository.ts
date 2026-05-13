@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { PrimaryKey, toPrimaryKey } from 'src/types';
+import { BasicStatus } from '../../../common/enums/basic-status.enum';
 
 export interface UserRoleFilter {
   userId?: any;
@@ -87,7 +88,7 @@ export class UserRoleRepository {
   ): Promise<bigint[]> {
     const where: any = { user_id: userId };
     if (groupId === null) {
-      where.group = { context: { type: 'system', status: 'active' }, status: 'active' };
+      where.group = { context: { type: 'system', status: BasicStatus.active }, status: BasicStatus.active };
     } else {
       where.group_id = groupId;
     }

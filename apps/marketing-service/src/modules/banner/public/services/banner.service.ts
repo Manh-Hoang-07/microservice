@@ -2,6 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { BannerFilter, BannerRepository } from '../../repositories/banner.repository';
+import { BannerStatus } from '../../enums/banner-status.enum';
 
 @Injectable()
 export class PublicBannerService {
@@ -37,7 +38,7 @@ export class PublicBannerService {
     const options = parseQueryOptions(query);
 
     const filter: BannerFilter = {
-      status: 'active',
+      status: BannerStatus.active,
       active_at: new Date(),
     };
     if (query.location_id) filter.location_id = query.location_id;

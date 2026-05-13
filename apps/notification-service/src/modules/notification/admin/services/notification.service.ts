@@ -6,6 +6,7 @@ import { PrimaryKey } from 'src/types';
 import { NotificationRepository, NotificationFilter } from '../../repositories/notification.repository';
 import { SendNotificationDto } from '../dtos/send-notification.dto';
 import { ListNotificationsAdminQueryDto } from '../dtos/list-notifications.query.dto';
+import { NotificationStatus } from '../../enums/notification-status.enum';
 
 const NUMERIC_RE = /^\d{1,20}$/;
 
@@ -48,7 +49,7 @@ export class AdminNotificationService {
         message: dto.message,
         type: dto.type,
         data: dto.data,
-        status: 'active',
+        status: NotificationStatus.active,
       })),
     );
     await this.invalidateUnreadCounts(dto.user_ids);
@@ -65,13 +66,13 @@ export class AdminNotificationService {
   // --- internal methods called from Kafka events ---
 
   async create(data: { user_id: string | bigint; title: string; message: string; type?: string; data?: any }) {
-    const result = await this.notifRepo.create({ ...data, status: 'active' });
+    const result = await this.notifRepo.create({ ...data, status: NotificationStatus.active });
     await this.invalidateUnreadCounts([data.user_id]);
     return result;
   }
 
   async createMany(notifications: Array<{ user_id: string | bigint; title: string; message: string; type?: string; data?: any }>) {
-    const result = await this.notifRepo.createMany(notifications.map((n) => ({ ...n, status: 'active' })));
+    const result = await this.notifRepo.createMany(notifications.map((n) => ({ ...n, status: NotificationStatus.active })));
     const userIds = [...new Set(notifications.map((n) => n.user_id))];
     await this.invalidateUnreadCounts(userIds);
     return result;

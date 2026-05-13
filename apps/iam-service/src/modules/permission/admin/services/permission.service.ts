@@ -9,6 +9,7 @@ import { RbacPermissionIndexService } from '../../../../rbac/services/rbac-permi
 import { ListPermissionsAdminQueryDto } from '../dtos/list-permission.query.dto';
 import { CreatePermissionDto } from '../dtos/create-permission.dto';
 import { UpdatePermissionDto } from '../dtos/update-permission.dto';
+import { PermissionScope } from '../../enums/permission-scope.enum';
 
 @Injectable()
 export class PermissionService {
@@ -50,7 +51,7 @@ export class PermissionService {
     const data: any = {
       code: dto.code,
       name: dto.name,
-      scope: dto.scope || 'context',
+      scope: dto.scope ?? PermissionScope.context,
       created_user_id: actorId,
     };
     if (dto.parent_id) data.parent = { connect: { id: dto.parent_id } };

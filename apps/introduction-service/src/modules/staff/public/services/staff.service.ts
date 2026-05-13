@@ -3,6 +3,7 @@ import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { StaffFilter, StaffRepository } from '../../repositories/staff.repository';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
 export class PublicStaffService {
@@ -33,7 +34,7 @@ export class PublicStaffService {
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const filter: StaffFilter = { status: 'active' };
+    const filter: StaffFilter = { status: BasicStatus.active };
     if (query.department) filter.department = query.department;
 
     return this.getOrSet('introduction:public:staff:list', 300, async () => {

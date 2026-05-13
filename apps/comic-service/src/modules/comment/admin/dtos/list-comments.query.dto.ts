@@ -1,5 +1,6 @@
-import { IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { CommentStatus } from '../../enums/comment-status.enum';
 
 /**
  * Admin listing filters for comments. `status` is constrained to the same set
@@ -23,6 +24,6 @@ export class ListCommentsAdminQueryDto extends BaseListQueryDto {
   user_id?: string;
 
   @IsOptional()
-  @IsIn(['visible', 'hidden', 'spam', 'deleted'])
-  status?: string;
+  @IsEnum(CommentStatus)
+  status?: CommentStatus;
 }

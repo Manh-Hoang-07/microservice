@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { GalleryFilter, GalleryRepository } from '../../repositories/gallery.repository';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
 export class PublicGalleryService {
@@ -32,7 +33,7 @@ export class PublicGalleryService {
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const filter: GalleryFilter = { status: 'active' };
+    const filter: GalleryFilter = { status: BasicStatus.active };
     if (query.featured !== undefined) {
       filter.featured = query.featured === 'true' || query.featured === true;
     }

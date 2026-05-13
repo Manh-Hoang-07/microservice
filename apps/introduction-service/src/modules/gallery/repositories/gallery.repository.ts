@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { BasicStatus } from '../../../common/enums/status.enum';
 
 export interface GalleryFilter {
   search?: string;
@@ -48,7 +49,7 @@ export class GalleryRepository {
   }
 
   findActiveBySlug(slug: string) {
-    return this.prisma.gallery.findFirst({ where: { slug, status: 'active' } });
+    return this.prisma.gallery.findFirst({ where: { slug, status: BasicStatus.active } });
   }
 
   create(data: Record<string, any>) {

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { BasicStatus } from '../../../common/enums/status.enum';
 
 export interface TestimonialFilter {
   search?: string;
@@ -54,7 +55,7 @@ export class TestimonialRepository {
 
   findActiveById(id: any) {
     return this.prisma.testimonial.findFirst({
-      where: { id: toPrimaryKey(id), status: 'active' },
+      where: { id: toPrimaryKey(id), status: BasicStatus.active },
       include: { project: { select: PROJECT_SELECT } },
     });
   }

@@ -1,10 +1,11 @@
-import { IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { BannerStatus } from '../../enums/banner-status.enum';
 
 export class ListBannersAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsIn(['draft', 'active', 'inactive'])
-  status?: string;
+  @IsEnum(BannerStatus)
+  status?: BannerStatus;
 
   @IsOptional()
   @IsString()

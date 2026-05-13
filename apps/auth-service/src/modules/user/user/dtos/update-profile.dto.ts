@@ -2,9 +2,11 @@ import { Transform } from 'class-transformer';
 import {
   IsOptional,
   IsString,
+  IsEnum,
   Matches,
   MaxLength,
 } from 'class-validator';
+import { Gender } from '../../enums/gender.enum';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -24,9 +26,8 @@ export class UpdateProfileDto {
   birthday?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  gender?: string;
+  @IsEnum(Gender)
+  gender?: Gender;
 
   @IsOptional()
   @IsString()

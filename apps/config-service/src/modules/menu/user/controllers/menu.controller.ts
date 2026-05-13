@@ -2,14 +2,14 @@ import { Controller, Get, Req } from '@nestjs/common';
 import { Permission, session } from '@package/common';
 import { UserMenuService } from '../services/menu.service';
 
-@Controller()
+@Controller('user/menus')
 export class UserMenuController {
   constructor(
     private readonly service: UserMenuService,
   ) {}
 
   @Permission('user')
-  @Get('menus/user')
+  @Get()
   async getUserMenuTree(@Req() req: any) {
     const ctx = session()!;
     const userId = ctx.userId ?? '';

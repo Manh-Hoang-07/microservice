@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { ChapterStatus } from '../enums/chapter-status.enum';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -89,7 +90,7 @@ export class ChapterRepository {
 
   findPublicOne(id: any) {
     return this.prisma.chapter.findFirst({
-      where: { id: toPrimaryKey(id), status: 'published' },
+      where: { id: toPrimaryKey(id), status: ChapterStatus.published },
       include: {
         pages: { orderBy: { page_number: 'asc' } },
         comic: { select: { id: true, title: true, slug: true } },
@@ -109,7 +110,7 @@ export class ChapterRepository {
       where: {
         comic_id: toPrimaryKey(comicId),
         chapter_index: direction === 'next' ? { gt: currentIndex } : { lt: currentIndex },
-        status: 'published',
+        status: ChapterStatus.published,
       },
       orderBy: { chapter_index: direction === 'next' ? 'asc' : 'desc' },
       select: { id: true, title: true, chapter_index: true, chapter_label: true },
@@ -157,7 +158,7 @@ export class ChapterRepository {
     if (!chapter) return null;
 
     const max = await this.prisma.chapter.aggregate({
-      where: { comic_id: cid, status: 'published' },
+      where: { comic_id: cid, status: ChapterStatus.published },
       _max: { chapter_index: true },
     });
 
@@ -187,7 +188,7 @@ export class ChapterRepository {
     const chid = toPrimaryKey(chapterId);
 
     const max = await client.chapter.aggregate({
-      where: { comic_id: cid, status: 'published' },
+      where: { comic_id: cid, status: ChapterStatus.published },
       _max: { chapter_index: true },
     });
 

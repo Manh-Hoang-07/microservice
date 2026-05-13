@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { toPrimaryKey } from 'src/types';
+import { BasicStatus } from '../../../common/enums/basic-status.enum';
 
 export interface RoleFilter {
   search?: string;
@@ -124,7 +125,7 @@ export class RoleRepository {
   async getPermissionCodesByIds(ids: (string | bigint)[]): Promise<string[]> {
     if (!ids.length) return [];
     const rows = await this.prisma.permission.findMany({
-      where: { id: { in: ids.map(toPrimaryKey) }, status: 'active' },
+      where: { id: { in: ids.map(toPrimaryKey) }, status: BasicStatus.active },
       select: { code: true },
     });
     return rows.map((r) => r.code);

@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { PrimaryKey } from 'src/types';
+import { TemplateStatus } from '../enums/template-status.enum';
+import { TemplateCategory } from '../enums/template-category.enum';
+import { TemplateType } from '../enums/template-type.enum';
 
 export interface ContentTemplateFilter {
   search?: string;
@@ -57,7 +60,7 @@ export class ContentTemplateRepository {
 
   findActiveByCode(code: string) {
     return this.prisma.contentTemplate.findFirst({
-      where: { code, status: 'active', category: 'render', type: 'email' },
+      where: { code, status: TemplateStatus.active, category: TemplateCategory.render, type: TemplateType.email },
     });
   }
 

@@ -8,6 +8,7 @@ import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
 import { safeUser } from '../utils/user.util';
 import { PrimaryKey } from 'src/types';
+import { UserStatus } from '../../user/enums/user-status.enum';
 
 @Injectable()
 export class SocialAuthService {
@@ -38,7 +39,7 @@ export class SocialAuthService {
       throw new ForbiddenException(t(this.i18n, 'auth.ACCOUNT_LINKED_TO_OTHER'));
     }
 
-    if (existing && existing.status !== 'active') {
+    if (existing && existing.status !== UserStatus.active) {
       log.addException(new Error('account_locked'));
       log.save();
       throw new ForbiddenException(t(this.i18n, 'auth.ACCOUNT_LOCKED'));
@@ -107,7 +108,7 @@ export class SocialAuthService {
               name,
               image: picture ?? null,
               googleId,
-              status: 'active',
+              status: UserStatus.active,
               email_verified_at: now,
               last_login_at: now,
             },

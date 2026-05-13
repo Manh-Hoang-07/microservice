@@ -1,4 +1,5 @@
-import { IsString, IsOptional, MaxLength, IsIn } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsEnum } from 'class-validator';
+import { BasicStatus } from '../../../../common/enums/basic-status.enum';
 
 export class UpdateContextDto {
   @IsOptional()
@@ -7,6 +8,6 @@ export class UpdateContextDto {
   name?: string;
 
   @IsOptional()
-  @IsIn(['active', 'inactive'])
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 }

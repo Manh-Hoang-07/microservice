@@ -1,11 +1,12 @@
 import {
-  IsIn,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
 } from 'class-validator';
+import { BasicStatus } from '../../../../../common/enums/basic-status.enum';
 
 export class CreateWardDto {
   @IsNotEmpty()
@@ -29,6 +30,6 @@ export class CreateWardDto {
   code: string;
 
   @IsOptional()
-  @IsIn(['active', 'inactive'])
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 }

@@ -1,11 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsBooleanString, IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsBooleanString, IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { ComicStatus } from '../../enums/comic-status.enum';
 
 export class ListComicsAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsIn(['draft', 'published', 'scheduled'])
-  status?: string;
+  @IsEnum(ComicStatus)
+  status?: ComicStatus;
 
   @IsOptional()
   @IsString()

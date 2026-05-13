@@ -1,5 +1,6 @@
-import { IsOptional, IsString, Matches } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { UserStatus } from '../../enums/user-status.enum';
 
 export class UserQueryDto extends BaseListQueryDto {
   @IsOptional()
@@ -11,9 +12,6 @@ export class UserQueryDto extends BaseListQueryDto {
   phone?: string;
 
   @IsOptional()
-  @IsString()
-  @Matches(/^(active|inactive|locked)$/, {
-    message: 'status must be one of: active, inactive, locked',
-  })
-  status?: string;
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 }

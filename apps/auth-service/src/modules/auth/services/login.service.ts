@@ -13,6 +13,7 @@ import { TokenService } from './token.service';
 import { LoginDto } from '../dto/login.dto';
 import { UserRepository } from '../repositories/user.repository';
 import { PrimaryKey, toPrimaryKey } from 'src/types';
+import { UserStatus } from '../../user/enums/user-status.enum';
 
 @Injectable()
 export class LoginService {
@@ -59,7 +60,7 @@ export class LoginService {
       throw new UnauthorizedException(t(this.i18n, 'auth.INVALID_CREDENTIALS'));
     }
 
-    if (user.status !== 'active') {
+    if (user.status !== UserStatus.active) {
       log.addException(new Error('account_not_active'));
       log.save();
       throw new ForbiddenException(t(this.i18n, 'auth.ACCOUNT_LOCKED'));

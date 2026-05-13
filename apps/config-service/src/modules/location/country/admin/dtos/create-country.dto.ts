@@ -1,4 +1,5 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { BasicStatus } from '../../../../../common/enums/basic-status.enum';
 
 export class CreateCountryDto {
   @IsNotEmpty()
@@ -37,6 +38,6 @@ export class CreateCountryDto {
   flagEmoji?: string;
 
   @IsOptional()
-  @IsIn(['active', 'inactive'])
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 }

@@ -13,6 +13,7 @@ import { AuthOtpService } from './auth-otp.service';
 import { TokenService } from './token.service';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { UserStatus } from '../../user/enums/user-status.enum';
 
 @Injectable()
 export class PasswordService {
@@ -31,7 +32,7 @@ export class PasswordService {
     const log = this.fileLogger.create('auth/forgot-password', { email });
 
     const user = await this.userRepo.findByEmail(email);
-    if (user && user.status === 'active') {
+    if (user && user.status === UserStatus.active) {
       log.addDebug('sending OTP');
       await this.otpService.sendForgotPasswordOtp(email);
     } else {
@@ -60,7 +61,7 @@ export class PasswordService {
 
     log.addDebug('finding user');
     const user = await this.userRepo.findByEmail(email);
-    if (!user || user.status !== 'active') {
+    if (!user || user.status !== UserStatus.active) {
       log.addException(new Error(!user ? 'user_not_found' : 'user_not_active'));
       log.save();
       throw new BadRequestException(t(this.i18n, 'auth.INVALID_OTP'));

@@ -3,6 +3,7 @@ import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { TestimonialFilter, TestimonialRepository } from '../../repositories/testimonial.repository';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
 export class PublicTestimonialService {
@@ -33,7 +34,7 @@ export class PublicTestimonialService {
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const filter: TestimonialFilter = { status: 'active' };
+    const filter: TestimonialFilter = { status: BasicStatus.active };
     if (query.featured !== undefined) {
       filter.featured = query.featured === 'true' || query.featured === true;
     }

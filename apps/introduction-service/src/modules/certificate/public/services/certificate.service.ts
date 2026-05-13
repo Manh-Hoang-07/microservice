@@ -3,6 +3,7 @@ import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { CertificateFilter, CertificateRepository } from '../../repositories/certificate.repository';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
 export class PublicCertificateService {
@@ -33,7 +34,7 @@ export class PublicCertificateService {
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
 
-    const filter: CertificateFilter = { status: 'active' };
+    const filter: CertificateFilter = { status: BasicStatus.active };
     if (query.type) filter.type = query.type;
 
     return this.getOrSet('introduction:public:certificate:list', 300, async () => {

@@ -2,8 +2,9 @@ import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { RedisService } from '@package/redis';
 import { ProjectFilter, ProjectRepository } from '../../repositories/project.repository';
+import { ProjectStatus } from '../../enums/project-status.enum';
 
-const PUBLIC_PROJECT_STATUSES = ['planning', 'in_progress', 'completed'];
+const PUBLIC_PROJECT_STATUSES = [ProjectStatus.planning, ProjectStatus.in_progress, ProjectStatus.completed];
 
 @Injectable()
 export class PublicProjectService {

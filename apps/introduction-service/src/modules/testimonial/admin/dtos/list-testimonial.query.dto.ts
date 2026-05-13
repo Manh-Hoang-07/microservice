@@ -1,10 +1,11 @@
-import { IsBooleanString, IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsBooleanString, IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { BaseListQueryDto } from '@package/common';
+import { BasicStatus } from '../../../../common/enums/status.enum';
 
 export class ListTestimonialAdminQueryDto extends BaseListQueryDto {
   @IsOptional()
-  @IsIn(['active', 'inactive', 'draft'])
-  status?: string;
+  @IsEnum(BasicStatus)
+  status?: BasicStatus;
 
   @IsOptional()
   @IsBooleanString()
