@@ -4,6 +4,6 @@ export enum TagStatus {
 }
 
 export const TagStatusOptions = [
-  { value: TagStatus.active, label: 'Hoạt động' },
-  { value: TagStatus.inactive, label: 'Ngừng hoạt động' },
+  { id: TagStatus.active, name: 'Hoạt động' },
+  { id: TagStatus.inactive, name: 'Ngừng hoạt động' },
 ];

@@ -4,6 +4,6 @@ export enum PermissionScope {
 }
 
 export const PermissionScopeOptions = [
-  { value: PermissionScope.context, label: 'Context' },
-  { value: PermissionScope.system, label: 'System' },
+  { id: PermissionScope.context, name: 'Context' },
+  { id: PermissionScope.system, name: 'System' },
 ];

@@ -6,8 +6,8 @@ export enum TemplateType {
 }
 
 export const TemplateTypeOptions = [
-  { value: TemplateType.email, label: 'Email' },
-  { value: TemplateType.telegram, label: 'Telegram' },
-  { value: TemplateType.zalo, label: 'Zalo' },
-  { value: TemplateType.sms, label: 'SMS' },
+  { id: TemplateType.email, name: 'Email' },
+  { id: TemplateType.telegram, name: 'Telegram' },
+  { id: TemplateType.zalo, name: 'Zalo' },
+  { id: TemplateType.sms, name: 'SMS' },
 ];

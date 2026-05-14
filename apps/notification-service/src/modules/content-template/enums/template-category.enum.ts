@@ -4,6 +4,6 @@ export enum TemplateCategory {
 }
 
 export const TemplateCategoryOptions = [
-  { value: TemplateCategory.render, label: 'Render' },
-  { value: TemplateCategory.file, label: 'File' },
+  { id: TemplateCategory.render, name: 'Render' },
+  { id: TemplateCategory.file, name: 'File' },
 ];

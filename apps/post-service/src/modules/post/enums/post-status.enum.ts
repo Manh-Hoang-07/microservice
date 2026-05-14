@@ -11,8 +11,8 @@ export enum PostStatus {
 export const PUBLIC_POST_STATUSES = [PostStatus.published];
 
 export const PostStatusOptions = [
-  { value: PostStatus.draft, label: 'Nháp' },
-  { value: PostStatus.scheduled, label: 'Lên lịch' },
-  { value: PostStatus.published, label: 'Đã xuất bản' },
-  { value: PostStatus.archived, label: 'Đã lưu trữ' },
+  { id: PostStatus.draft, name: 'Nháp' },
+  { id: PostStatus.scheduled, name: 'Lên lịch' },
+  { id: PostStatus.published, name: 'Đã xuất bản' },
+  { id: PostStatus.archived, name: 'Đã lưu trữ' },
 ];

@@ -5,7 +5,7 @@ export enum Gender {
 }
 
 export const GenderOptions = [
-  { value: Gender.male, label: 'Nam' },
-  { value: Gender.female, label: 'Nữ' },
-  { value: Gender.other, label: 'Khác' },
+  { id: Gender.male, name: 'Nam' },
+  { id: Gender.female, name: 'Nữ' },
+  { id: Gender.other, name: 'Khác' },
 ];

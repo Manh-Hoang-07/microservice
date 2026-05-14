@@ -6,8 +6,10 @@ import {
   MaxLength,
   ValidateNested,
   IsEmail,
+  IsEnum,
 } from 'class-validator';
 import { ProfileDto } from './create-user.dto';
+import { UserStatus } from '../../enums/user-status.enum';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -39,6 +41,10 @@ export class UpdateUserDto {
   @IsString()
   @MaxLength(255)
   image?: string;
+
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 
   @IsOptional()
   @ValidateNested()

@@ -5,7 +5,7 @@ export enum MenuType {
 }
 
 export const MenuTypeOptions = [
-  { value: MenuType.route, label: 'Route (Nội bộ)' },
-  { value: MenuType.group, label: 'Group (Nhóm)' },
-  { value: MenuType.link, label: 'Link (Bên ngoài)' },
+  { id: MenuType.route, name: 'Route (Nội bộ)' },
+  { id: MenuType.group, name: 'Group (Nhóm)' },
+  { id: MenuType.link, name: 'Link (Bên ngoài)' },
 ];

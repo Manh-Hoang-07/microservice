@@ -5,7 +5,7 @@ export enum StatsSortBy {
 }
 
 export const StatsSortByOptions = [
-  { value: StatsSortBy.views, label: 'Lượt xem' },
-  { value: StatsSortBy.follows, label: 'Lượt theo dõi' },
-  { value: StatsSortBy.rating, label: 'Đánh giá' },
+  { id: StatsSortBy.views, name: 'Lượt xem' },
+  { id: StatsSortBy.follows, name: 'Lượt theo dõi' },
+  { id: StatsSortBy.rating, name: 'Đánh giá' },
 ];

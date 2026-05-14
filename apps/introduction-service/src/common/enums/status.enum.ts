@@ -11,7 +11,7 @@ export enum BasicStatus {
 }
 
 export const BasicStatusOptions = [
-  { value: BasicStatus.active, label: 'Hoạt động' },
-  { value: BasicStatus.inactive, label: 'Ngừng hoạt động' },
-  { value: BasicStatus.draft, label: 'Nháp' },
+  { id: BasicStatus.active, name: 'Hoạt động' },
+  { id: BasicStatus.inactive, name: 'Ngừng hoạt động' },
+  { id: BasicStatus.draft, name: 'Nháp' },
 ];

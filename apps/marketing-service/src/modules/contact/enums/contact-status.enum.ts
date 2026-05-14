@@ -6,8 +6,8 @@ export enum ContactStatus {
 }
 
 export const ContactStatusOptions = [
-  { value: ContactStatus.pending, label: 'Chờ xử lý' },
-  { value: ContactStatus.read, label: 'Đã đọc' },
-  { value: ContactStatus.replied, label: 'Đã trả lời' },
-  { value: ContactStatus.closed, label: 'Đã đóng' },
+  { id: ContactStatus.pending, name: 'Chờ xử lý' },
+  { id: ContactStatus.read, name: 'Đã đọc' },
+  { id: ContactStatus.replied, name: 'Đã trả lời' },
+  { id: ContactStatus.closed, name: 'Đã đóng' },
 ];

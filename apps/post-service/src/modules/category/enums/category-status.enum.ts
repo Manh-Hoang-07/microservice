@@ -4,6 +4,6 @@ export enum CategoryStatus {
 }
 
 export const CategoryStatusOptions = [
-  { value: CategoryStatus.active, label: 'Hoạt động' },
-  { value: CategoryStatus.inactive, label: 'Ngừng hoạt động' },
+  { id: CategoryStatus.active, name: 'Hoạt động' },
+  { id: CategoryStatus.inactive, name: 'Ngừng hoạt động' },
 ];

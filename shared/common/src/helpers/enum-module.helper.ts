@@ -2,21 +2,21 @@ import { Controller, DynamicModule, Get, Module, NotFoundException, Param } from
 import { Public } from '../decorators/permission.decorator';
 
 export interface EnumItem {
-  value: string;
-  label: string;
+  id: string;
+  name: string;
 }
 
 /**
  * EnumModule.register({
  *   path: 'admin/menus/enums',
  *   enums: {
- *     types:    [{ value: 'route', label: 'Route' }, ...],
- *     statuses: [{ value: 'active', label: 'Hoạt động' }, ...],
+ *     types:    [{ id: 'route', name: 'Route' }, ...],
+ *     statuses: [{ id: 'active', name: 'Hoạt động' }, ...],
  *   },
  * })
  *
  * Tự sinh ra:
- *   GET /<path>/:key  →  @Public()  trả [{ value, label }]
+ *   GET /<path>/:key  →  @Public()  trả [{ id, name }]
  */
 export class EnumModule {
   static register(options: {

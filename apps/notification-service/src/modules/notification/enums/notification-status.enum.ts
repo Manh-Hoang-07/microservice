@@ -5,7 +5,7 @@ export enum NotificationStatus {
 }
 
 export const NotificationStatusOptions = [
-  { value: NotificationStatus.active, label: 'Hoạt động' },
-  { value: NotificationStatus.archived, label: 'Đã lưu trữ' },
-  { value: NotificationStatus.deleted, label: 'Đã xóa' },
+  { id: NotificationStatus.active, name: 'Hoạt động' },
+  { id: NotificationStatus.archived, name: 'Đã lưu trữ' },
+  { id: NotificationStatus.deleted, name: 'Đã xóa' },
 ];

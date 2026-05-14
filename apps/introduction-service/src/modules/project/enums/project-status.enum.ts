@@ -6,8 +6,8 @@ export enum ProjectStatus {
 }
 
 export const ProjectStatusOptions = [
-  { value: ProjectStatus.planning, label: 'Lên kế hoạch' },
-  { value: ProjectStatus.in_progress, label: 'Đang thực hiện' },
-  { value: ProjectStatus.completed, label: 'Hoàn thành' },
-  { value: ProjectStatus.cancelled, label: 'Đã hủy' },
+  { id: ProjectStatus.planning, name: 'Lên kế hoạch' },
+  { id: ProjectStatus.in_progress, name: 'Đang thực hiện' },
+  { id: ProjectStatus.completed, name: 'Hoàn thành' },
+  { id: ProjectStatus.cancelled, name: 'Đã hủy' },
 ];

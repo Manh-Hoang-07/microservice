@@ -6,8 +6,8 @@ export enum PostType {
 }
 
 export const PostTypeOptions = [
-  { value: PostType.text, label: 'Văn bản' },
-  { value: PostType.video, label: 'Video' },
-  { value: PostType.image, label: 'Hình ảnh' },
-  { value: PostType.audio, label: 'Âm thanh' },
+  { id: PostType.text, name: 'Văn bản' },
+  { id: PostType.video, name: 'Video' },
+  { id: PostType.image, name: 'Hình ảnh' },
+  { id: PostType.audio, name: 'Âm thanh' },
 ];

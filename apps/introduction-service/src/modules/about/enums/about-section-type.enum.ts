@@ -7,9 +7,9 @@ export enum AboutSectionType {
 }
 
 export const AboutSectionTypeOptions = [
-  { value: AboutSectionType.general, label: 'Tổng quan' },
-  { value: AboutSectionType.mission, label: 'Sứ mệnh' },
-  { value: AboutSectionType.vision, label: 'Tầm nhìn' },
-  { value: AboutSectionType.history, label: 'Lịch sử' },
-  { value: AboutSectionType.values, label: 'Giá trị' },
+  { id: AboutSectionType.general, name: 'Tổng quan' },
+  { id: AboutSectionType.mission, name: 'Sứ mệnh' },
+  { id: AboutSectionType.vision, name: 'Tầm nhìn' },
+  { id: AboutSectionType.history, name: 'Lịch sử' },
+  { id: AboutSectionType.values, name: 'Giá trị' },
 ];

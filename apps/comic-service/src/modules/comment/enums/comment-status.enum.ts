@@ -6,8 +6,8 @@ export enum CommentStatus {
 }
 
 export const CommentStatusOptions = [
-  { value: CommentStatus.visible, label: 'Hiển thị' },
-  { value: CommentStatus.hidden, label: 'Ẩn' },
-  { value: CommentStatus.spam, label: 'Spam' },
-  { value: CommentStatus.deleted, label: 'Đã xóa' },
+  { id: CommentStatus.visible, name: 'Hiển thị' },
+  { id: CommentStatus.hidden, name: 'Ẩn' },
+  { id: CommentStatus.spam, name: 'Spam' },
+  { id: CommentStatus.deleted, name: 'Đã xóa' },
 ];

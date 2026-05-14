@@ -10,7 +10,7 @@ export enum ComicStatus {
 export const PUBLIC_COMIC_STATUSES = [ComicStatus.published];
 
 export const ComicStatusOptions = [
-  { value: ComicStatus.draft, label: 'Nháp' },
-  { value: ComicStatus.published, label: 'Đã xuất bản' },
-  { value: ComicStatus.scheduled, label: 'Lên lịch' },
+  { id: ComicStatus.draft, name: 'Nháp' },
+  { id: ComicStatus.published, name: 'Đã xuất bản' },
+  { id: ComicStatus.scheduled, name: 'Lên lịch' },
 ];

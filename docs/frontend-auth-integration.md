@@ -1,15 +1,15 @@
-# Tich hop Auth Service — Tai lieu API cho Frontend
+# Tích hợp Auth Service — Tài liệu API cho Frontend
 
 > **Base URL:** `/api/auth` (qua Nginx proxy -> auth-service:3001)
 >
-> Tat ca path ben duoi deu co prefix `/api/auth`. Vi du: `POST /api/auth/login`
+> Tất cả path bên dưới đều có prefix `/api/auth`. Ví dụ: `POST /api/auth/login`
 
 ---
 
-## Cau truc Response chung
+## Cấu trúc Response chung
 
 ```json
-// Thanh cong
+// Thành công
 {
   "success": true,
   "message": "Success",
@@ -20,10 +20,10 @@
   "timestamp": "2026-05-13T10:00:00+07:00"
 }
 
-// Loi
+// Lỗi
 {
   "success": false,
-  "message": "Mo ta loi",
+  "message": "Mô tả lỗi",
   "code": "ERROR_CODE",
   "httpStatus": 400,
   "data": null,
@@ -34,32 +34,32 @@
 
 ---
 
-## Phan quyen
+## Phân quyền
 
-| Ky hieu | Nghia |
+| Ký hiệu | Nghĩa |
 |---------|-------|
-| Public | Khong can dang nhap |
-| User | Can header `Authorization: Bearer {token}` |
-| Admin | Can JWT co quyen `user.manage` |
+| Public | Không cần đăng nhập |
+| User | Cần header `Authorization: Bearer {token}` |
+| Admin | Cần JWT có quyền `user.manage` |
 
 ---
 
-## Luu y chung
+## Lưu ý chung
 
-- **Request body va response deu dung camelCase** — `countryId`, `createdAt`, khong phai `country_id`.
-- **ID la string** — BigInt serialize thanh string. Gui len phai la numeric string (VD: `"123"`).
-- **Token**: luu `accessToken` va `refreshToken` phia client. Gui `Authorization: Bearer {accessToken}` cho moi request can xac thuc.
-- **Throttle**: cac endpoint auth co gioi han request/phut de chong brute-force.
+- **Request body và response đều dùng camelCase** — `countryId`, `createdAt`, không phải `country_id`.
+- **ID là string** — BigInt serialize thành string. Gửi lên phải là numeric string (VD: `"123"`).
+- **Token**: lưu `accessToken` và `refreshToken` phía client. Gửi `Authorization: Bearer {accessToken}` cho mọi request cần xác thực.
+- **Throttle**: các endpoint auth có giới hạn request/phút để chống brute-force.
 - **Enum `status`:** `"active"` | `"inactive"` | `"locked"`.
 - **Enum `gender`:** `"male"` | `"female"` | `"other"`.
 
 ---
 
-## 1. Dang nhap / Dang ky / OTP
+## 1. Đăng nhập / Đăng ký / OTP
 
 ### Public POST `/api/auth/login`
 
-Dang nhap bang email + password. **Throttle: 5 req/60s**
+Đăng nhập bằng email + password. **Throttle: 5 req/60s**
 
 **Request Body:**
 
@@ -71,11 +71,11 @@ Dang nhap bang email + password. **Throttle: 5 req/60s**
 }
 ```
 
-| Field | Kieu | Bat buoc | Mo ta |
+| Field | Kiểu | Bắt buộc | Mô tả |
 |-------|------|----------|-------|
-| `email` | string (email) | Co | Tu dong trim + lowercase |
-| `password` | string (6-72) | Co | |
-| `remember` | boolean | Khong | `true` -> refresh token TTL dai hon |
+| `email` | string (email) | Có | Tự động trim + lowercase |
+| `password` | string (6-72) | Có | |
+| `remember` | boolean | Không | `true` -> refresh token TTL dài hơn |
 
 **Response `data`:**
 
@@ -87,18 +87,18 @@ Dang nhap bang email + password. **Throttle: 5 req/60s**
 }
 ```
 
-> **Luu y:** Response login chi tra token, KHONG tra user object. FE can goi them `GET /api/auth/me` de lay thong tin user.
+> **Lưu ý:** Response login chỉ trả token, KHÔNG trả user object. FE cần gọi thêm `GET /api/auth/me` để lấy thông tin user.
 
-**Loi thuong gap:**
-- `401` — Email hoac mat khau khong dung
-- `403` — Tai khoan bi khoa
-- `429` — Qua nhieu request
+**Lỗi thường gặp:**
+- `401` — Email hoặc mật khẩu không đúng
+- `403` — Tài khoản bị khóa
+- `429` — Quá nhiều request
 
 ---
 
 ### Public POST `/api/auth/register/send-otp`
 
-Gui OTP xac thuc email truoc khi dang ky. **Throttle: 2 req/60s**
+Gửi OTP xác thực email trước khi đăng ký. **Throttle: 2 req/60s**
 
 ```json
 { "email": "newuser@example.com" }
@@ -114,7 +114,7 @@ Gui OTP xac thuc email truoc khi dang ky. **Throttle: 2 req/60s**
 
 ### Public POST `/api/auth/register`
 
-Dang ky tai khoan moi. **Throttle: 5 req/60s**
+Đăng ký tài khoản mới. **Throttle: 5 req/60s**
 
 **Request Body:**
 
@@ -130,15 +130,15 @@ Dang ky tai khoan moi. **Throttle: 5 req/60s**
 }
 ```
 
-| Field | Kieu | Bat buoc | Mo ta |
+| Field | Kiểu | Bắt buộc | Mô tả |
 |-------|------|----------|-------|
-| `name` | string (max 255) | Co | Trim |
-| `email` | string (email) | Co | Trim + lowercase |
-| `username` | string (3-50) | Khong | Chi `a-z0-9_`, tu dong lowercase |
-| `phone` | string | Khong | Format: `+?[0-9]{6,20}` |
-| `password` | string (8-72) | Co | |
-| `confirmPassword` | string | Co | Phai khop `password` |
-| `otp` | string (6 so) | Co | OTP nhan qua email |
+| `name` | string (max 255) | Có | Trim |
+| `email` | string (email) | Có | Trim + lowercase |
+| `username` | string (3-50) | Không | Chỉ `a-z0-9_`, tự động lowercase |
+| `phone` | string | Không | Format: `+?[0-9]{6,20}` |
+| `password` | string (8-72) | Có | |
+| `confirmPassword` | string | Có | Phải khớp `password` |
+| `otp` | string (6 số) | Có | OTP nhận qua email |
 
 **Response `data`:** (HTTP 201)
 
@@ -165,13 +165,13 @@ Dang ky tai khoan moi. **Throttle: 5 req/60s**
 }
 ```
 
-> **Luu y:** Register tra full user object (tru `password` va `rememberToken`).
+> **Lưu ý:** Register trả full user object (trừ `password` và `rememberToken`).
 
 ---
 
 ### Public POST `/api/auth/forgot-password/send-otp`
 
-Gui OTP reset password. **Throttle: 2 req/60s**
+Gửi OTP reset password. **Throttle: 2 req/60s**
 
 ```json
 { "email": "user@example.com" }
@@ -183,13 +183,13 @@ Gui OTP reset password. **Throttle: 2 req/60s**
 { "message": "OTP_SENT" }
 ```
 
-Luon tra `200` bat ke email co ton tai hay khong (chong enumeration).
+Luôn trả `200` bất kể email có tồn tại hay không (chống enumeration).
 
 ---
 
 ### Public POST `/api/auth/reset-password`
 
-Dat lai mat khau bang OTP. **Throttle: 3 req/60s**
+Đặt lại mật khẩu bằng OTP. **Throttle: 3 req/60s**
 
 ```json
 {
@@ -200,12 +200,12 @@ Dat lai mat khau bang OTP. **Throttle: 3 req/60s**
 }
 ```
 
-| Field | Kieu | Bat buoc |
+| Field | Kiểu | Bắt buộc |
 |-------|------|----------|
-| `email` | string (email) | Co |
-| `otp` | string (6 so) | Co |
-| `password` | string (8-72) | Co |
-| `confirmPassword` | string | Co — phai khop |
+| `email` | string (email) | Có |
+| `otp` | string (6 số) | Có |
+| `password` | string (8-72) | Có |
+| `confirmPassword` | string | Có — phải khớp |
 
 **Response `data`:**
 
@@ -219,20 +219,20 @@ Dat lai mat khau bang OTP. **Throttle: 3 req/60s**
 
 ### Public POST `/api/auth/refresh`
 
-Lam moi access token. **Throttle: 10 req/60s**
+Làm mới access token. **Throttle: 10 req/60s**
 
 ```json
 { "refreshToken": "eyJhbGciOi..." }
 ```
 
-Cung co the gui qua cookie `refresh_token` (khong can body).
+Cũng có thể gửi qua cookie `refresh_token` (không cần body).
 
 **Response `data`:**
 
 ```json
 {
-  "token": "eyJhbGciOi...(moi)",
-  "refreshToken": "eyJhbGciOi...(moi)",
+  "token": "eyJhbGciOi...(mới)",
+  "refreshToken": "eyJhbGciOi...(mới)",
   "expiresIn": 3600
 }
 ```
@@ -241,13 +241,13 @@ Cung co the gui qua cookie `refresh_token` (khong can body).
 
 ### Public POST `/api/auth/logout`
 
-Dang xuat session hien tai.
+Đăng xuất session hiện tại.
 
 ```json
 { "refreshToken": "eyJhbGciOi..." }
 ```
 
-Hoac gui qua cookie. Server tu dong xoa cookie `access_token` va `refresh_token`.
+Hoặc gửi qua cookie. Server tự động xóa cookie `access_token` và `refresh_token`.
 
 **Response `data`:**
 
@@ -259,7 +259,7 @@ Hoac gui qua cookie. Server tu dong xoa cookie `access_token` va `refresh_token`
 
 ### User POST `/api/auth/logout-all`
 
-Thu hoi tat ca session cua user hien tai. Khong can body.
+Thu hồi tất cả session của user hiện tại. Không cần body.
 
 **Response `data`:**
 
@@ -269,11 +269,11 @@ Thu hoi tat ca session cua user hien tai. Khong can body.
 
 ---
 
-## 3. Thong tin User hien tai
+## 3. Thông tin User hiện tại
 
 ### User GET `/api/auth/me`
 
-Lay thong tin user dang dang nhap.
+Lấy thông tin user đang đăng nhập.
 
 **Response `data`:**
 
@@ -314,17 +314,17 @@ Lay thong tin user dang dang nhap.
 
 ---
 
-## 4. Profile (User tu quan ly)
+## 4. Profile (User tự quản lý)
 
 ### User GET `/api/auth/user/profile`
 
-Lay profile cua minh. Response giong GET /me (full user + profile).
+Lấy profile của mình. Response giống GET /me (full user + profile).
 
 ---
 
 ### User PATCH `/api/auth/user/profile`
 
-Cap nhat profile. Tat ca field optional — chi gui field can thay doi.
+Cập nhật profile. Tất cả field optional — chỉ gửi field cần thay đổi.
 
 ```json
 {
@@ -340,7 +340,7 @@ Cap nhat profile. Tat ca field optional — chi gui field can thay doi.
 }
 ```
 
-| Field | Kieu | Mo ta |
+| Field | Kiểu | Mô tả |
 |-------|------|-------|
 | `name` | string (max 255) | |
 | `image` | string (max 255) | URL avatar |
@@ -355,7 +355,7 @@ Cap nhat profile. Tat ca field optional — chi gui field can thay doi.
 
 ### User PATCH `/api/auth/user/profile/change-password`
 
-Doi mat khau.
+Đổi mật khẩu.
 
 ```json
 {
@@ -377,47 +377,47 @@ Doi mat khau.
 
 ### Public GET `/api/auth/google`
 
-Redirect den trang dang nhap Google.
+Redirect đến trang đăng nhập Google.
 
 ### Public GET `/api/auth/google/callback`
 
-Google redirect ve day. Server set cookie va redirect ve FE.
+Google redirect về đây. Server set cookie và redirect về FE.
 
-**Luong tich hop:**
+**Luồng tích hợp:**
 
 ```
 1. FE: window.location.href = '/api/auth/google'
-2. User dang nhap Google
-3. Server nhan callback, tao/cap nhat user, set cookies
-4. Thanh cong: redirect ve {GOOGLE_FRONTEND_URL}/auth/google/success (set cookie access_token, refresh_token)
-5. That bai: redirect ve {GOOGLE_FRONTEND_URL}/login?error={code}
+2. User đăng nhập Google
+3. Server nhận callback, tạo/cập nhật user, set cookies
+4. Thành công: redirect về {GOOGLE_FRONTEND_URL}/auth/google/success (set cookie access_token, refresh_token)
+5. Thất bại: redirect về {GOOGLE_FRONTEND_URL}/login?error={code}
    - error code: bad_request | unauthorized | auth_failed
-6. FE doc token tu cookie hoac goi GET /api/auth/me
+6. FE đọc token từ cookie hoặc gọi GET /api/auth/me
 ```
 
-**Cookies duoc set:**
+**Cookies được set:**
 - `access_token` (HttpOnly, Secure)
 - `refresh_token` (HttpOnly, Secure)
 
 ---
 
-## 6. Quan ly User (Admin)
+## 6. Quản lý User (Admin)
 
 ### Admin GET `/api/auth/admin/users`
 
-Danh sach user co phan trang.
+Danh sách user có phân trang.
 
 **Query params:**
 
-| Param | Kieu | Mo ta |
+| Param | Kiểu | Mô tả |
 |-------|------|-------|
-| `email` | string | Loc theo email |
-| `phone` | string | Loc theo SDT |
+| `email` | string | Lọc theo email |
+| `phone` | string | Lọc theo SĐT |
 | `status` | `active` \| `inactive` \| `locked` | |
-| `skip` | number | Mac dinh `0` |
-| `take` | number | Mac dinh `10` |
+| `skip` | number | Mặc định `0` |
+| `take` | number | Mặc định `10` |
 | `sort` | string | VD: `createdAt` (field sort) |
-| `skipCount` | boolean string | `"true"` -> bo qua dem tong |
+| `skipCount` | boolean string | `"true"` -> bỏ qua đếm tổng |
 
 **Response `data`:**
 
@@ -453,7 +453,7 @@ Danh sach user co phan trang.
 
 ### Admin GET `/api/auth/admin/users/simple`
 
-Danh sach rut gon — dung cho dropdown. Max 200 records.
+Danh sách rút gọn — dùng cho dropdown. Max 200 records.
 
 **Response `data[i]`:**
 
@@ -471,7 +471,7 @@ Danh sach rut gon — dung cho dropdown. Max 200 records.
 
 ### Admin GET `/api/auth/admin/users/:id`
 
-Chi tiet user (bao gom profile).
+Chi tiết user (bao gồm profile).
 
 **Response `data`:**
 
@@ -514,7 +514,7 @@ Chi tiet user (bao gom profile).
 
 ### Admin POST `/api/auth/admin/users`
 
-Tao user moi. (HTTP 201)
+Tạo user mới. (HTTP 201)
 
 ```json
 {
@@ -536,27 +536,27 @@ Tao user moi. (HTTP 201)
 }
 ```
 
-| Field | Kieu | Bat buoc |
+| Field | Kiểu | Bắt buộc |
 |-------|------|----------|
-| `password` | string (6-72) | Co |
-| `email` | email | Khong |
-| `username` | string (max 50) | Khong |
-| `phone` | string (max 20) | Khong |
-| `name` | string (max 255) | Khong |
-| `image` | string (max 255) | Khong |
-| `profile` | object | Khong |
+| `password` | string (6-72) | Có |
+| `email` | email | Không |
+| `username` | string (max 50) | Không |
+| `phone` | string (max 20) | Không |
+| `name` | string (max 255) | Không |
+| `image` | string (max 255) | Không |
+| `profile` | object | Không |
 
 ---
 
 ### Admin PUT `/api/auth/admin/users/:id`
 
-Cap nhat user. Giong POST, tat ca optional (ke ca `password`).
+Cập nhật user. Giống POST, tất cả optional (kể cả `password`).
 
 ---
 
 ### Admin DELETE `/api/auth/admin/users/:id`
 
-Xoa user.
+Xóa user.
 
 **Response `data`:**
 
@@ -568,15 +568,15 @@ Xoa user.
 
 ### Admin PATCH `/api/auth/admin/users/:id/password`
 
-Admin doi mat khau user.
+Admin đổi mật khẩu user.
 
 ```json
 { "password": "NewPass1234" }
 ```
 
-| Field | Kieu | Bat buoc |
+| Field | Kiểu | Bắt buộc |
 |-------|------|----------|
-| `password` | string (6-72) | Co |
+| `password` | string (6-72) | Có |
 
 **Response `data`:**
 
@@ -588,15 +588,15 @@ Admin doi mat khau user.
 
 ### Admin PATCH `/api/auth/admin/users/:id/status`
 
-Doi trang thai user.
+Đổi trạng thái user.
 
 ```json
 { "status": "active" }
 ```
 
-| Field | Kieu | Bat buoc |
+| Field | Kiểu | Bắt buộc |
 |-------|------|----------|
-| `status` | `active` \| `inactive` \| `locked` | Co |
+| `status` | `active` \| `inactive` \| `locked` | Có |
 
 **Response `data`:**
 
@@ -606,59 +606,59 @@ Doi trang thai user.
 
 ---
 
-## Luong tich hop tieu bieu
+## Luồng tích hợp tiêu biểu
 
-### Dang ky
+### Đăng ký
 
 ```
 1. POST /api/auth/register/send-otp   ->  { email }
-2. User nhan OTP qua email
+2. User nhận OTP qua email
 3. POST /api/auth/register             ->  { name, email, password, confirmPassword, otp }
-4. Luu token, redirect trang chu
+4. Lưu token, redirect trang chủ
 ```
 
-### Dang nhap
+### Đăng nhập
 
 ```
 1. POST /api/auth/login                ->  { email, password }
-2. Nhan { token, refreshToken, expiresIn } — KHONG co user
-3. Luu accessToken + refreshToken
-4. GET /api/auth/me                    ->  Lay thong tin user
-5. Gui header: Authorization: Bearer {accessToken}
+2. Nhận { token, refreshToken, expiresIn } — KHÔNG có user
+3. Lưu accessToken + refreshToken
+4. GET /api/auth/me                    ->  Lấy thông tin user
+5. Gửi header: Authorization: Bearer {accessToken}
 ```
 
 ### Refresh token
 
 ```
-1. Khi nhan 401 Unauthorized
+1. Khi nhận 401 Unauthorized
 2. POST /api/auth/refresh              ->  { refreshToken }
-3. Luu token moi, retry request goc
-4. Neu refresh cung 401 -> redirect login
+3. Lưu token mới, retry request gốc
+4. Nếu refresh cũng 401 -> redirect login
 ```
 
-### Quen mat khau
+### Quên mật khẩu
 
 ```
 1. POST /api/auth/forgot-password/send-otp  ->  { email }
-2. User nhan OTP qua email
+2. User nhận OTP qua email
 3. POST /api/auth/reset-password            ->  { email, otp, password, confirmPassword }
 4. Redirect login
 ```
 
 ---
 
-## 7. Enum (Danh sach gia tri)
+## 7. Enum (Danh sách giá trị)
 
 ### Public GET `/api/auth/users/enums/:key`
 
-Lay danh sach gia tri enum de hien thi dropdown / label. **Khong can dang nhap.**
+Lấy danh sách giá trị enum để hiển thị dropdown / label. **Không cần đăng nhập.**
 
-| Key | Mo ta | Gia tri |
+| Key | Mô tả | Giá trị |
 |-----|-------|---------|
-| `genders` | Gioi tinh | `male`, `female`, `other` |
-| `statuses` | Trang thai user | `active`, `inactive`, `locked` |
+| `genders` | Giới tính | `male`, `female`, `other` |
+| `statuses` | Trạng thái user | `active`, `inactive`, `locked` |
 
-**Vi du request:**
+**Ví dụ request:**
 
 ```
 GET /api/auth/users/enums/genders
@@ -670,40 +670,40 @@ GET /api/auth/users/enums/statuses
 ```json
 [
   { "value": "male", "label": "Nam" },
-  { "value": "female", "label": "Nu" },
-  { "value": "other", "label": "Khac" }
+  { "value": "female", "label": "Nữ" },
+  { "value": "other", "label": "Khác" }
 ]
 ```
 
-> Dung de hien thi label tieng Viet trong dropdown thay vi hien thi raw enum value.
+> Dùng để hiển thị label tiếng Việt trong dropdown thay vì hiển thị raw enum value.
 
 ---
 
-## Tong hop endpoint
+## Tổng hợp endpoint
 
-| Method | Path | Auth | Mo ta |
+| Method | Path | Auth | Mô tả |
 |--------|------|------|-------|
-| POST | `/api/auth/login` | Public | Dang nhap |
-| POST | `/api/auth/register` | Public | Dang ky |
-| POST | `/api/auth/register/send-otp` | Public | Gui OTP dang ky |
-| POST | `/api/auth/logout` | Public | Dang xuat |
-| POST | `/api/auth/logout-all` | User | Dang xuat tat ca |
-| POST | `/api/auth/refresh` | Public | Lam moi token |
-| GET | `/api/auth/me` | User | Thong tin user |
-| POST | `/api/auth/forgot-password/send-otp` | Public | Gui OTP quen MK |
-| POST | `/api/auth/reset-password` | Public | Dat lai MK |
+| POST | `/api/auth/login` | Public | Đăng nhập |
+| POST | `/api/auth/register` | Public | Đăng ký |
+| POST | `/api/auth/register/send-otp` | Public | Gửi OTP đăng ký |
+| POST | `/api/auth/logout` | Public | Đăng xuất |
+| POST | `/api/auth/logout-all` | User | Đăng xuất tất cả |
+| POST | `/api/auth/refresh` | Public | Làm mới token |
+| GET | `/api/auth/me` | User | Thông tin user |
+| POST | `/api/auth/forgot-password/send-otp` | Public | Gửi OTP quên MK |
+| POST | `/api/auth/reset-password` | Public | Đặt lại MK |
 | GET | `/api/auth/google` | Public | OAuth Google |
 | GET | `/api/auth/google/callback` | Public | Callback OAuth |
-| GET | `/api/auth/user/profile` | User | Lay profile |
-| PATCH | `/api/auth/user/profile` | User | Cap nhat profile |
-| PATCH | `/api/auth/user/profile/change-password` | User | Doi mat khau |
-| GET | `/api/auth/admin/users` | Admin | Danh sach user |
-| GET | `/api/auth/admin/users/simple` | Admin | DS rut gon |
-| GET | `/api/auth/admin/users/:id` | Admin | Chi tiet user |
-| POST | `/api/auth/admin/users` | Admin | Tao user |
-| PUT | `/api/auth/admin/users/:id` | Admin | Cap nhat user |
-| DELETE | `/api/auth/admin/users/:id` | Admin | Xoa user |
-| PATCH | `/api/auth/admin/users/:id/password` | Admin | Doi MK user |
-| PATCH | `/api/auth/admin/users/:id/status` | Admin | Doi trang thai |
-| GET | `/api/auth/users/enums/genders` | Public | Enum gioi tinh |
-| GET | `/api/auth/users/enums/statuses` | Public | Enum trang thai user |
+| GET | `/api/auth/user/profile` | User | Lấy profile |
+| PATCH | `/api/auth/user/profile` | User | Cập nhật profile |
+| PATCH | `/api/auth/user/profile/change-password` | User | Đổi mật khẩu |
+| GET | `/api/auth/admin/users` | Admin | Danh sách user |
+| GET | `/api/auth/admin/users/simple` | Admin | DS rút gọn |
+| GET | `/api/auth/admin/users/:id` | Admin | Chi tiết user |
+| POST | `/api/auth/admin/users` | Admin | Tạo user |
+| PUT | `/api/auth/admin/users/:id` | Admin | Cập nhật user |
+| DELETE | `/api/auth/admin/users/:id` | Admin | Xóa user |
+| PATCH | `/api/auth/admin/users/:id/password` | Admin | Đổi MK user |
+| PATCH | `/api/auth/admin/users/:id/status` | Admin | Đổi trạng thái |
+| GET | `/api/auth/users/enums/genders` | Public | Enum giới tính |
+| GET | `/api/auth/users/enums/statuses` | Public | Enum trạng thái user |

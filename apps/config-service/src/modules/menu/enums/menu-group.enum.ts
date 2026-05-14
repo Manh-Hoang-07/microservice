@@ -4,6 +4,6 @@ export enum MenuGroup {
 }
 
 export const MenuGroupOptions = [
-  { value: MenuGroup.admin, label: 'Admin - Quản trị' },
-  { value: MenuGroup.client, label: 'Client - Website' },
+  { id: MenuGroup.admin, name: 'Admin - Quản trị' },
+  { id: MenuGroup.client, name: 'Client - Website' },
 ];

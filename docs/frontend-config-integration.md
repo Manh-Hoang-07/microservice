@@ -1,15 +1,15 @@
-# Tich hop Config Service — Tai lieu API cho Frontend
+# Tích hợp Config Service — Tài liệu API cho Frontend
 
 > **Base URL:** `/api/config` (qua Nginx proxy -> config-service:3003)
 >
-> Tat ca path ben duoi deu co prefix `/api/config`. Vi du: `GET /api/config/general`
+> Tất cả path bên dưới đều có prefix `/api/config`. Ví dụ: `GET /api/config/general`
 
 ---
 
-## Cau truc Response chung
+## Cấu trúc Response chung
 
 ```json
-// Danh sach
+// Danh sách
 {
   "success": true,
   "message": "Success",
@@ -41,36 +41,36 @@
 
 ---
 
-## Phan quyen
+## Phân quyền
 
-| Ky hieu | Nghia |
+| Ký hiệu | Nghĩa |
 |---------|-------|
-| Public | Khong can dang nhap |
-| User | Can header `Authorization: Bearer {token}` |
-| Admin | Can JWT co quyen admin tuong ung |
+| Public | Không cần đăng nhập |
+| User | Cần header `Authorization: Bearer {token}` |
+| Admin | Cần JWT có quyền admin tương ứng |
 
 ---
 
-## Luu y chung
+## Lưu ý chung
 
-- **Request body, query params va response deu dung camelCase** — `countryId`, `siteName`, khong phai `country_id`, `site_name`.
-- **ID la string** — BigInt serialize thanh string. Gui len phai la numeric string (VD: `"123"`).
+- **Request body, query params và response đều dùng camelCase** — `countryId`, `siteName`, không phải `country_id`, `site_name`.
+- **ID là string** — BigInt serialize thành string. Gửi lên phải là numeric string (VD: `"123"`).
 - **Enum `status`:** `"active"` | `"inactive"`.
 - **Menu `type`:** `"route"` | `"group"` | `"link"`.
-- **Boolean trong query string:** gui `"true"` hoac `"1"`.
-- **Query param dung camelCase**: `countryId=1`, KHONG dung `filter[country_id]=1`.
+- **Boolean trong query string:** gửi `"true"` hoặc `"1"`.
+- **Query param dùng camelCase**: `countryId=1`, KHÔNG dùng `filter[country_id]=1`.
 
 ---
 
-## Tham so phan trang chung (ap dung cho moi List API)
+## Tham số phân trang chung (áp dụng cho mọi List API)
 
-| Param | Kieu | Default | Mo ta |
+| Param | Kiểu | Default | Mô tả |
 |-------|------|---------|-------|
-| `page` | number | `1` | Trang hien tai |
-| `limit` | number | `10` | So ban ghi moi trang (max 100) |
-| `search` | string | — | Tim kiem toan van (max 200) |
-| `sort` | string | — | Vi du: `name:ASC`, `createdAt:DESC` |
-| `skipCount` | boolean string | `"false"` | `"true"` -> bo qua dem tong (tang hieu nang) |
+| `page` | number | `1` | Trang hiện tại |
+| `limit` | number | `10` | Số bản ghi mỗi trang (max 100) |
+| `search` | string | — | Tìm kiếm toàn văn (max 200) |
+| `sort` | string | — | Ví dụ: `name:ASC`, `createdAt:DESC` |
+| `skipCount` | boolean string | `"false"` | `"true"` -> bỏ qua đếm tổng (tăng hiệu năng) |
 
 **Response `meta` cho List:**
 
@@ -91,7 +91,7 @@
 
 ### Public GET `/api/config/general`
 
-Lay cau hinh chung cua site (cache Redis 10 phut).
+Lấy cấu hình chung của site (cache Redis 10 phút).
 
 **Response `data`:**
 
@@ -99,12 +99,12 @@ Lay cau hinh chung cua site (cache Redis 10 phut).
 {
   "id": "1",
   "siteName": "Comic Platform",
-  "siteDescription": "Mo ta site",
+  "siteDescription": "Mô tả site",
   "siteLogo": "https://cdn.example.com/logo.png",
   "siteFavicon": "https://cdn.example.com/favicon.ico",
   "siteEmail": "admin@example.com",
   "sitePhone": "0901234567",
-  "siteAddress": "123 Duong Sach, TP.HCM",
+  "siteAddress": "123 Đường Sách, TP.HCM",
   "siteCountryId": "1",
   "siteProvinceId": "2",
   "siteWardId": "3",
@@ -124,9 +124,9 @@ Lay cau hinh chung cua site (cache Redis 10 phut).
     }
   ],
   "metaTitle": "Comic Platform",
-  "metaKeywords": "truyen tranh, manga",
+  "metaKeywords": "truyện tranh, manga",
   "ogTitle": "Comic Platform",
-  "ogDescription": "Doc truyen tranh online",
+  "ogDescription": "Đọc truyện tranh online",
   "ogImage": "https://cdn.example.com/og.jpg",
   "canonicalUrl": "https://example.com",
   "googleAnalyticsId": "G-XXXXXXXXXX",
@@ -143,13 +143,13 @@ Lay cau hinh chung cua site (cache Redis 10 phut).
 
 ### Admin GET `/api/config/admin/general`
 
-Lay cau hinh (admin, quyen `config.manage`). Giong public, them `googleSearchConsole`.
+Lấy cấu hình (admin, quyền `config.manage`). Giống public, thêm `googleSearchConsole`.
 
 ---
 
 ### Admin PUT `/api/config/admin/general`
 
-Cap nhat cau hinh chung (quyen `config.manage`). Tat ca field optional — chi gui field can thay doi.
+Cập nhật cấu hình chung (quyền `config.manage`). Tất cả field optional — chỉ gửi field cần thay đổi.
 
 **Request Body:**
 
@@ -171,8 +171,8 @@ Cap nhat cau hinh chung (quyen `config.manage`). Tat ca field optional — chi g
   "currency": "string (max 10), VD: 'VND'",
   "contactChannels": [
     {
-      "type": "string (bat buoc)",
-      "value": "string (bat buoc)",
+      "type": "string (bắt buộc)",
+      "value": "string (bắt buộc)",
       "label": "string? (max 255)",
       "icon": "string? (max 500)",
       "urlTemplate": "string? (max 500)",
@@ -199,7 +199,7 @@ Cap nhat cau hinh chung (quyen `config.manage`). Tat ca field optional — chi g
 
 ### Admin GET `/api/config/admin/email`
 
-Lay cau hinh SMTP hien tai (quyen `config.manage`).
+Lấy cấu hình SMTP hiện tại (quyền `config.manage`).
 
 **Response `data`:**
 
@@ -225,7 +225,7 @@ Lay cau hinh SMTP hien tai (quyen `config.manage`).
 
 ### Admin PUT `/api/config/admin/email`
 
-Cap nhat cau hinh SMTP email (quyen `config.manage`). Tat ca field optional.
+Cập nhật cấu hình SMTP email (quyền `config.manage`). Tất cả field optional.
 
 **Request Body:**
 
@@ -242,25 +242,9 @@ Cap nhat cau hinh SMTP email (quyen `config.manage`). Tat ca field optional.
 }
 ```
 
-**Response `data`:**
+> **Lưu ý:** Gửi `"••••••"` cho `smtpPassword` để giữ nguyên mật khẩu hiện tại (không thay đổi).
 
-```json
-{
-  "id": "1",
-  "smtpHost": "smtp.example.com",
-  "smtpPort": 587,
-  "smtpSecure": true,
-  "smtpUsername": "user@example.com",
-  "smtpPassword": "••••••",
-  "fromEmail": "noreply@example.com",
-  "fromName": "Comic Platform",
-  "replyToEmail": null,
-  "createdUserId": null,
-  "updatedUserId": null,
-  "createdAt": "2026-01-01T00:00:00.000Z",
-  "updatedAt": "2026-05-13T10:00:00.000Z"
-}
-```
+**Response `data`:** Giống GET `/api/config/admin/email`.
 
 ---
 
@@ -268,7 +252,7 @@ Cap nhat cau hinh SMTP email (quyen `config.manage`). Tat ca field optional.
 
 ### Public GET `/api/config/menus`
 
-Lay cay menu public (group `client`, status `active`, cache 10 phut).
+Lấy cây menu public (group `client`, status `active`, cache 10 phút).
 
 **Response `data`:**
 
@@ -277,7 +261,7 @@ Lay cay menu public (group `client`, status `active`, cache 10 phut).
   {
     "id": "1",
     "code": "home",
-    "name": "Trang chu",
+    "name": "Trang chủ",
     "path": "/",
     "icon": "home",
     "type": "route",
@@ -287,7 +271,7 @@ Lay cay menu public (group `client`, status `active`, cache 10 phut).
       {
         "id": "2",
         "code": "home.intro",
-        "name": "Gioi thieu",
+        "name": "Giới thiệu",
         "path": "/intro",
         "icon": null,
         "type": "route",
@@ -304,41 +288,41 @@ Lay cay menu public (group `client`, status `active`, cache 10 phut).
 
 ### User GET `/api/config/user/menus`
 
-Lay cay menu admin theo quyen cua user dang dang nhap.
+Lấy cây menu admin theo quyền của user đang đăng nhập.
 
 **Headers:**
-- `Authorization: Bearer {token}` (bat buoc)
-- `x-group-id: {groupId}` (tuy chon — neu user thuoc nhieu group)
+- `Authorization: Bearer {token}` (bắt buộc)
+- `x-group-id: {groupId}` (tùy chọn — nếu user thuộc nhiều group)
 
-**Response `data`:** Mang cay menu, chi gom item user co quyen.
+**Response `data`:** Mảng cây menu, chỉ gồm item user có quyền.
 
 ---
 
 ### Admin GET `/api/config/admin/menus`
 
-Danh sach menu co phan trang (quyen `menu.manage`).
+Danh sách menu có phân trang (quyền `menu.manage`).
 
 **Query params:**
 
-| Param | Kieu | Mo ta |
+| Param | Kiểu | Mô tả |
 |-------|------|-------|
 | `status` | `active` \| `inactive` | |
-| `parentId` | numeric string | Loc theo menu cha |
+| `parentId` | numeric string | Lọc theo menu cha |
 | `showInMenu` | boolean string | `"true"` \| `"false"` |
 | `group` | string (max 50) | `admin`, `client`, ... |
-| + phan trang | | |
+| + phân trang | | |
 
 ---
 
 ### Admin GET `/api/config/admin/menus/tree`
 
-Toan bo cay menu dang tree (khong phan trang).
+Toàn bộ cây menu dạng tree (không phân trang).
 
 ---
 
 ### Admin GET `/api/config/admin/menus/:id`
 
-Chi tiet menu.
+Chi tiết menu.
 
 **Response `data`:**
 
@@ -368,12 +352,12 @@ Chi tiet menu.
 
 ### Admin POST `/api/config/admin/menus`
 
-Tao menu moi. (HTTP 201)
+Tạo menu mới. (HTTP 201)
 
 ```json
 {
-  "code": "string (3-120, bat buoc, unique)",
-  "name": "string (max 150, bat buoc)",
+  "code": "string (3-120, bắt buộc, unique)",
+  "name": "string (max 150, bắt buộc)",
   "path": "string? (max 255)",
   "apiPath": "string? (max 255)",
   "icon": "string? (max 120)",
@@ -388,57 +372,57 @@ Tao menu moi. (HTTP 201)
 }
 ```
 
-**Loi:** `400` — code da ton tai, parentId khong hop le, phat hien vong lap parent.
+**Lỗi:** `400` — code đã tồn tại, parentId không hợp lệ, phát hiện vòng lặp parent.
 
 ---
 
 ### Admin PUT `/api/config/admin/menus/:id`
 
-Cap nhat menu. Giong POST, tat ca optional. `parentId` truyen `null` hoac `""` de bo parent.
+Cập nhật menu. Giống POST, tất cả optional. `parentId` truyền `null` hoặc `""` để bỏ parent.
 
 ---
 
 ### Admin DELETE `/api/config/admin/menus/:id`
 
-Xoa menu. **Response `data`:** `true`
+Xóa menu. **Response `data`:** `true`
 
 ---
 
 ### Admin GET `/api/config/admin/permissions`
 
-Lay danh sach quyen de chon khi tao/sua menu (quyen `menu.manage`). Goi noi bo toi IAM service — FE chi can quyen `menu.manage`, KHONG can `permission.manage`.
+Lấy danh sách quyền để chọn khi tạo/sửa menu (quyền `menu.manage`). Gọi nội bộ tới IAM service — FE chỉ cần quyền `menu.manage`, KHÔNG cần `permission.manage`.
 
 **Query params:**
 
-| Param | Kieu | Mo ta |
+| Param | Kiểu | Mô tả |
 |-------|------|-------|
-| `search` | string | Tim kiem theo code hoac name |
+| `search` | string | Tìm kiếm theo code hoặc name |
 
 **Response `data`:**
 
 ```json
 [
   { "id": "1", "code": "dashboard.view", "name": "Xem dashboard" },
-  { "id": "2", "code": "menu.manage", "name": "Quan ly menu" },
-  { "id": "3", "code": "user.manage", "name": "Quan ly nguoi dung" }
+  { "id": "2", "code": "menu.manage", "name": "Quản lý menu" },
+  { "id": "3", "code": "user.manage", "name": "Quản lý người dùng" }
 ]
 ```
 
-> Max 200 quyen. Dung cho truong `requiredPermissionCode` khi tao/sua menu.
+> Max 200 quyền. Dùng cho trường `requiredPermissionCode` khi tạo/sửa menu.
 
 ---
 
 ### Public GET `/api/config/menus/enums/:key`
 
-Lay danh sach gia tri enum cho menu. **Khong can dang nhap.**
+Lấy danh sách giá trị enum cho menu. **Không cần đăng nhập.**
 
-| Key | Mo ta | Gia tri |
+| Key | Mô tả | Giá trị |
 |-----|-------|---------|
-| `types` | Loai menu | `route`, `group`, `link` |
-| `statuses` | Trang thai | `active`, `inactive` |
-| `groups` | Nhom menu | `admin`, `client` |
+| `types` | Loại menu | `route`, `group`, `link` |
+| `statuses` | Trạng thái | `active`, `inactive` |
+| `groups` | Nhóm menu | `admin`, `client` |
 
-**Vi du request:**
+**Ví dụ request:**
 
 ```
 GET /api/config/menus/enums/types
@@ -450,21 +434,21 @@ GET /api/config/menus/enums/groups
 
 ```json
 [
-  { "value": "route", "label": "Route (Noi bo)" },
-  { "value": "group", "label": "Group (Nhom)" },
-  { "value": "link", "label": "Link (Ben ngoai)" }
+  { "id": "route", "name": "Route (Nội bộ)" },
+  { "id": "group", "name": "Group (Nhóm)" },
+  { "id": "link", "name": "Link (Bên ngoài)" }
 ]
 ```
 
 ---
 
-## 4. Quoc gia (Country)
+## 4. Quốc gia (Country)
 
 ### Public GET `/api/config/countries`
 
-Danh sach quoc gia (chi active, cache 24h).
+Danh sách quốc gia (chỉ active, cache 24h).
 
-**Query params:** `name`, `code` + phan trang
+**Query params:** `name`, `code` + phân trang
 
 **Response `data[i]`:**
 
@@ -474,10 +458,10 @@ Danh sach quoc gia (chi active, cache 24h).
   "code": "VN",
   "codeAlpha3": "VNM",
   "name": "Viet Nam",
-  "officialName": "Cong hoa Xa hoi Chu nghia Viet Nam",
+  "officialName": "Cộng hòa Xã hội Chủ nghĩa Việt Nam",
   "phoneCode": "+84",
   "currencyCode": "VND",
-  "flagEmoji": "VN",
+  "flagEmoji": "🇻🇳",
   "status": "active",
   "createdUserId": null,
   "updatedUserId": null,
@@ -490,41 +474,41 @@ Danh sach quoc gia (chi active, cache 24h).
 
 ### Public GET `/api/config/countries/:id/provinces`
 
-Danh sach tinh/thanh cua quoc gia (chi active, cache 24h).
+Danh sách tỉnh/thành của quốc gia (chỉ active, cache 24h).
 
-**Query params:** `name`, `code` + phan trang
+**Query params:** `name`, `code` + phân trang
 
 ---
 
 ### Admin GET `/api/config/admin/countries`
 
-Danh sach quoc gia admin (bao gom inactive, quyen `country.manage`).
+Danh sách quốc gia admin (bao gồm inactive, quyền `country.manage`).
 
-**Query params them:** `status` (`active` | `inactive`), `name`, `code` + phan trang
+**Query params thêm:** `status` (`active` | `inactive`), `name`, `code` + phân trang
 
 ---
 
 ### Admin GET `/api/config/admin/countries/simple`
 
-Danh sach rut gon (limit 1000, skipCount forced) — dung cho dropdown.
+Danh sách rút gọn (limit 1000, skipCount forced) — dùng cho dropdown.
 
 ---
 
 ### Admin GET `/api/config/admin/countries/:id`
 
-Chi tiet quoc gia. Response giong `data[i]` cua list.
+Chi tiết quốc gia. Response giống `data[i]` của list.
 
 ---
 
 ### Admin POST `/api/config/admin/countries`
 
-Tao quoc gia moi. (HTTP 201)
+Tạo quốc gia mới. (HTTP 201)
 
 ```json
 {
-  "code": "string (max 10, bat buoc) — ISO alpha-2, VD: 'VN'",
+  "code": "string (max 10, bắt buộc) — ISO alpha-2, VD: 'VN'",
   "codeAlpha3": "string? (max 10) — VD: 'VNM'",
-  "name": "string (max 255, bat buoc)",
+  "name": "string (max 255, bắt buộc)",
   "officialName": "string? (max 255)",
   "phoneCode": "string? (max 20) — VD: '+84'",
   "currencyCode": "string? (max 20)",
@@ -537,21 +521,21 @@ Tao quoc gia moi. (HTTP 201)
 
 ### Admin PATCH `/api/config/admin/countries/:id`
 
-Cap nhat. Tat ca optional.
+Cập nhật. Tất cả optional.
 
 ---
 
 ### Admin DELETE `/api/config/admin/countries/:id`
 
-Xoa. **`409 Conflict`** neu con tinh/thanh lien ket. **Response `data`:** `true`
+Xóa. **`409 Conflict`** nếu còn tỉnh/thành liên kết. **Response `data`:** `true`
 
 ---
 
-## 5. Tinh/Thanh pho (Province)
+## 5. Tỉnh/Thành phố (Province)
 
 ### Public GET `/api/config/provinces`
 
-**Query params:** `name`, `code` + phan trang
+**Query params:** `name`, `code` + phân trang
 
 **Response `data[i]`:**
 
@@ -559,8 +543,8 @@ Xoa. **`409 Conflict`** neu con tinh/thanh lien ket. **Response `data`:** `true`
 {
   "id": "1",
   "code": "HCM",
-  "name": "Ho Chi Minh",
-  "type": "Thanh pho Truc thuoc Trung uong",
+  "name": "Hồ Chí Minh",
+  "type": "Thành phố Trực thuộc Trung ương",
   "phoneCode": "028",
   "countryId": "1",
   "status": "active",
@@ -578,19 +562,19 @@ Xoa. **`409 Conflict`** neu con tinh/thanh lien ket. **Response `data`:** `true`
 
 ### Public GET `/api/config/countries/:countryId/provinces`
 
-Tinh theo quoc gia (cache 24h).
+Tỉnh theo quốc gia (cache 24h).
 
 ---
 
 ### Public GET `/api/config/provinces/:id/wards`
 
-Phuong/xa theo tinh (cache 24h). **Query params:** `name`, `code` + phan trang
+Phường/xã theo tỉnh (cache 24h). **Query params:** `name`, `code` + phân trang
 
 ---
 
 ### Admin GET `/api/config/admin/provinces`
 
-**Query params:** `name`, `code`, `status`, `countryId` + phan trang
+**Query params:** `name`, `code`, `status`, `countryId` + phân trang
 
 ---
 
@@ -602,21 +586,21 @@ Dropdown — limit 1000, skipCount forced.
 
 ### Admin GET `/api/config/admin/provinces/:id`
 
-Chi tiet tinh. Response giong `data[i]` cua list.
+Chi tiết tỉnh. Response giống `data[i]` của list.
 
 ---
 
 ### Admin POST `/api/config/admin/provinces`
 
-Tao tinh moi. (HTTP 201)
+Tạo tỉnh mới. (HTTP 201)
 
 ```json
 {
-  "code": "string (max 20, bat buoc)",
-  "name": "string (max 255, bat buoc)",
-  "type": "string (max 50, bat buoc) — VD: 'Tinh', 'Thanh pho Truc thuoc Trung uong'",
+  "code": "string (max 20, bắt buộc)",
+  "name": "string (max 255, bắt buộc)",
+  "type": "string (max 50, bắt buộc) — VD: 'Tỉnh', 'Thành phố Trực thuộc Trung ương'",
   "phoneCode": "string? (max 20)",
-  "countryId": "numeric string (1-20 digits, bat buoc)",
+  "countryId": "numeric string (1-20 digits, bắt buộc)",
   "status": "active | inactive",
   "note": "string? (max 2000)",
   "codeBnv": "string? (max 20)",
@@ -624,17 +608,17 @@ Tao tinh moi. (HTTP 201)
 }
 ```
 
-### Admin GET `:id` / PATCH `:id` / DELETE `:id`
+### Admin PATCH `:id` / DELETE `:id`
 
-CRUD tieu chuan. DELETE tra `true`. Wards bi cascade xoa khi xoa tinh.
+CRUD tiêu chuẩn. DELETE trả `true`. Wards bị cascade xóa khi xóa tỉnh.
 
 ---
 
-## 6. Phuong/Xa (Ward)
+## 6. Phường/Xã (Ward)
 
 ### Public GET `/api/config/wards`
 
-**Query params:** `name`, `code` + phan trang
+**Query params:** `name`, `code` + phân trang
 
 **Response `data[i]`:**
 
@@ -642,8 +626,8 @@ CRUD tieu chuan. DELETE tra `true`. Wards bi cascade xoa khi xoa tinh.
 {
   "id": "1",
   "provinceId": "1",
-  "name": "Phuong Ben Nghe",
-  "type": "Phuong",
+  "name": "Phường Bến Nghé",
+  "type": "Phường",
   "code": "26734",
   "status": "active",
   "createdUserId": null,
@@ -657,13 +641,13 @@ CRUD tieu chuan. DELETE tra `true`. Wards bi cascade xoa khi xoa tinh.
 
 ### Public GET `/api/config/provinces/:provinceId/wards`
 
-Phuong/xa theo tinh (cache 24h).
+Phường/xã theo tỉnh (cache 24h).
 
 ---
 
 ### Admin GET `/api/config/admin/wards`
 
-**Query params:** `name`, `code`, `status`, `provinceId` + phan trang
+**Query params:** `name`, `code`, `status`, `provinceId` + phân trang
 
 ---
 
@@ -675,27 +659,27 @@ Dropdown — limit 1000, skipCount forced.
 
 ### Admin GET `/api/config/admin/wards/:id`
 
-Chi tiet phuong/xa. Response giong `data[i]` cua list.
+Chi tiết phường/xã. Response giống `data[i]` của list.
 
 ---
 
 ### Admin POST `/api/config/admin/wards`
 
-Tao phuong/xa moi. (HTTP 201)
+Tạo phường/xã mới. (HTTP 201)
 
 ```json
 {
-  "provinceId": "numeric string (1-20 digits, bat buoc)",
-  "name": "string (max 255, bat buoc)",
-  "type": "string (max 50, bat buoc) — VD: 'Phuong', 'Xa', 'Thi tran'",
-  "code": "string (max 20, bat buoc)",
+  "provinceId": "numeric string (1-20 digits, bắt buộc)",
+  "name": "string (max 255, bắt buộc)",
+  "type": "string (max 50, bắt buộc) — VD: 'Phường', 'Xã', 'Thị trấn'",
+  "code": "string (max 20, bắt buộc)",
   "status": "active | inactive"
 }
 ```
 
-### Admin GET `:id` / PATCH `:id` / DELETE `:id`
+### Admin PATCH `:id` / DELETE `:id`
 
-CRUD tieu chuan. DELETE tra `true`.
+CRUD tiêu chuẩn. DELETE trả `true`.
 
 ---
 
@@ -703,7 +687,7 @@ CRUD tieu chuan. DELETE tra `true`.
 
 ### Public GET `/api/config/cache/flush`
 
-Xoa toan bo Redis cache. **Throttle: 5 req/60s.**
+Xóa toàn bộ Redis cache. **Throttle: 5 req/60s.**
 
 **Response `data`:**
 
@@ -714,71 +698,71 @@ Xoa toan bo Redis cache. **Throttle: 5 req/60s.**
 }
 ```
 
-> `reason` chi co khi `flushed = false`.
+> `reason` chỉ có khi `flushed = false`.
 
 ---
 
-## Luong tich hop dia chi (Country -> Province -> Ward)
+## Luồng tích hợp địa chỉ (Country -> Province -> Ward)
 
 ```
 1. GET /api/config/countries?limit=200
-   -> Hien thi dropdown quoc gia
+   -> Hiển thị dropdown quốc gia
 
-2. Khi chon quoc gia (countryId):
+2. Khi chọn quốc gia (countryId):
    GET /api/config/countries/{countryId}/provinces?limit=100
-   -> Hien thi dropdown tinh/thanh
+   -> Hiển thị dropdown tỉnh/thành
 
-3. Khi chon tinh (provinceId):
+3. Khi chọn tỉnh (provinceId):
    GET /api/config/provinces/{provinceId}/wards?limit=500
-   -> Hien thi dropdown phuong/xa
+   -> Hiển thị dropdown phường/xã
 ```
 
 ---
 
-## Tong hop endpoint
+## Tổng hợp endpoint
 
-| Method | Path | Auth | Mo ta |
+| Method | Path | Auth | Mô tả |
 |--------|------|------|-------|
-| GET | `/api/config/general` | Public | Cau hinh chung |
-| GET | `/api/config/admin/general` | Admin | Cau hinh chung (admin) |
-| PUT | `/api/config/admin/general` | Admin | Cap nhat cau hinh chung |
-| GET | `/api/config/admin/email` | Admin | Lay cau hinh SMTP |
-| PUT | `/api/config/admin/email` | Admin | Cap nhat SMTP email |
+| GET | `/api/config/general` | Public | Cấu hình chung |
+| GET | `/api/config/admin/general` | Admin | Cấu hình chung (admin) |
+| PUT | `/api/config/admin/general` | Admin | Cập nhật cấu hình chung |
+| GET | `/api/config/admin/email` | Admin | Lấy cấu hình SMTP |
+| PUT | `/api/config/admin/email` | Admin | Cập nhật SMTP email |
 | GET | `/api/config/menus` | Public | Menu public |
-| GET | `/api/config/user/menus` | User | Menu theo quyen user |
-| GET | `/api/config/admin/menus` | Admin | Danh sach menu |
-| GET | `/api/config/admin/menus/tree` | Admin | Cay menu |
-| GET | `/api/config/admin/permissions` | Admin | DS quyen cho menu |
-| GET | `/api/config/admin/menus/:id` | Admin | Chi tiet menu |
-| POST | `/api/config/admin/menus` | Admin | Tao menu |
-| PUT | `/api/config/admin/menus/:id` | Admin | Cap nhat menu |
-| DELETE | `/api/config/admin/menus/:id` | Admin | Xoa menu |
-| GET | `/api/config/menus/enums/types` | Public | Enum loai menu |
-| GET | `/api/config/menus/enums/statuses` | Public | Enum trang thai menu |
-| GET | `/api/config/menus/enums/groups` | Public | Enum nhom menu |
-| GET | `/api/config/countries` | Public | DS quoc gia |
-| GET | `/api/config/countries/:id/provinces` | Public | Tinh theo quoc gia |
-| GET | `/api/config/admin/countries` | Admin | DS quoc gia (admin) |
-| GET | `/api/config/admin/countries/simple` | Admin | Dropdown quoc gia |
-| GET | `/api/config/admin/countries/:id` | Admin | Chi tiet quoc gia |
-| POST | `/api/config/admin/countries` | Admin | Tao quoc gia |
-| PATCH | `/api/config/admin/countries/:id` | Admin | Cap nhat quoc gia |
-| DELETE | `/api/config/admin/countries/:id` | Admin | Xoa quoc gia |
-| GET | `/api/config/provinces` | Public | DS tinh/thanh |
-| GET | `/api/config/countries/:countryId/provinces` | Public | Tinh theo quoc gia |
-| GET | `/api/config/provinces/:id/wards` | Public | Phuong/xa theo tinh |
-| GET | `/api/config/admin/provinces` | Admin | DS tinh (admin) |
-| GET | `/api/config/admin/provinces/simple` | Admin | Dropdown tinh |
-| GET | `/api/config/admin/provinces/:id` | Admin | Chi tiet tinh |
-| POST | `/api/config/admin/provinces` | Admin | Tao tinh |
-| PATCH | `/api/config/admin/provinces/:id` | Admin | Cap nhat tinh |
-| DELETE | `/api/config/admin/provinces/:id` | Admin | Xoa tinh |
-| GET | `/api/config/wards` | Public | DS phuong/xa |
-| GET | `/api/config/provinces/:provinceId/wards` | Public | Phuong/xa theo tinh |
-| GET | `/api/config/admin/wards` | Admin | DS phuong/xa (admin) |
-| GET | `/api/config/admin/wards/simple` | Admin | Dropdown phuong/xa |
-| GET | `/api/config/admin/wards/:id` | Admin | Chi tiet phuong/xa |
-| POST | `/api/config/admin/wards` | Admin | Tao phuong/xa |
-| PATCH | `/api/config/admin/wards/:id` | Admin | Cap nhat phuong/xa |
-| DELETE | `/api/config/admin/wards/:id` | Admin | Xoa phuong/xa |
-| GET | `/api/config/cache/flush` | Public | Xoa cache |
+| GET | `/api/config/user/menus` | User | Menu theo quyền user |
+| GET | `/api/config/admin/menus` | Admin | Danh sách menu |
+| GET | `/api/config/admin/menus/tree` | Admin | Cây menu |
+| GET | `/api/config/admin/permissions` | Admin | DS quyền cho menu |
+| GET | `/api/config/admin/menus/:id` | Admin | Chi tiết menu |
+| POST | `/api/config/admin/menus` | Admin | Tạo menu |
+| PUT | `/api/config/admin/menus/:id` | Admin | Cập nhật menu |
+| DELETE | `/api/config/admin/menus/:id` | Admin | Xóa menu |
+| GET | `/api/config/menus/enums/types` | Public | Enum loại menu |
+| GET | `/api/config/menus/enums/statuses` | Public | Enum trạng thái menu |
+| GET | `/api/config/menus/enums/groups` | Public | Enum nhóm menu |
+| GET | `/api/config/countries` | Public | DS quốc gia |
+| GET | `/api/config/countries/:id/provinces` | Public | Tỉnh theo quốc gia |
+| GET | `/api/config/admin/countries` | Admin | DS quốc gia (admin) |
+| GET | `/api/config/admin/countries/simple` | Admin | Dropdown quốc gia |
+| GET | `/api/config/admin/countries/:id` | Admin | Chi tiết quốc gia |
+| POST | `/api/config/admin/countries` | Admin | Tạo quốc gia |
+| PATCH | `/api/config/admin/countries/:id` | Admin | Cập nhật quốc gia |
+| DELETE | `/api/config/admin/countries/:id` | Admin | Xóa quốc gia |
+| GET | `/api/config/provinces` | Public | DS tỉnh/thành |
+| GET | `/api/config/countries/:countryId/provinces` | Public | Tỉnh theo quốc gia |
+| GET | `/api/config/provinces/:id/wards` | Public | Phường/xã theo tỉnh |
+| GET | `/api/config/admin/provinces` | Admin | DS tỉnh (admin) |
+| GET | `/api/config/admin/provinces/simple` | Admin | Dropdown tỉnh |
+| GET | `/api/config/admin/provinces/:id` | Admin | Chi tiết tỉnh |
+| POST | `/api/config/admin/provinces` | Admin | Tạo tỉnh |
+| PATCH | `/api/config/admin/provinces/:id` | Admin | Cập nhật tỉnh |
+| DELETE | `/api/config/admin/provinces/:id` | Admin | Xóa tỉnh |
+| GET | `/api/config/wards` | Public | DS phường/xã |
+| GET | `/api/config/provinces/:provinceId/wards` | Public | Phường/xã theo tỉnh |
+| GET | `/api/config/admin/wards` | Admin | DS phường/xã (admin) |
+| GET | `/api/config/admin/wards/simple` | Admin | Dropdown phường/xã |
+| GET | `/api/config/admin/wards/:id` | Admin | Chi tiết phường/xã |
+| POST | `/api/config/admin/wards` | Admin | Tạo phường/xã |
+| PATCH | `/api/config/admin/wards/:id` | Admin | Cập nhật phường/xã |
+| DELETE | `/api/config/admin/wards/:id` | Admin | Xóa phường/xã |
+| GET | `/api/config/cache/flush` | Public | Xóa cache |

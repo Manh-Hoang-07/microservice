@@ -10,12 +10,12 @@ export enum BannerLinkTarget {
 }
 
 export const BannerStatusOptions = [
-  { value: BannerStatus.draft, label: 'Nháp' },
-  { value: BannerStatus.active, label: 'Hoạt động' },
-  { value: BannerStatus.inactive, label: 'Ngừng hoạt động' },
+  { id: BannerStatus.draft, name: 'Nháp' },
+  { id: BannerStatus.active, name: 'Hoạt động' },
+  { id: BannerStatus.inactive, name: 'Ngừng hoạt động' },
 ];
 
 export const BannerLinkTargetOptions = [
-  { value: BannerLinkTarget.self, label: 'Cùng tab' },
-  { value: BannerLinkTarget.blank, label: 'Tab mới' },
+  { id: BannerLinkTarget.self, name: 'Cùng tab' },
+  { id: BannerLinkTarget.blank, name: 'Tab mới' },
 ];

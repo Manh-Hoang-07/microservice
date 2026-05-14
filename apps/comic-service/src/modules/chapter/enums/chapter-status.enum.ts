@@ -7,7 +7,7 @@ export enum ChapterStatus {
 export const PUBLIC_CHAPTER_STATUSES = [ChapterStatus.published, ChapterStatus.scheduled];
 
 export const ChapterStatusOptions = [
-  { value: ChapterStatus.draft, label: 'Nháp' },
-  { value: ChapterStatus.published, label: 'Đã xuất bản' },
-  { value: ChapterStatus.scheduled, label: 'Lên lịch' },
+  { id: ChapterStatus.draft, name: 'Nháp' },
+  { id: ChapterStatus.published, name: 'Đã xuất bản' },
+  { id: ChapterStatus.scheduled, name: 'Lên lịch' },
 ];
