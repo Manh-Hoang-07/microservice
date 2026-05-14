@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import { getSessionGroupId, parseQueryOptions, createPaginationMeta } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { UserAdminRepository } from '../../repositories/user-admin.repository';
+import { IamClient } from 'src/clients/iam.client';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import { UpdateUserDto } from '../dtos/update-user.dto';
 import { AdminChangePasswordDto } from '../dtos/admin-change-password.dto';
@@ -18,13 +20,28 @@ export class AdminUserService {
   constructor(
     private readonly userRepo: UserAdminRepository,
     private readonly configService: ConfigService,
+    private readonly iamClient: IamClient,
   ) {}
 
   async getList(query: UserQueryDto) {
+    const sessionGroupId = getSessionGroupId();
+    if (sessionGroupId) {
+      const memberIds = await this.iamClient.getGroupMemberIds(String(sessionGroupId));
+      if (!memberIds.length) {
+        return { data: [], meta: createPaginationMeta(parseQueryOptions(query as any), 0) };
+      }
+      return this.userRepo.findAll({ ...query, userIds: memberIds });
+    }
     return this.userRepo.findAll(query);
   }
 
   async getSimpleList(query: UserQueryDto) {
+    const sessionGroupId = getSessionGroupId();
+    if (sessionGroupId) {
+      const memberIds = await this.iamClient.getGroupMemberIds(String(sessionGroupId));
+      if (!memberIds.length) return { data: [] };
+      return this.userRepo.findAllSimple({ ...query, userIds: memberIds });
+    }
     return this.userRepo.findAllSimple(query);
   }
 

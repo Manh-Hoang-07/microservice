@@ -6,17 +6,26 @@ jest.mock('../../../src/modules/user/admin/dtos/update-user.dto', () => ({ Updat
 jest.mock('../../../src/modules/user/admin/dtos/admin-change-password.dto', () => ({ AdminChangePasswordDto: jest.fn() }));
 jest.mock('../../../src/modules/user/admin/dtos/change-status.dto', () => ({ ChangeStatusDto: jest.fn() }));
 jest.mock('../../../src/modules/user/admin/dtos/user-query.dto', () => ({ UserQueryDto: jest.fn() }));
+jest.mock('src/clients/iam.client', () => ({ IamClient: jest.fn() }), { virtual: true });
+jest.mock('@package/common', () => ({
+  getSessionGroupId: jest.fn().mockReturnValue(null),
+  parseQueryOptions: jest.fn(() => ({ skip: 0, take: 10 })),
+  createPaginationMeta: jest.fn((_opts, total) => ({ total })),
+}));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { AdminUserService } from '../../../src/modules/user/admin/services/user.service';
 import { UserAdminRepository } from '../../../src/modules/user/repositories/user-admin.repository';
+import { getSessionGroupId } from '@package/common';
+const mockGetSessionGroupId = getSessionGroupId as jest.MockedFunction<typeof getSessionGroupId>;
 
 describe('AdminUserService', () => {
   let service: AdminUserService;
   let userRepo: jest.Mocked<Partial<UserAdminRepository>>;
   let configService: jest.Mocked<Partial<ConfigService>>;
+  let iamClient: { getGroupMemberIds: jest.Mock };
 
   const mockUser = {
     id: 1n,
@@ -52,14 +61,18 @@ describe('AdminUserService', () => {
       get: jest.fn().mockReturnValue(12),
     };
 
+    iamClient = { getGroupMemberIds: jest.fn() };
+
     service = new AdminUserService(
       userRepo as any,
       configService as any,
+      iamClient as any,
     );
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    mockGetSessionGroupId.mockReturnValue(null);
   });
 
   describe('getList', () => {
@@ -72,6 +85,78 @@ describe('AdminUserService', () => {
 
       expect(userRepo.findAll).toHaveBeenCalledWith(query);
       expect(result).toEqual(expected);
+    });
+
+    it('filtra por group quando getSessionGroupId retorna groupId', async () => {
+      const memberIds = [1n, 3n, 7n];
+      mockGetSessionGroupId.mockReturnValue(5n);
+      iamClient.getGroupMemberIds.mockResolvedValue(memberIds);
+      userRepo.findAll!.mockResolvedValue({ data: [], meta: { total: 0 } });
+
+      await service.getList({ page: 1, limit: 10 } as any);
+
+      expect(iamClient.getGroupMemberIds).toHaveBeenCalledWith('5');
+      expect(userRepo.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ userIds: memberIds }),
+      );
+    });
+
+    it('retorna vazio imediatamente quando group sem membros', async () => {
+      mockGetSessionGroupId.mockReturnValue(5n);
+      iamClient.getGroupMemberIds.mockResolvedValue([]);
+
+      const result = await service.getList({ page: 1, limit: 10 } as any);
+
+      expect(userRepo.findAll).not.toHaveBeenCalled();
+      expect(result.data).toEqual([]);
+    });
+
+    it('não filtra por group quando system context (null)', async () => {
+      mockGetSessionGroupId.mockReturnValue(null);
+      const expected = { data: [mockUser], total: 1 };
+      userRepo.findAll!.mockResolvedValue(expected);
+      const query = { page: 1, limit: 10 };
+
+      const result = await service.getList(query as any);
+
+      expect(iamClient.getGroupMemberIds).not.toHaveBeenCalled();
+      expect(userRepo.findAll).toHaveBeenCalledWith(query);
+      expect(result).toEqual(expected);
+    });
+  });
+
+  describe('getSimpleList', () => {
+    it('filtra por group quando getSessionGroupId retorna groupId', async () => {
+      mockGetSessionGroupId.mockReturnValue(8n);
+      iamClient.getGroupMemberIds.mockResolvedValue([2n, 4n]);
+      userRepo.findAllSimple!.mockResolvedValue({ data: [] });
+
+      await service.getSimpleList({} as any);
+
+      expect(iamClient.getGroupMemberIds).toHaveBeenCalledWith('8');
+      expect(userRepo.findAllSimple).toHaveBeenCalledWith(
+        expect.objectContaining({ userIds: [2n, 4n] }),
+      );
+    });
+
+    it('retorna vazio quando group sem membros', async () => {
+      mockGetSessionGroupId.mockReturnValue(8n);
+      iamClient.getGroupMemberIds.mockResolvedValue([]);
+
+      const result = await service.getSimpleList({} as any);
+
+      expect(userRepo.findAllSimple).not.toHaveBeenCalled();
+      expect(result.data).toEqual([]);
+    });
+
+    it('não filtra quando system context', async () => {
+      mockGetSessionGroupId.mockReturnValue(null);
+      userRepo.findAllSimple!.mockResolvedValue({ data: [] });
+      const query = { limit: 50 };
+
+      await service.getSimpleList(query as any);
+
+      expect(userRepo.findAllSimple).toHaveBeenCalledWith(query);
     });
   });
 
