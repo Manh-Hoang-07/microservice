@@ -161,8 +161,8 @@ export class GroupRepository {
   removeMember(groupId: string | bigint, userId: string | bigint, tx: Tx = this.prisma) {
     const gid = toPrimaryKey(groupId);
     const uid = toPrimaryKey(userId);
-    return tx.userGroup.delete({
-      where: { userId_groupId: { userId: uid, groupId: gid } },
+    return tx.userGroup.deleteMany({
+      where: { userId: uid, groupId: gid },
     });
   }
 }
