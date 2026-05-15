@@ -24,7 +24,7 @@ export interface IRepository<T> {
  * Nhận flat query object: { page, limit, sort, search, status, ... }
  * Repository.findAll() cũng nhận thẳng flat query này.
  */
-export abstract class ListService<T, R extends IRepository<T>> {
+export abstract class ListService<R extends IRepository<any>, T = R extends IRepository<infer U> ? U : never> {
   constructor(protected readonly repository: R) {}
 
   /**

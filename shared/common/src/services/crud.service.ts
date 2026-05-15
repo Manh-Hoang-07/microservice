@@ -5,7 +5,7 @@ import { IRepository, ListService } from './list.service';
  * Extends ListService với đầy đủ CRUD: create, update, delete.
  * Kế thừa khi service cần admin CRUD (thêm, sửa, xóa).
  */
-export abstract class CrudService<T, R extends IRepository<T>> extends ListService<T, R> {
+export abstract class CrudService<R extends IRepository<any>, T = R extends IRepository<infer U> ? U : never> extends ListService<R, T> {
   protected async beforeCreate(data: any): Promise<any> {
     return { ...data };
   }

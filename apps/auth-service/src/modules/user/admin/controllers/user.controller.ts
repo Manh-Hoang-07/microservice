@@ -9,7 +9,7 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminUserService } from '../services/user.service';
 import { UserQueryDto } from '../dtos/user-query.dto';
@@ -45,9 +45,7 @@ export class AdminUserController {
   @Permission('user.manage')
   @Post()
   create(@Body() dto: CreateUserDto) {
-    const ctx = session()!;
-    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
-    return this.adminUserService.create(dto, actorId);
+    return this.adminUserService.create(dto);
   }
 
   @Permission('user.manage')
@@ -56,9 +54,7 @@ export class AdminUserController {
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
   ) {
-    const ctx = session()!;
-    const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
-    return this.adminUserService.update(toPrimaryKey(id), dto, actorId);
+    return this.adminUserService.update(toPrimaryKey(id), dto);
   }
 
   @Permission('user.manage')

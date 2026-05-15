@@ -1,52 +1,33 @@
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
-import { getSessionGroupId } from '@package/common';
+import { GroupAwareService, getSessionUserId } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { UserAdminRepository } from '../../repositories/user-admin.repository';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import { UpdateUserDto } from '../dtos/update-user.dto';
 import { AdminChangePasswordDto } from '../dtos/admin-change-password.dto';
 import { ChangeStatusDto } from '../dtos/change-status.dto';
-import { UserQueryDto } from '../dtos/user-query.dto';
 
 @Injectable()
-export class AdminUserService {
+export class AdminUserService extends GroupAwareService<UserAdminRepository> {
   constructor(
     private readonly userRepo: UserAdminRepository,
     private readonly configService: ConfigService,
-  ) {}
-
-  async getList(query: UserQueryDto) {
-    const sessionGroupId = getSessionGroupId();
-    if (sessionGroupId) {
-      query = { ...query, groupId: String(sessionGroupId) };
-    }
-    const { data, meta } = await this.userRepo.findAll(query);
-    return { data, meta };
+  ) {
+    super(userRepo);
   }
 
-  async getSimpleList(query: UserQueryDto) {
-    const sessionGroupId = getSessionGroupId();
-    if (sessionGroupId) {
-      return this.userRepo.findAllSimple({ ...query, groupId: String(sessionGroupId) });
-    }
-    return this.userRepo.findAllSimple(query);
+  protected transform(entity: any) {
+    if (!entity) return entity;
+    const { password, rememberToken, ...rest } = entity;
+    return rest;
   }
 
-  async getOne(id: PrimaryKey) {
-    const user = await this.userRepo.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return this.sanitize(user);
-  }
-
-  async create(dto: CreateUserDto, actorId?: PrimaryKey) {
+  async create(dto: CreateUserDto) {
     await this.assertUnique({
       email: dto.email,
       username: dto.username,
@@ -56,9 +37,10 @@ export class AdminUserService {
     const rounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
     const hashedPassword = await bcrypt.hash(dto.password, rounds);
 
+    const actorId = getSessionUserId();
     const { profile: profileDto, ...rest } = dto;
     const profileData = profileDto
-      ? this.buildProfileData(profileDto, actorId)
+      ? this.buildProfileData(profileDto)
       : undefined;
 
     const user = await this.userRepo.createWithProfile(
@@ -69,7 +51,7 @@ export class AdminUserService {
     return this.getOne(user.id);
   }
 
-  async update(id: bigint, dto: UpdateUserDto, actorId?: PrimaryKey) {
+  async update(id: bigint, dto: UpdateUserDto) {
     await this.getOne(id);
 
     await this.assertUnique(
@@ -77,6 +59,7 @@ export class AdminUserService {
       id,
     );
 
+    const actorId = getSessionUserId();
     const { profile: profileDto, password, ...rest } = dto;
     const updateData: Record<string, any> = { ...rest, updatedUserId: actorId };
 
@@ -86,11 +69,10 @@ export class AdminUserService {
     }
 
     const profileData = profileDto
-      ? this.buildProfileData(profileDto, actorId)
+      ? this.buildProfileData(profileDto)
       : undefined;
 
     await this.userRepo.updateWithProfile(id, updateData, profileData);
-
     return this.getOne(id);
   }
 
@@ -126,20 +108,13 @@ export class AdminUserService {
     }
   }
 
-  private buildProfileData(
-    profile: Record<string, any>,
-    actorId?: PrimaryKey,
-  ): Record<string, any> {
+  private buildProfileData(profile: Record<string, any>): Record<string, any> {
     const data: Record<string, any> = { ...profile };
+    const actorId = getSessionUserId();
     if (actorId) {
       data.createdUserId = actorId;
       data.updatedUserId = actorId;
     }
     return data;
-  }
-
-  private sanitize(user: Record<string, any>) {
-    const { password, rememberToken, ...rest } = user;
-    return rest;
   }
 }

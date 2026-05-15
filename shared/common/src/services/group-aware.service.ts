@@ -11,7 +11,7 @@ import { getSessionGroupId } from '../session/group-filter.helper';
  * Subclass override `applyGroupFilter` để tùy chỉnh cách merge (ví dụ:
  * Prisma relation filter `userGroups.some` thay vì field `groupId` đơn giản).
  */
-export abstract class GroupAwareService<T, R extends IRepository<T>> extends CrudService<T, R> {
+export abstract class GroupAwareService<R extends IRepository<any>, T = R extends IRepository<infer U> ? U : never> extends CrudService<R, T> {
   /**
    * Merge groupId vào filter object.
    * Default: thêm field `groupId` dạng string.

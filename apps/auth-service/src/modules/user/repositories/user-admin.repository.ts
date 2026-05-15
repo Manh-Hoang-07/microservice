@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { PrimaryKey, toPrimaryKey } from 'src/types';
-import { parseQueryOptions, createPaginationMeta } from '@package/common';
+import { IPaginatedResult, parseQueryOptions, createPaginationMeta } from '@package/common';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -37,6 +37,11 @@ const DETAIL_SELECT = {
   profile: true,
 } satisfies Prisma.UserSelect;
 
+/** Kiểu entity đầy đủ trả về bởi findById (DETAIL_SELECT). profile optional vì create/update không include relation. */
+export type UserAdminEntity =
+  Omit<Prisma.UserGetPayload<{ select: typeof DETAIL_SELECT }>, 'profile'> &
+  { profile?: Prisma.UserGetPayload<{ select: typeof DETAIL_SELECT }>['profile'] };
+
 const SIMPLE_SELECT = {
   id: true,
   name: true,
@@ -49,7 +54,7 @@ const SIMPLE_SELECT = {
 export class UserAdminRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: Record<string, any>) {
+  async findAll(query: Record<string, any>): Promise<IPaginatedResult<UserAdminEntity>> {
     const options = parseQueryOptions(query);
     const where = this.buildWhere(query);
     const orderBy = this.buildOrderBy(query.sort);
@@ -68,7 +73,7 @@ export class UserAdminRepository {
     ]);
 
     const meta = createPaginationMeta(options, total);
-    return { data, meta };
+    return { data: data as unknown as UserAdminEntity[], meta };
   }
 
   async findAllSimple(query: Record<string, any>) {
@@ -84,11 +89,11 @@ export class UserAdminRepository {
     return { data };
   }
 
-  findById(id: PrimaryKey) {
+  findById(id: PrimaryKey): Promise<UserAdminEntity | null> {
     return this.prisma.user.findUnique({
       where: { id },
       select: DETAIL_SELECT,
-    });
+    }) as Promise<UserAdminEntity | null>;
   }
 
   findByIdWithPassword(id: PrimaryKey) {
@@ -148,6 +153,10 @@ export class UserAdminRepository {
         await this.upsertProfile(id, profileData, tx);
       }
     });
+  }
+
+  findSimple(query: Record<string, any>): Promise<{ data: UserAdminEntity[] }> {
+    return this.findAllSimple(query) as Promise<{ data: UserAdminEntity[] }>;
   }
 
   delete(id: PrimaryKey) {
