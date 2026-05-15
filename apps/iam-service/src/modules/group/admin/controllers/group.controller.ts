@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { GroupService } from '../services/group.service';
 import { CreateGroupDto } from '../dtos/create-group.dto';
@@ -26,15 +26,13 @@ export class GroupController {
   @Permission('group.manage')
   @Post()
   create(@Body() dto: CreateGroupDto) {
-    const ctx = session()!;
-    return this.service.create(dto, toPrimaryKey(ctx.userId!));
+    return this.service.create(dto);
   }
 
   @Permission('group.manage')
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateGroupDto) {
-    const ctx = session()!;
-    return this.service.update(toPrimaryKey(id), dto, toPrimaryKey(ctx.userId!));
+    return this.service.update(toPrimaryKey(id), dto);
   }
 
   @Permission('group.manage')

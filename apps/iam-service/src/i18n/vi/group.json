@@ -3,5 +3,10 @@
   "CODE_EXISTS": "Mã nhóm đã tồn tại.",
   "DELETED": "Xóa nhóm thành công.",
   "MEMBER_ADDED": "Thêm thành viên thành công.",
-  "MEMBER_REMOVED": "Xóa thành viên thành công."
+  "MEMBER_REMOVED": "Xóa thành viên thành công.",
+  "NOT_OWNER": "Bạn không phải chủ nhóm này.",
+  "ROLE_NOT_IN_CONTEXT": "Vai trò không thuộc phạm vi của nhóm này.",
+  "MEMBER_NOT_FOUND": "Người dùng không phải thành viên của nhóm.",
+  "ROLE_ASSIGNED": "Gán vai trò thành công.",
+  "ROLE_REVOKED": "Thu hồi vai trò thành công."
 }

@@ -1,11 +1,33 @@
 // ---------------------------------------------------------------------------
 // Module mocks -- must come before any import
 // ---------------------------------------------------------------------------
-jest.mock('@package/common', () => ({
-  t: (_i18n: any, key: string) => key,
-  parseQueryOptions: jest.fn((q: any) => ({ skip: 0, take: 10, orderBy: {} })),
-  createPaginationMeta: jest.fn((_opts, total) => ({ total })),
-}));
+jest.mock('@package/common', () => {
+  class CrudService {
+    constructor(protected readonly repository: any) {}
+    protected async prepareFilters(q) { return q; }
+    protected prepareQuery(q) { return { page: 1, limit: 10, ...q }; }
+    async getList(q = {}) {
+      const normalized = this.prepareQuery(q);
+      const filtered = await this.prepareFilters(normalized);
+      if (filtered === false) return { data: [], meta: { total: 0 } };
+      return this.repository.findAll(filtered);
+    }
+    async getOne(id) {
+      const entity = await this.repository.findById(id);
+      if (!entity) { const e: any = new Error('Not found'); e.status = 404; throw e; }
+      return entity;
+    }
+    protected transform(e) { return e; }
+  }
+
+  return {
+    t: (_, key) => key,
+    CrudService,
+    parseQueryOptions: jest.fn(() => ({ skip: 0, take: 10 })),
+    createPaginationMeta: jest.fn((_, total) => ({ total })),
+    getSessionUserId: jest.fn().mockReturnValue(BigInt(100)),
+  };
+});
 
 jest.mock('@package/bootstrap', () => ({ FileLogger: jest.fn() }));
 
@@ -15,57 +37,32 @@ jest.mock('nestjs-i18n', () => ({
 }));
 
 jest.mock('src/types', () => ({
-  toPrimaryKey: (v: string) => BigInt(v),
+  toPrimaryKey: (v) => BigInt(v),
 }), { virtual: true });
 
-jest.mock('src/generated/prisma', () => ({
-  PrismaClient: jest.fn(),
-  Prisma: {},
-}), { virtual: true });
-
-jest.mock('@prisma/adapter-pg', () => ({
-  PrismaPg: jest.fn(),
-}));
-
-jest.mock('../../../../../src/core/database/prisma.service', () => ({
-  PrismaService: jest.fn(),
-}));
-
-jest.mock('../../../../../src/modules/group/repositories/group.repository', () => ({
-  GroupRepository: jest.fn(),
-}));
-
-jest.mock('../../../../../src/rbac/services/rbac-cache.service', () => ({
-  RbacCacheService: jest.fn(),
-}));
-
-jest.mock('@package/redis', () => ({
-  RedisService: jest.fn(),
-}));
-
-jest.mock('../../../../../src/rbac/repositories/rbac.repository', () => ({
-  RbacRepository: jest.fn(),
-}));
-
-jest.mock('../../../../../src/kafka/services/rbac-event-publisher.service', () => ({
-  RbacEventPublisher: jest.fn(),
-}));
+jest.mock('src/generated/prisma', () => ({ PrismaClient: jest.fn(), Prisma: {} }), { virtual: true });
+jest.mock('@prisma/adapter-pg', () => ({ PrismaPg: jest.fn() }));
+jest.mock('../../../../../src/core/database/prisma.service', () => ({ PrismaService: jest.fn() }));
+jest.mock('../../../../../src/modules/group/repositories/group.repository', () => ({ GroupRepository: jest.fn() }));
+jest.mock('../../../../../src/rbac/services/rbac-cache.service', () => ({ RbacCacheService: jest.fn() }));
+jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('../../../../../src/rbac/repositories/rbac.repository', () => ({ RbacRepository: jest.fn() }));
 
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { GroupService } from '../../../../../src/modules/group/admin/services/group.service';
+import { getSessionUserId } from '@package/common';
+
+const mockGetSessionUserId = getSessionUserId as jest.Mock;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const MOCK_TX = {} as any;
-
 function makeMockRepo() {
   return {
-    findMany: jest.fn(),
-    count: jest.fn(),
+    findAll: jest.fn().mockResolvedValue({ data: [], meta: { total: 0 } }),
     findById: jest.fn(),
     findByCode: jest.fn(),
     create: jest.fn(),
@@ -75,172 +72,136 @@ function makeMockRepo() {
     countMembers: jest.fn(),
     addMember: jest.fn(),
     removeMember: jest.fn(),
-    withTransaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => fn(MOCK_TX)),
-  };
-}
-
-function makeMockRbacCache() {
-  return {
-    bumpVersion: jest.fn().mockResolvedValue(undefined),
-    clearAllUserCaches: jest.fn().mockResolvedValue(undefined),
-  };
-}
-
-function makeMockI18n() {
-  return {} as any;
-}
-
-function makeMockEventPublisher() {
-  return {
-    publishGroupMemberAdded: jest.fn().mockResolvedValue(undefined),
-    publishGroupMemberRemoved: jest.fn().mockResolvedValue(undefined),
-    publishGroupDeleted: jest.fn().mockResolvedValue(undefined),
   };
 }
 
 function createService(overrides: Record<string, any> = {}) {
   const repo = overrides.repo ?? makeMockRepo();
-  const rbacCache = overrides.rbacCache ?? makeMockRbacCache();
-  const i18n = overrides.i18n ?? makeMockI18n();
-  const eventPublisher = overrides.eventPublisher ?? makeMockEventPublisher();
-
-  const service = new (GroupService as any)(repo, rbacCache, i18n, eventPublisher);
-  return { service, repo, rbacCache, i18n, eventPublisher };
+  const rbacCache = overrides.rbacCache ?? {
+    bumpVersion: jest.fn().mockResolvedValue(undefined),
+    clearAllUserCaches: jest.fn().mockResolvedValue(undefined),
+  };
+  const i18n = {} as any;
+  const service = new GroupService(repo as any, rbacCache as any, i18n);
+  return { service, repo, rbacCache };
 }
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 describe('GroupService', () => {
+  beforeEach(() => mockGetSessionUserId.mockReturnValue(BigInt(100)));
+  afterEach(() => jest.clearAllMocks());
+
   // --- getOne ---
   describe('getOne', () => {
-    it('should return the group when found', async () => {
+    it('returns the group when found', async () => {
       const { service, repo } = createService();
       const group = { id: BigInt(1), code: 'team-a', name: 'Team A' };
       repo.findById.mockResolvedValue(group);
-
       const result = await service.getOne(BigInt(1));
       expect(result).toEqual(group);
     });
 
-    it('should throw NotFoundException when not found', async () => {
+    it('throws NotFoundException when not found', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue(null);
-
       await expect(service.getOne(BigInt(999))).rejects.toThrow(NotFoundException);
     });
   });
 
   // --- create ---
   describe('create', () => {
-    it('should create a group when code is unique', async () => {
+    it('creates a group when code is unique', async () => {
       const { service, repo } = createService();
       repo.findByCode.mockResolvedValue(null);
       const created = { id: BigInt(1), code: 'team-b' };
       repo.create.mockResolvedValue(created);
 
-      const result = await service.create(
-        { type: 'team', code: 'team-b', name: 'Team B', context_id: BigInt(1) } as any,
-        BigInt(100),
-      );
+      const result = await service.create({ type: 'team', code: 'team-b', name: 'Team B', contextId: '1' } as any);
       expect(result).toEqual(created);
+      expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ createdUserId: BigInt(100) }));
     });
 
-    it('should throw ConflictException when code exists', async () => {
+    it('throws ConflictException when code exists', async () => {
       const { service, repo } = createService();
       repo.findByCode.mockResolvedValue({ id: BigInt(1) });
-
-      await expect(
-        service.create({ code: 'dup' } as any, BigInt(100)),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.create({ code: 'dup' } as any)).rejects.toThrow(ConflictException);
     });
 
-    it('should include owner_id when provided', async () => {
+    it('includes ownerId when provided', async () => {
       const { service, repo } = createService();
       repo.findByCode.mockResolvedValue(null);
       repo.create.mockResolvedValue({ id: BigInt(1) });
 
-      await service.create(
-        { type: 'team', code: 'x', name: 'X', contextId: '1', ownerId: '50' } as any,
-        BigInt(100),
-      );
-      expect(repo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ ownerId: '50' }),
-      );
+      await service.create({ type: 'team', code: 'x', name: 'X', contextId: '1', ownerId: '50' } as any);
+      expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ ownerId: '50' }));
     });
   });
 
   // --- update ---
   describe('update', () => {
-    it('should update the group', async () => {
+    it('updates the group and returns result', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1), name: 'Updated' });
 
-      const result = await service.update(BigInt(1), { name: 'Updated' } as any, BigInt(100));
+      const result = await service.update(BigInt(1), { name: 'Updated' } as any);
       expect(result.name).toBe('Updated');
+      expect(repo.update).toHaveBeenCalledWith(BigInt(1), expect.objectContaining({ updatedUserId: BigInt(100) }));
     });
 
-    it('should bump cache when status changes', async () => {
+    it('bumps cache when status changes', async () => {
       const { service, repo, rbacCache } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
-      await service.update(BigInt(1), { status: 'inactive' } as any, BigInt(100));
+      await service.update(BigInt(1), { status: 'inactive' } as any);
       expect(rbacCache.bumpVersion).toHaveBeenCalled();
     });
 
-    it('should not bump cache when status is unchanged', async () => {
+    it('does not bump cache when status is unchanged', async () => {
       const { service, repo, rbacCache } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
-      await service.update(BigInt(1), { name: 'New Name' } as any, BigInt(100));
+      await service.update(BigInt(1), { name: 'New Name' } as any);
       expect(rbacCache.bumpVersion).not.toHaveBeenCalled();
     });
 
-    it('should nullify owner_id when explicitly set to falsy', async () => {
+    it('nullifies ownerId when explicitly set to falsy', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
-      await service.update(BigInt(1), { ownerId: null } as any, BigInt(100));
-      expect(repo.update).toHaveBeenCalledWith(
-        BigInt(1),
-        expect.objectContaining({ ownerId: null }),
-      );
+      await service.update(BigInt(1), { ownerId: null } as any);
+      expect(repo.update).toHaveBeenCalledWith(BigInt(1), expect.objectContaining({ ownerId: null }));
     });
   });
 
   // --- delete ---
   describe('delete', () => {
-    it('should delete, publish event, and bump cache', async () => {
-      const { service, repo, rbacCache, eventPublisher } = createService();
+    it('deletes and bumps cache', async () => {
+      const { service, repo, rbacCache } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
+      repo.delete.mockResolvedValue({});
 
       const result = await service.delete(BigInt(1));
-
       expect(result.message).toBe('group.DELETED');
-      expect(repo.withTransaction).toHaveBeenCalled();
-      expect(repo.delete).toHaveBeenCalledWith(BigInt(1), MOCK_TX);
-      expect(eventPublisher.publishGroupDeleted).toHaveBeenCalledWith(
-        { groupId: BigInt(1) },
-        MOCK_TX,
-      );
+      expect(repo.delete).toHaveBeenCalledWith(BigInt(1));
       expect(rbacCache.bumpVersion).toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException when not found', async () => {
+    it('throws NotFoundException when not found', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue(null);
-
       await expect(service.delete(BigInt(999))).rejects.toThrow(NotFoundException);
     });
   });
 
   // --- getMembers ---
   describe('getMembers', () => {
-    it('should return paginated members', async () => {
+    it('returns paginated members', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.getMembers.mockResolvedValue([{ userId: 'u1' }]);
@@ -254,38 +215,26 @@ describe('GroupService', () => {
 
   // --- addMember ---
   describe('addMember', () => {
-    it('should call withTransaction, pass tx to addMember and publishGroupMemberAdded, then clear cache', async () => {
-      const { service, repo, rbacCache, eventPublisher } = createService();
+    it('adds member and clears cache', async () => {
+      const { service, repo, rbacCache } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
 
       const result = await service.addMember(BigInt(1), { userId: BigInt(42) } as any);
-
       expect(result.message).toBe('group.MEMBER_ADDED');
-      expect(repo.withTransaction).toHaveBeenCalled();
-      expect(repo.addMember).toHaveBeenCalledWith(BigInt(1), BigInt(42), MOCK_TX);
-      expect(eventPublisher.publishGroupMemberAdded).toHaveBeenCalledWith(
-        { groupId: BigInt(1), userId: BigInt(42) },
-        MOCK_TX,
-      );
+      expect(repo.addMember).toHaveBeenCalledWith(BigInt(1), BigInt(42));
       expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(42));
     });
   });
 
   // --- removeMember ---
   describe('removeMember', () => {
-    it('should call withTransaction, pass tx to removeMember and publishGroupMemberRemoved, then clear cache', async () => {
-      const { service, repo, rbacCache, eventPublisher } = createService();
+    it('removes member and clears cache', async () => {
+      const { service, repo, rbacCache } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
 
       const result = await service.removeMember(BigInt(1), BigInt(42));
-
       expect(result.message).toBe('group.MEMBER_REMOVED');
-      expect(repo.withTransaction).toHaveBeenCalled();
-      expect(repo.removeMember).toHaveBeenCalledWith(BigInt(1), BigInt(42), MOCK_TX);
-      expect(eventPublisher.publishGroupMemberRemoved).toHaveBeenCalledWith(
-        { groupId: BigInt(1), userId: BigInt(42) },
-        MOCK_TX,
-      );
+      expect(repo.removeMember).toHaveBeenCalledWith(BigInt(1), BigInt(42));
       expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(42));
     });
   });

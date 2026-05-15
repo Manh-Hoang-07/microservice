@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
+import { createPaginationMeta } from '@package/common';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { toPrimaryKey } from 'src/types';
 
@@ -10,6 +11,7 @@ export interface GroupFilter {
   type?: string;
   status?: string;
   contextId?: any;
+  ownerId?: any;
 }
 
 const LIST_SELECT = {
@@ -56,6 +58,10 @@ export class GroupRepository {
       andConditions.push({ contextId: toPrimaryKey(filter.contextId) });
     }
 
+    if (filter.ownerId) {
+      andConditions.push({ ownerId: toPrimaryKey(filter.ownerId) });
+    }
+
     if (andConditions.length > 0) {
       where.AND = andConditions;
     }
@@ -75,6 +81,33 @@ export class GroupRepository {
 
   count(filter: GroupFilter) {
     return this.prisma.group.count({ where: this.buildWhere(filter) });
+  }
+
+  private static readonly ALLOWED_SORT_FIELDS = new Set(['id', 'code', 'name', 'status', 'createdAt']);
+
+  async findAll(query: Record<string, any> = {}): Promise<{ data: any[]; meta: any }> {
+    const page = Math.max(Number(query.page) || 1, 1);
+    const take = Math.min(Math.max(Number(query.limit) || 10, 1), 100);
+    const skip = (page - 1) * take;
+
+    const [rawField, rawDir] = String(query.sort || 'createdAt:desc').split(':');
+    const sortField = GroupRepository.ALLOWED_SORT_FIELDS.has(rawField) ? rawField : 'createdAt';
+    const orderBy = { [sortField]: rawDir?.toLowerCase() === 'asc' ? 'asc' : 'desc' };
+
+    const filter: GroupFilter = {};
+    if (query.search) filter.search = String(query.search).slice(0, 100);
+    if (query.type) filter.type = query.type;
+    if (query.status) filter.status = query.status;
+    if (query.contextId) filter.contextId = query.contextId;
+    if (query.ownerId) filter.ownerId = query.ownerId;
+
+    const skipCount = query.skipCount === 'true';
+    const [data, total] = await Promise.all([
+      this.findMany(filter, { skip, take, orderBy }),
+      skipCount ? Promise.resolve(0) : this.count(filter),
+    ]);
+
+    return { data, meta: createPaginationMeta({ page, skip, take }, total) };
   }
 
   findById(id: string | bigint) {

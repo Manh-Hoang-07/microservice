@@ -3,5 +3,10 @@
   "CODE_EXISTS": "Group code already exists.",
   "DELETED": "Group deleted successfully.",
   "MEMBER_ADDED": "Member added successfully.",
-  "MEMBER_REMOVED": "Member removed successfully."
+  "MEMBER_REMOVED": "Member removed successfully.",
+  "NOT_OWNER": "You are not the owner of this group.",
+  "ROLE_NOT_IN_CONTEXT": "Role does not belong to this group's context.",
+  "MEMBER_NOT_FOUND": "User is not a member of this group.",
+  "ROLE_ASSIGNED": "Role assigned successfully.",
+  "ROLE_REVOKED": "Role revoked successfully."
 }
