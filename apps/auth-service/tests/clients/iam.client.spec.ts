@@ -28,67 +28,59 @@ function makeClient(overrides: { baseUrl?: string; redisGet?: any; redisSet?: an
   return { client, redis };
 }
 
-describe('IamClient.getGroupMemberIds', () => {
+describe('IamClient.checkPermissions', () => {
   afterEach(() => jest.clearAllMocks());
 
-  it('retorna userIds do cache Redis quando disponível', async () => {
+  it('retorna resultado do cache Redis quando disponível', async () => {
     const { client, redis } = makeClient({
-      redisGet: jest.fn().mockResolvedValue(JSON.stringify(['1', '3', '7'])),
+      redisGet: jest.fn().mockResolvedValue(JSON.stringify({ allowed: true })),
     });
 
-    const result = await client.getGroupMemberIds('5');
+    const result = await client.checkPermissions('user-1', ['users.manage']);
 
-    expect(redis.get).toHaveBeenCalledWith('group:members:5');
-    expect(result).toEqual([1n, 3n, 7n]);
+    expect(redis.get).toHaveBeenCalled();
+    expect(result).toBe(true);
   });
 
-  it('chỉ gọi fetch khi cache miss, armazenar resultado no Redis', async () => {
+  it('chama IAM quando cache miss e armazena resultado', async () => {
     const { client, redis } = makeClient();
-    const mockFetch = jest.fn().mockResolvedValue({
+    global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { userIds: ['1', '2'] } }),
-    });
-    global.fetch = mockFetch as any;
+      json: async () => ({ data: { allowed: true } }),
+    }) as any;
 
-    const result = await client.getGroupMemberIds('5');
+    const result = await client.checkPermissions('user-1', ['users.manage'], 'group-5');
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://iam:3002/internal/groups/5/member-ids',
-      expect.objectContaining({
-        method: 'GET',
-        headers: expect.objectContaining({ 'x-internal-secret': 'secret-key' }),
-      }),
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://iam:3002/internal/rbac/check',
+      expect.objectContaining({ method: 'POST' }),
     );
-    expect(redis.set).toHaveBeenCalledWith(
-      'group:members:5',
-      JSON.stringify(['1', '2']),
-      120,
-    );
-    expect(result).toEqual([1n, 2n]);
+    expect(redis.set).toHaveBeenCalled();
+    expect(result).toBe(true);
   });
 
-  it('retorna [] quando IAM retorna lista vazia', async () => {
+  it('retorna false quando IAM retorna allowed=false', async () => {
     const { client } = makeClient();
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { userIds: [] } }),
+      json: async () => ({ data: { allowed: false } }),
     }) as any;
 
-    const result = await client.getGroupMemberIds('99');
-    expect(result).toEqual([]);
+    const result = await client.checkPermissions('user-1', ['users.delete']);
+    expect(result).toBe(false);
   });
 
-  it('continua quando Redis está indisponível (cache miss)', async () => {
+  it('continua quando Redis está indisponível', async () => {
     const { client } = makeClient({
       redisGet: jest.fn().mockRejectedValue(new Error('Redis down')),
       redisSet: jest.fn().mockRejectedValue(new Error('Redis down')),
     });
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { userIds: ['5'] } }),
+      json: async () => ({ data: { allowed: true } }),
     }) as any;
 
-    const result = await client.getGroupMemberIds('1');
-    expect(result).toEqual([5n]);
+    const result = await client.checkPermissions('user-1', ['users.manage']);
+    expect(result).toBe(true);
   });
 });

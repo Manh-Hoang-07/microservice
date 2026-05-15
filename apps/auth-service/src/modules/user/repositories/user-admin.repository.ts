@@ -228,6 +228,12 @@ export class UserAdminRepository {
       andConditions.push({ phone: query.phone });
     }
 
+    if (query.groupId) {
+      andConditions.push({
+        userGroups: { some: { groupId: BigInt(query.groupId) } },
+      });
+    }
+
     if (query.userIds?.length) {
       andConditions.push({ id: { in: query.userIds } });
     }

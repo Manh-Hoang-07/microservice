@@ -14,4 +14,8 @@ export class UserQueryDto extends BaseListQueryDto {
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
+
+  @IsOptional()
+  @IsString()
+  groupId?: string;
 }
