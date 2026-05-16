@@ -2,7 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '@package/redis';
 import { decodeAssignedCodes, encodeAssignedCodes } from './rbac-assigned-codes.codec';
-import { RbacId, NullableRbacId } from '../types';
+import { RbacId } from '../types';
 
 const LEGACY_ASSIGNED_BITMAP_PREFIX = 'b64:v1:' as const;
 
@@ -22,8 +22,6 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
   ) {
     this.ttlSeconds = Number(this.configService.get('RBAC_CACHE_TTL') || 86400);
-    // Default 2s — short enough that a missed pubsub message leaves the
-    // window of stale auth small, long enough to avoid pummeling Redis.
     this.versionTtlMs = Number(
       this.configService.get('RBAC_CACHE_VERSION_TTL_MS') || 2000,
     );
@@ -53,8 +51,6 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    // Detach the subscriber so its closure doesn't pin `this` across
-    // hot-reload tests / multi-tenant module destruction.
     if (this.subscriberCallback) {
       await this.redis
         .unsubscribe(this.invalidationChannel, this.subscriberCallback)
@@ -63,7 +59,6 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Tracked-keys set is namespaced per version so old generations expire on their own. */
   private trackedKeysSet(userId: RbacId, version: number): string {
     return `rbac:v${version}:u:${userId}:keys`;
   }
@@ -78,19 +73,14 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     return this.version;
   }
 
-  private async buildCacheKey(userId: RbacId, groupId: NullableRbacId): Promise<string> {
+  private async buildCacheKey(userId: RbacId): Promise<string> {
     const v = await this.ensureVersion();
-    return groupId === null
-      ? `rbac:v${v}:u:${userId}:g:system`
-      : `rbac:v${v}:u:${userId}:g:${groupId}`;
+    return `rbac:v${v}:u:${userId}`;
   }
 
-  async getPermissions(
-    userId: RbacId,
-    groupId: NullableRbacId,
-  ): Promise<{ codes: string[]; cached: boolean }> {
+  async getPermissions(userId: RbacId): Promise<{ codes: string[]; cached: boolean }> {
     if (!this.redis.isEnabled()) return { codes: [], cached: false };
-    const key = await this.buildCacheKey(userId, groupId);
+    const key = await this.buildCacheKey(userId);
     const raw = await this.redis.get(key);
     if (raw) {
       if (typeof raw === 'string' && raw.startsWith(LEGACY_ASSIGNED_BITMAP_PREFIX)) {
@@ -104,13 +94,10 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     return { codes: [], cached: false };
   }
 
-  async setPermissions(userId: RbacId, groupId: NullableRbacId, codes: string[]) {
+  async setPermissions(userId: RbacId, codes: string[]) {
     if (!this.redis.isEnabled()) return;
     const v = await this.ensureVersion();
-    const key =
-      groupId === null
-        ? `rbac:v${v}:u:${userId}:g:system`
-        : `rbac:v${v}:u:${userId}:g:${groupId}`;
+    const key = `rbac:v${v}:u:${userId}`;
     await this.redis.multi([
       ['SET', key, encodeAssignedCodes(codes), 'EX', this.ttlSeconds],
       ['SADD', this.trackedKeysSet(userId, v), key],
@@ -118,16 +105,12 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     ]);
   }
 
-  async clearUserCache(userId: RbacId, groupId: NullableRbacId) {
+  async clearUserCache(userId: RbacId) {
     if (!this.redis.isEnabled()) return;
-    const key = await this.buildCacheKey(userId, groupId);
+    const key = await this.buildCacheKey(userId);
     await this.redis.del(key);
   }
 
-  /**
-   * Atomically rename the tracked-set so any concurrent setPermissions cannot
-   * leak entries past the clear; then unlink the snapshot's keys in bulk.
-   */
   async clearAllUserCaches(userId: RbacId) {
     if (!this.redis.isEnabled()) return;
     const v = await this.ensureVersion();
@@ -136,7 +119,6 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.redis.multi([['RENAME', trackedSet, snapshotKey]]);
     } catch {
-      // No tracked entries — nothing to clear.
       await this.redis.publish(
         this.invalidationChannel,
         JSON.stringify({ type: 'user_all', userId: String(userId) }),
@@ -152,11 +134,6 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  /**
-   * Cache version bump — every read computes its key under the new version,
-   * so any concurrent stale write lands on the previous generation key
-   * (orphaned, TTL'd out).
-   */
   async bumpVersion(): Promise<void> {
     if (!this.redis.isEnabled()) return;
     const next = await this.redis.hincrby(this.versionKey, this.versionField, 1);

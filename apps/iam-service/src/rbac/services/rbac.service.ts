@@ -6,7 +6,7 @@ import { RbacPermissionIndexService } from './rbac-permission-index.service';
 import { RbacRoleAssignmentService } from './rbac-role-assignment.service';
 import { RbacRepository } from '../repositories/rbac.repository';
 import { PERM } from '../constants/rbac.constants';
-import { RbacId, NullableRbacId } from '../types';
+import { RbacId } from '../types';
 import { toPrimaryKey } from 'src/types';
 
 function toAssignedSet(codes: Iterable<string>): Set<string> {
@@ -27,35 +27,31 @@ export class RbacService {
     private readonly i18n: I18nService,
   ) {}
 
-  async hasPermissions(
-    userId: RbacId,
-    groupId: NullableRbacId,
-    required: string[],
-  ): Promise<boolean> {
-    const assigned = await this.getPermissions(userId, groupId);
+  async hasPermissions(userId: RbacId, required: string[]): Promise<boolean> {
+    const assigned = await this.getPermissions(userId);
     return this.permissionIndexService.hasAnyRequiredFromAssigned(assigned, required);
   }
 
-  async getPermissions(userId: RbacId, groupId: NullableRbacId): Promise<Set<string>> {
-    const read = await this.rbacCache.getPermissions(userId, groupId);
+  async getPermissions(userId: RbacId): Promise<Set<string>> {
+    const read = await this.rbacCache.getPermissions(userId);
     if (read.cached) return toAssignedSet(read.codes);
-    return this.refreshPermissions(userId, groupId);
+    return this.refreshPermissions(userId);
   }
 
-  async refreshPermissions(userId: RbacId, groupId: NullableRbacId): Promise<Set<string>> {
-    const key = this.scopeKey(userId, groupId);
+  async refreshPermissions(userId: RbacId): Promise<Set<string>> {
+    const key = String(userId);
     const pending = this.refreshInFlight.get(key);
     if (pending) {
       await pending;
-      const fromCache = await this.rbacCache.getPermissions(userId, groupId);
+      const fromCache = await this.rbacCache.getPermissions(userId);
       return toAssignedSet(fromCache.codes);
     }
 
     const refreshPromise = (async () => {
       await this.permissionIndexService.prepare();
-      const codes = await this.roleAssignmentService.getActivePermissionCodes(userId, groupId);
+      const codes = await this.roleAssignmentService.getActivePermissionCodes(userId);
       const set = toAssignedSet(codes);
-      await this.rbacCache.setPermissions(userId, groupId, Array.from(set));
+      await this.rbacCache.setPermissions(userId, Array.from(set));
       return set;
     })();
 
@@ -69,36 +65,22 @@ export class RbacService {
 
   /**
    * Guard against privilege escalation: caller must already hold every
-   * permission contained in the role they want to grant. System-only
-   * permissions (e.g. `system.manage`) require the caller to hold them too.
+   * permission contained in the role they want to grant.
    */
   async assertCallerCanGrantRole(
     actorId: RbacId,
-    actorGroupId: NullableRbacId,
     roleIds: (string | bigint)[],
   ): Promise<void> {
     if (!roleIds.length) return;
     const targetCodes = await this.rbacRepo.getPermissionCodesForRoles(roleIds.map(toPrimaryKey));
     if (!targetCodes.size) return;
 
-    // System manage holders may grant anything.
-    const systemPerms = await this.getPermissions(actorId, null);
-    if (this.permissionIndexService.matchesAssigned(systemPerms, PERM.SYSTEM.MANAGE)) {
+    const callerEffective = await this.getPermissions(actorId);
+    if (this.permissionIndexService.matchesAssigned(callerEffective, PERM.SYSTEM.MANAGE)) {
       return;
     }
 
-    // Otherwise, evaluate caller's effective permissions in BOTH the system
-    // scope and the target scope, then ensure every target code is granted.
-    const scopedPerms = await this.getPermissions(actorId, actorGroupId);
-    const callerEffective = new Set<string>([...systemPerms, ...scopedPerms]);
-
     for (const code of targetCodes) {
-      // system.* requires system scope
-      if (code.startsWith('system.') && !this.permissionIndexService.matchesAssigned(systemPerms, code)) {
-        throw new ForbiddenException(
-          t(this.i18n, 'rbac.PRIVILEGE_ESCALATION_BLOCKED', { code }),
-        );
-      }
       if (!this.permissionIndexService.matchesAssigned(callerEffective, code)) {
         throw new ForbiddenException(
           t(this.i18n, 'rbac.PRIVILEGE_ESCALATION_BLOCKED', { code }),
@@ -110,23 +92,14 @@ export class RbacService {
   /** Variant of assertCallerCanGrantRole that takes raw permission codes. */
   async assertCallerCanGrantPermissionCodes(
     actorId: RbacId,
-    actorGroupId: NullableRbacId,
     targetCodes: string[],
   ): Promise<void> {
     if (!targetCodes.length) return;
 
-    const systemPerms = await this.getPermissions(actorId, null);
-    if (this.permissionIndexService.matchesAssigned(systemPerms, PERM.SYSTEM.MANAGE)) return;
-
-    const scopedPerms = await this.getPermissions(actorId, actorGroupId);
-    const callerEffective = new Set<string>([...systemPerms, ...scopedPerms]);
+    const callerEffective = await this.getPermissions(actorId);
+    if (this.permissionIndexService.matchesAssigned(callerEffective, PERM.SYSTEM.MANAGE)) return;
 
     for (const code of targetCodes) {
-      if (code.startsWith('system.') && !this.permissionIndexService.matchesAssigned(systemPerms, code)) {
-        throw new ForbiddenException(
-          t(this.i18n, 'rbac.PRIVILEGE_ESCALATION_BLOCKED', { code }),
-        );
-      }
       if (!this.permissionIndexService.matchesAssigned(callerEffective, code)) {
         throw new ForbiddenException(
           t(this.i18n, 'rbac.PRIVILEGE_ESCALATION_BLOCKED', { code }),
@@ -138,51 +111,36 @@ export class RbacService {
   async assignRoleToUser(
     userId: RbacId,
     roleId: RbacId,
-    groupId: RbacId,
-    actor: { id: RbacId; groupId: NullableRbacId },
+    actor: { id: RbacId },
   ): Promise<void> {
-    await this.assertCallerCanGrantRole(actor.id, actor.groupId, [toPrimaryKey(roleId)]);
-    await this.roleAssignmentService.assignRoleToUser(userId, roleId, groupId);
+    await this.assertCallerCanGrantRole(actor.id, [toPrimaryKey(roleId)]);
+    await this.roleAssignmentService.assignRoleToUser(userId, roleId);
     await this.rbacCache.bumpVersion();
     await this.rbacCache.clearAllUserCaches(userId);
-    await this.refreshPermissions(userId, groupId);
+    await this.refreshPermissions(userId);
   }
 
-  async syncRolesInGroup(
+  async syncUserRoles(
     userId: RbacId,
-    groupId: RbacId,
     roleIds: RbacId[],
-    actor: { id: RbacId; groupId: NullableRbacId },
-    skipValidation = false,
+    actor: { id: RbacId },
   ): Promise<void> {
     const targetIds = roleIds.map((r) => toPrimaryKey(r));
 
-    // Assert caller can grant the NEW roles
-    await this.assertCallerCanGrantRole(actor.id, actor.groupId, targetIds);
+    await this.assertCallerCanGrantRole(actor.id, targetIds);
 
-    // Assert caller can revoke the EXISTING roles BEFORE committing the sync.
-    // This prevents a low-priv actor from revoking a high-priv role by omitting it.
-    const existing = await this.rbacRepo.getExistingRoleIds(userId, groupId);
+    const existing = await this.rbacRepo.getExistingRoleIds(userId);
     if (existing.length) {
-      await this.assertCallerCanGrantRole(actor.id, actor.groupId, existing);
+      await this.assertCallerCanGrantRole(actor.id, existing);
     }
 
-    await this.roleAssignmentService.syncRolesInGroup(
-      userId,
-      groupId,
-      roleIds,
-      skipValidation,
-    );
+    await this.roleAssignmentService.syncUserRoles(userId, roleIds);
     await this.rbacCache.bumpVersion();
     await this.rbacCache.clearAllUserCaches(userId);
-    await this.refreshPermissions(userId, groupId);
+    await this.refreshPermissions(userId);
   }
 
   hasCode(assigned: Set<string>, need: string): boolean {
     return this.permissionIndexService.matchesAssigned(assigned, need);
-  }
-
-  private scopeKey(userId: RbacId, groupId: NullableRbacId): string {
-    return `${userId}:${groupId === null ? 'system' : groupId}`;
   }
 }

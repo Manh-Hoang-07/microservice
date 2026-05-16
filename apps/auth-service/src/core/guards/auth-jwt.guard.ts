@@ -88,9 +88,8 @@ export class AuthJwtGuard implements CanActivate {
       return true;
     }
 
-    const groupId = (request.headers['x-group-id'] as string) || undefined;
     try {
-      const allowed = await this.iamClient.checkPermissions(String(request.user.sub), permissions, groupId);
+      const allowed = await this.iamClient.checkPermissions(String(request.user.sub), permissions);
       if (!allowed) throw new ForbiddenException(t(this.i18n, 'auth.PERMISSION_DENIED'));
     } catch (err) {
       if (err instanceof ForbiddenException) throw err;

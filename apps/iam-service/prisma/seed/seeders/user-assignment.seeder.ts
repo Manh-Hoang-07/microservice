@@ -9,8 +9,8 @@ const usersData = JSON.parse(
 interface UserEntry {
   user_id: number;
   username: string;
-  group_code: string;
-  role_code: string;
+  group_code?: string;
+  role_code?: string;
 }
 
 export async function seedUserAssignments(
@@ -21,35 +21,38 @@ export async function seedUserAssignments(
   const users = usersData as UserEntry[];
 
   for (const user of users) {
-    if (!user.group_code || !user.role_code) continue;
-
     const userId = BigInt(user.user_id);
-    const groupId = groupMap.get(user.group_code);
-    const roleId = roleMap.get(user.role_code);
 
-    if (!groupId || !roleId) {
-      console.log(`  ⚠ User ${user.username}: skipped (group or role not found)`);
-      continue;
+    // UserGroup membership (data only, không liên quan auth)
+    if (user.group_code) {
+      const groupId = groupMap.get(user.group_code);
+      if (groupId) {
+        const ugExists = await prisma.userGroup.findUnique({
+          where: { userId_groupId: { userId, groupId } },
+        });
+        if (!ugExists) {
+          await prisma.userGroup.create({ data: { userId, groupId, joinedAt: new Date() } });
+          console.log(`  ✔ UserGroup: ${user.username} → ${user.group_code}`);
+        }
+      }
     }
 
-    // UserGroup
-    const ugExists = await prisma.userGroup.findUnique({
-      where: { userId_groupId: { userId, groupId } },
-    });
-    if (!ugExists) {
-      await prisma.userGroup.create({ data: { userId, groupId, joinedAt: new Date() } });
-      console.log(`  ✔ UserGroup: ${user.username} → ${user.group_code}`);
-    }
-
-    // UserRoleAssignment
-    const uraExists = await prisma.userRoleAssignment.findFirst({
-      where: { userId, roleId, groupId },
-    });
-    if (!uraExists) {
-      await prisma.userRoleAssignment.create({
-        data: { userId, roleId, groupId },
+    // UserRoleAssignment (global, không scope theo group)
+    if (user.role_code) {
+      const roleId = roleMap.get(user.role_code);
+      if (!roleId) {
+        console.log(`  ⚠ User ${user.username}: role ${user.role_code} not found`);
+        continue;
+      }
+      const uraExists = await prisma.userRoleAssignment.findFirst({
+        where: { userId, roleId },
       });
-      console.log(`  ✔ UserRoleAssignment: ${user.username} → ${user.role_code} @ ${user.group_code}`);
+      if (!uraExists) {
+        await prisma.userRoleAssignment.create({
+          data: { userId, roleId },
+        });
+        console.log(`  ✔ UserRoleAssignment: ${user.username} → ${user.role_code}`);
+      }
     }
   }
 }

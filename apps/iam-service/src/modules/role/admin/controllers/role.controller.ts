@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { Permission, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { RoleService } from '../services/role.service';
@@ -45,11 +45,10 @@ export class RoleController {
 
   @Permission('role.manage')
   @Put(':id/permissions')
-  syncPermissions(@Param('id') id: string, @Body() dto: SyncPermissionsDto, @Req() req: any) {
+  syncPermissions(@Param('id') id: string, @Body() dto: SyncPermissionsDto) {
     const ctx = session()!;
     return this.service.syncPermissions(toPrimaryKey(id), dto, {
       id: ctx.userId ?? '',
-      groupId: (req?.headers?.['x-group-id'] as string | undefined) ?? null,
     });
   }
 }

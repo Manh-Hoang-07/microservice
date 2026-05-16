@@ -1,4 +1,4 @@
-import { Controller, Get, Req } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { Permission, session } from '@package/common';
 import { UserMenuService } from '../services/menu.service';
 
@@ -10,10 +10,9 @@ export class UserMenuController {
 
   @Permission('user')
   @Get()
-  async getUserMenuTree(@Req() req: any) {
+  async getUserMenuTree() {
     const ctx = session()!;
     const userId = ctx.userId ?? '';
-    const groupId = req.headers['x-group-id'] as string | undefined;
-    return this.service.getUserMenuTree(userId, groupId);
+    return this.service.getUserMenuTree(userId);
   }
 }

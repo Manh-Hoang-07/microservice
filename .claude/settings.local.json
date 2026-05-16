@@ -157,7 +157,8 @@
       "Bash(psql \"postgresql://root:123456@160.191.50.85:5432/iam_db\" -c \"SELECT id, code, name, status FROM permissions WHERE code = 'group.owner';\")",
       "Bash(npx ts-node -P tsconfig.seed.json -e ' *)",
       "Bash(grep -v \"^$\")",
-      "Bash(DATABASE_URL=\"postgresql://root:123456@160.191.50.85:5432/iam_db\" npx prisma db execute --stdin --schema=prisma/schema.prisma)"
+      "Bash(DATABASE_URL=\"postgresql://root:123456@160.191.50.85:5432/iam_db\" npx prisma db execute --stdin --schema=prisma/schema.prisma)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }

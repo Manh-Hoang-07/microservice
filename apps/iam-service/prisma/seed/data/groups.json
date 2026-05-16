@@ -3,14 +3,12 @@
     "type": "system",
     "code": "system",
     "name": "System Admin Group",
-    "status": "active",
-    "context_code": "system"
+    "status": "active"
   },
   {
     "type": "group",
     "code": "group_demo",
     "name": "Group Demo Default",
-    "status": "active",
-    "context_code": "group"
+    "status": "active"
   }
 ]

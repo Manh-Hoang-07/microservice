@@ -41,13 +41,9 @@ export class IamClient implements OnModuleInit {
    * Check if user has all required permissions.
    * Uses Redis cache (60s TTL) → circuit breaker → IAM HTTP call.
    */
-  async checkPermissions(
-    userId: string,
-    permissions: string[],
-    groupId?: string,
-  ): Promise<boolean> {
+  async checkPermissions(userId: string, permissions: string[]): Promise<boolean> {
     // Cache first
-    const cacheKey = `rbac:${userId}:${permissions.sort().join(',')}:${groupId ?? ''}`;
+    const cacheKey = `rbac:${userId}:${permissions.sort().join(',')}`;
     try {
       const cached = await this.redis.get(cacheKey);
       if (cached !== null && cached !== undefined) {
@@ -58,7 +54,6 @@ export class IamClient implements OnModuleInit {
     // Call IAM
     const data = await this.doPost(`${this.baseUrl}/internal/rbac/check`, {
       userId,
-      groupId,
       permissions,
     });
 

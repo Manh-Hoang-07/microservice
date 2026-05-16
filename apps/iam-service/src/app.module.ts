@@ -26,7 +26,6 @@ import { RbacModule } from './rbac/rbac.module';
 import { InternalModule } from './internal/internal.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
-import { ContextModule } from './modules/context/context.module';
 import { GroupModule } from './modules/group/group.module';
 import { UserRoleModule } from './modules/user-role/user-role.module';
 import { KafkaModule } from './kafka/kafka.module';
@@ -88,7 +87,6 @@ import { KafkaModule } from './kafka/kafka.module';
     InternalModule,
     PermissionModule,
     RoleModule,
-    ContextModule,
     GroupModule,
     UserRoleModule,
   ],

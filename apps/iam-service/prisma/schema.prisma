@@ -8,30 +8,7 @@ datasource db {
 }
 
 // ============================================
-// Context — scope container for roles & groups
-// ============================================
-
-model Context {
-  id            BigInt   @id @default(autoincrement())
-  type          String   @db.VarChar(50)
-  refId         BigInt?  @map("ref_id")
-  name          String   @db.VarChar(255)
-  code          String   @unique @db.VarChar(100)
-  status        String   @default("active") @db.VarChar(30)
-  createdUserId BigInt?  @map("created_user_id")
-  updatedUserId BigInt?  @map("updated_user_id")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
-
-  groups       Group[]
-  roleContexts RoleContext[]
-
-  @@unique([type, refId], map: "contexts_idx_contexts_type_ref_id")
-  @@map("contexts")
-}
-
-// ============================================
-// Group — organisational unit within a context
+// Group — organisational unit (data only, không liên quan phân quyền)
 // ============================================
 
 model Group {
@@ -42,19 +19,15 @@ model Group {
   description   String?  @db.Text
   status        String   @default("active") @db.VarChar(30)
   ownerId       BigInt?  @map("owner_id")
-  contextId     BigInt   @map("context_id")
   metadata      Json?
   createdUserId BigInt?  @map("created_user_id")
   updatedUserId BigInt?  @map("updated_user_id")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  context             Context              @relation(fields: [contextId], references: [id], onDelete: Restrict)
-  userGroups          UserGroup[]
-  userRoleAssignments UserRoleAssignment[]
+  userGroups UserGroup[]
 
   @@unique([type, code], map: "groups_idx_groups_type_code")
-  @@index([contextId], map: "groups_IDX_groups_context_id")
   @@map("groups")
 }
 
@@ -117,7 +90,6 @@ model Role {
   parent              Role?                @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children            Role[]               @relation("RoleHierarchy")
   permissions         RoleHasPermission[]
-  roleContexts        RoleContext[]
   userRoleAssignments UserRoleAssignment[]
 
   @@unique([code], map: "roles_code_key")
@@ -137,34 +109,17 @@ model RoleHasPermission {
   @@map("role_has_permissions")
 }
 
-model RoleContext {
-  roleId    BigInt @map("role_id") @db.BigInt
-  contextId BigInt @map("context_id") @db.BigInt
-
-  role    Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  context Context @relation(fields: [contextId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, contextId])
-  @@index([roleId], map: "role_contexts_idx_role_contexts_role_id")
-  @@index([contextId], map: "role_contexts_idx_role_contexts_context_id")
-  @@map("role_contexts")
-}
-
 // user_id is an application-level reference to auth-service.users (no DB FK)
 model UserRoleAssignment {
   id        BigInt   @id @default(autoincrement())
   userId    BigInt   @map("user_id")
   roleId    BigInt   @map("role_id")
-  groupId   BigInt   @map("group_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
-  role  Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, roleId, groupId], map: "user_role_assignments_idx_user_role_group_unique")
-  @@index([userId, groupId], map: "user_role_assignments_idx_user_group")
-  @@index([groupId, userId], map: "user_role_assignments_idx_group_user")
-  @@index([groupId], map: "user_role_assignments_idx_user_role_assignments_group_id")
+  @@unique([userId, roleId], map: "user_role_assignments_idx_user_role_unique")
+  @@index([userId], map: "user_role_assignments_idx_user")
   @@index([roleId], map: "user_role_assignments_idx_user_role_assignments_role_id")
   @@map("user_role_assignments")
 }

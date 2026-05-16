@@ -10,7 +10,6 @@ export interface GroupFilter {
   search?: string;
   type?: string;
   status?: string;
-  contextId?: any;
   ownerId?: any;
 }
 
@@ -20,8 +19,7 @@ const LIST_SELECT = {
   name: true,
   description: true,
   status: true,
-  contextId: true,
-  context: { select: { id: true, code: true, name: true } },
+  ownerId: true,
   createdAt: true,
 } satisfies Prisma.GroupSelect;
 
@@ -52,10 +50,6 @@ export class GroupRepository {
 
     if (filter.status) {
       andConditions.push({ status: filter.status });
-    }
-
-    if (filter.contextId) {
-      andConditions.push({ contextId: toPrimaryKey(filter.contextId) });
     }
 
     if (filter.ownerId) {
@@ -98,7 +92,6 @@ export class GroupRepository {
     if (query.search) filter.search = String(query.search).slice(0, 100);
     if (query.type) filter.type = query.type;
     if (query.status) filter.status = query.status;
-    if (query.contextId) filter.contextId = query.contextId;
     if (query.ownerId) filter.ownerId = query.ownerId;
 
     const skipCount = query.skipCount === 'true';
@@ -113,7 +106,6 @@ export class GroupRepository {
   findById(id: string | bigint) {
     return this.prisma.group.findUnique({
       where: { id: toPrimaryKey(id) },
-      include: { context: { select: { id: true, code: true, name: true } } },
     });
   }
 
@@ -181,7 +173,6 @@ export class GroupRepository {
             type: true,
             status: true,
             description: true,
-            contextId: true,
             ownerId: true,
             metadata: true,
           },

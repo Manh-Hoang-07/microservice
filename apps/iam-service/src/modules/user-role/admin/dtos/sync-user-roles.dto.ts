@@ -7,8 +7,4 @@ export class SyncUserRolesDto {
   @IsString({ each: true })
   @Matches(/^\d{1,20}$/, { each: true, message: 'roleIds must be numeric.' })
   roleIds: string[];
-
-  @IsString()
-  @Matches(/^\d{1,20}$/, { message: 'groupId must be numeric.' })
-  groupId: string;
 }

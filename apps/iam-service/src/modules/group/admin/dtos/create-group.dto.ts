@@ -17,10 +17,6 @@ export class CreateGroupDto {
   @MaxLength(255)
   name: string;
 
-  @IsString()
-  @Matches(/^\d{1,20}$/, { message: 'contextId must be numeric.' })
-  contextId: string;
-
   @IsOptional()
   @IsString()
   @MaxLength(1000)

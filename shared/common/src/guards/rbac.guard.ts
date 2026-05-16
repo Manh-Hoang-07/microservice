@@ -61,10 +61,9 @@ export class RbacGuard implements CanActivate {
     }
 
     const userId = String(user.sub);
-    const groupId = (request.headers['x-group-id'] as string) || undefined;
 
     // Check Redis cache first
-    const cacheKey = `rbac:${userId}:${permissions.sort().join(',')}:${groupId ?? ''}`;
+    const cacheKey = `rbac:${userId}:${permissions.sort().join(',')}`;
     try {
       const cached = await this.redis?.get(cacheKey);
       if (cached !== null && cached !== undefined) {
@@ -97,7 +96,6 @@ export class RbacGuard implements CanActivate {
             },
             body: JSON.stringify({
               userId,
-              groupId,
               permissions,
             }),
             signal: controller.signal,

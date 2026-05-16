@@ -1,13 +1,11 @@
 import { session } from './session-context.storage';
 
 /**
- * Returns groupId when in group context, null when in system context.
- * Use in services: const gid = getSessionGroupId(); if (gid) { filter by gid }
+ * Returns groupId from x-group-id header. Used for data filtering only,
+ * not for authorization.
  */
 export function getSessionGroupId(): bigint | null {
-  const ctx = session();
-  if (!ctx || ctx.isSystemContext) return null;
-  return ctx.groupId;
+  return session()?.groupId ?? null;
 }
 
 /**

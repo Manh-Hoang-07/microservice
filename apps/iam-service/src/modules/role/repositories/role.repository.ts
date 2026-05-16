@@ -74,9 +74,6 @@ export class RoleRepository {
         permissions: {
           include: { permission: { select: { id: true, code: true, name: true } } },
         },
-        roleContexts: {
-          include: { context: { select: { id: true, code: true, name: true } } },
-        },
       },
     });
   }

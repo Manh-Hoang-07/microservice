@@ -12,23 +12,16 @@ export class InternalRbacController {
 
   @Post('check')
   async checkPermissions(@Body() body: RbacCheckDto) {
-    const { userId, groupId, permissions } = body;
+    const { userId, permissions } = body;
     if (!permissions?.length) return { allowed: false };
 
-    const allowed = await this.rbacService.hasPermissions(
-      userId,
-      groupId ?? null,
-      permissions,
-    );
+    const allowed = await this.rbacService.hasPermissions(userId, permissions);
     return { allowed };
   }
 
   @Get('permissions')
   async getPermissions(@Query(ValidationPipe) query: RbacPermissionsQueryDto) {
-    const permSet = await this.rbacService.getPermissions(
-      query.userId,
-      query.groupId ?? null,
-    );
+    const permSet = await this.rbacService.getPermissions(query.userId);
     return { permissions: Array.from(permSet) };
   }
 }

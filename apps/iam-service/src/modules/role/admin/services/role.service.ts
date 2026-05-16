@@ -91,7 +91,7 @@ export class RoleService {
   async syncPermissions(
     id: PrimaryKey,
     dto: SyncPermissionsDto,
-    actor: { id: string; groupId?: string | null },
+    actor: { id: string },
   ) {
     await this.getOne(id);
     const targetIds = dto.permissionIds;
@@ -99,11 +99,7 @@ export class RoleService {
     if (targetIds.length) {
       const targetCodes = await this.repo.getPermissionCodesByIds(targetIds);
       if (targetCodes.length) {
-        await this.rbacService.assertCallerCanGrantPermissionCodes(
-          actor.id,
-          actor.groupId ?? null,
-          targetCodes,
-        );
+        await this.rbacService.assertCallerCanGrantPermissionCodes(actor.id, targetCodes);
       }
     }
     await this.repo.syncPermissions(id, targetIds);

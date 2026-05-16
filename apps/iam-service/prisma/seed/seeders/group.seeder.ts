@@ -11,23 +11,13 @@ interface GroupEntry {
   code: string;
   name: string;
   status: string;
-  context_code: string;
 }
 
-export async function seedGroups(
-  prisma: PrismaClient,
-  contextMap: Map<string, bigint>,
-): Promise<Map<string, bigint>> {
+export async function seedGroups(prisma: PrismaClient): Promise<Map<string, bigint>> {
   const codeToId = new Map<string, bigint>();
   const groups = groupsData as GroupEntry[];
 
   for (const g of groups) {
-    const contextId = contextMap.get(g.context_code);
-    if (!contextId) {
-      console.log(`  ⚠ Group: ${g.code} skipped (context ${g.context_code} not found)`);
-      continue;
-    }
-
     const existing = await prisma.group.findUnique({ where: { code: g.code } });
     if (existing) {
       codeToId.set(g.code, existing.id);
@@ -40,7 +30,6 @@ export async function seedGroups(
         code: g.code,
         name: g.name,
         status: g.status,
-        contextId: contextId,
       },
     });
     codeToId.set(g.code, created.id);

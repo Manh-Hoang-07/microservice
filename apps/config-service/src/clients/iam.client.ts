@@ -40,10 +40,9 @@ export class IamClient implements OnModuleInit {
     }
   }
 
-  async getUserPermissions(userId: string, groupId?: string): Promise<Set<string>> {
+  async getUserPermissions(userId: string): Promise<Set<string>> {
     const url = new URL(`${this.baseUrl}/internal/rbac/permissions`);
     url.searchParams.set('userId', userId);
-    if (groupId) url.searchParams.set('groupId', groupId);
 
     try {
       const data = await this.breaker.execute(() => this.doGet(url.toString()));

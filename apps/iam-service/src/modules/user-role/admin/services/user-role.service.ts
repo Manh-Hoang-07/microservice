@@ -19,35 +19,19 @@ export class UserRoleService {
     private readonly i18n: I18nService,
   ) {}
 
-  getUserRoles(userId: string, groupId?: string) {
-    return this.repo.getUserRoles(userId, groupId);
+  getUserRoles(userId: string) {
+    return this.repo.getUserRoles(userId);
   }
 
-  async assignRole(
-    userId: string,
-    dto: AssignRoleDto,
-    actor: { id: string; groupId?: string | null },
-  ) {
-    await this.rbacService.assignRoleToUser(userId, dto.roleId, dto.groupId, {
-      id: actor.id,
-      groupId: actor.groupId ?? null,
-    });
+  async assignRole(userId: string, dto: AssignRoleDto, actor: { id: string }) {
+    await this.rbacService.assignRoleToUser(userId, dto.roleId, { id: actor.id });
     return { message: t(this.i18n, 'rbac.ROLE_ASSIGNED') };
   }
 
-  async removeRole(
-    userId: string,
-    roleId: string,
-    groupId: string,
-    actor: { id: string; groupId?: string | null },
-  ) {
-    // Caller priv check — must already hold what's being revoked.
-    await this.rbacService.assertCallerCanGrantRole(actor.id, actor.groupId ?? null, [
-      roleId,
-    ]);
+  async removeRole(userId: string, roleId: string, actor: { id: string }) {
+    await this.rbacService.assertCallerCanGrantRole(actor.id, [roleId]);
 
-    // Last-admin protection: if removing this role would drop the last
-    // user with `system.manage`, refuse.
+    // Last-admin protection
     const targetCodes = await this.rbacRepo.getPermissionCodesForRoles([roleId]);
     if (targetCodes.has(PERM.SYSTEM.MANAGE)) {
       const remaining = await this.rbacRepo.countUsersWithPermission(PERM.SYSTEM.MANAGE);
@@ -56,7 +40,7 @@ export class UserRoleService {
       }
     }
 
-    const count = await this.repo.removeRole(userId, roleId, groupId);
+    const count = await this.repo.removeRole(userId, roleId);
     if (count === 0) {
       throw new NotFoundException(t(this.i18n, 'rbac.USER_ROLE_ASSIGNMENT_NOT_FOUND'));
     }
@@ -66,17 +50,8 @@ export class UserRoleService {
     return { message: t(this.i18n, 'rbac.ROLE_REMOVED') };
   }
 
-  async syncRoles(
-    userId: string,
-    dto: SyncUserRolesDto,
-    actor: { id: string; groupId?: string | null },
-  ) {
-    await this.rbacService.syncRolesInGroup(
-      userId,
-      dto.groupId,
-      dto.roleIds,
-      { id: actor.id, groupId: actor.groupId ?? null },
-    );
+  async syncRoles(userId: string, dto: SyncUserRolesDto, actor: { id: string }) {
+    await this.rbacService.syncUserRoles(userId, dto.roleIds, { id: actor.id });
     return { message: t(this.i18n, 'rbac.ROLES_SYNCED') };
   }
 }
