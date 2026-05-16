@@ -46,7 +46,7 @@ export async function seedRoles(
       if (parentId) {
         await prisma.role.update({
           where: { code: r.code },
-          data: { parent_id: parentId },
+          data: { parentId: parentId },
         });
       }
     }
@@ -55,79 +55,35 @@ export async function seedRoles(
   // Assign all permissions to super_admin
   const superAdminId = codeToId.get('super_admin');
   if (superAdminId) {
-    await prisma.roleHasPermission.deleteMany({ where: { role_id: superAdminId } });
+    await prisma.roleHasPermission.deleteMany({ where: { roleId: superAdminId } });
     const allPermIds = Array.from(permMap.values());
     if (allPermIds.length > 0) {
       await prisma.roleHasPermission.createMany({
-        data: allPermIds.map((pid) => ({ role_id: superAdminId, permission_id: pid })),
+        data: allPermIds.map((pid) => ({ roleId: superAdminId, permissionId: pid })),
         skipDuplicates: true,
       });
     }
     console.log(`  ✔ super_admin → ${allPermIds.length} permissions linked`);
   }
 
-  // Assign comic/post related permissions to group_owner
+  // Assign permissions to group_owner (Quản lý nhóm)
   const groupOwnerId = codeToId.get('group_owner');
   if (groupOwnerId) {
     const ownerPermCodes = [
-      'group.owner',
-      'comic.manage', 'comic.view', 'comic.create', 'comic.update', 'comic.delete', 'comic.approve',
-      'chapter.view', 'chapter.create', 'chapter.update', 'chapter.delete',
-      'post.manage', 'post_category.manage', 'post_tag.manage',
-      'notification.manage', 'notification.view', 'notification.send',
-      'group.manage', 'group.member.manage', 'group.member.add', 'group.member.remove',
+      'group.owner', 'group.comic', 'group.post',
+      'group.member.manage', 'group.member.add', 'group.member.remove',
     ];
-    await prisma.roleHasPermission.deleteMany({ where: { role_id: groupOwnerId } });
+    await prisma.roleHasPermission.deleteMany({ where: { roleId: groupOwnerId } });
     const ownerPermIds = ownerPermCodes
       .map((c) => permMap.get(c))
       .filter((id): id is bigint => id !== undefined);
     if (ownerPermIds.length > 0) {
       await prisma.roleHasPermission.createMany({
-        data: ownerPermIds.map((pid) => ({ role_id: groupOwnerId, permission_id: pid })),
+        data: ownerPermIds.map((pid) => ({ roleId: groupOwnerId, permissionId: pid })),
         skipDuplicates: true,
       });
     }
     console.log(`  ✔ group_owner → ${ownerPermIds.length} permissions linked`);
-  }
-
-  // Assign comic edit permissions to group_editor
-  const groupEditorId = codeToId.get('group_editor');
-  if (groupEditorId) {
-    const editorPermCodes = [
-      'comic.view', 'comic.create', 'comic.update',
-      'chapter.view', 'chapter.create', 'chapter.update',
-      'post.manage', 'post_category.manage', 'post_tag.manage',
-    ];
-    await prisma.roleHasPermission.deleteMany({ where: { role_id: groupEditorId } });
-    const editorPermIds = editorPermCodes
-      .map((c) => permMap.get(c))
-      .filter((id): id is bigint => id !== undefined);
-    if (editorPermIds.length > 0) {
-      await prisma.roleHasPermission.createMany({
-        data: editorPermIds.map((pid) => ({ role_id: groupEditorId, permission_id: pid })),
-        skipDuplicates: true,
-      });
-    }
-    console.log(`  ✔ group_editor → ${editorPermIds.length} permissions linked`);
-  }
-
-  // Assign upload permissions to group_uploader
-  const groupUploaderId = codeToId.get('group_uploader');
-  if (groupUploaderId) {
-    const uploaderPermCodes = [
-      'comic.view', 'chapter.view', 'chapter.create', 'chapter.update',
-    ];
-    await prisma.roleHasPermission.deleteMany({ where: { role_id: groupUploaderId } });
-    const uploaderPermIds = uploaderPermCodes
-      .map((c) => permMap.get(c))
-      .filter((id): id is bigint => id !== undefined);
-    if (uploaderPermIds.length > 0) {
-      await prisma.roleHasPermission.createMany({
-        data: uploaderPermIds.map((pid) => ({ role_id: groupUploaderId, permission_id: pid })),
-        skipDuplicates: true,
-      });
-    }
-    console.log(`  ✔ group_uploader → ${uploaderPermIds.length} permissions linked`);
   }
 
   console.log(`  ✔ Total roles: ${codeToId.size}`);

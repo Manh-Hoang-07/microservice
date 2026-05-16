@@ -34,20 +34,20 @@ export async function seedUserAssignments(
 
     // UserGroup
     const ugExists = await prisma.userGroup.findUnique({
-      where: { user_id_group_id: { user_id: userId, group_id: groupId } },
+      where: { userId_groupId: { userId, groupId } },
     });
     if (!ugExists) {
-      await prisma.userGroup.create({ data: { user_id: userId, group_id: groupId } });
+      await prisma.userGroup.create({ data: { userId, groupId, joinedAt: new Date() } });
       console.log(`  ✔ UserGroup: ${user.username} → ${user.group_code}`);
     }
 
     // UserRoleAssignment
     const uraExists = await prisma.userRoleAssignment.findFirst({
-      where: { user_id: userId, role_id: roleId, group_id: groupId },
+      where: { userId, roleId, groupId },
     });
     if (!uraExists) {
       await prisma.userRoleAssignment.create({
-        data: { user_id: userId, role_id: roleId, group_id: groupId },
+        data: { userId, roleId, groupId },
       });
       console.log(`  ✔ UserRoleAssignment: ${user.username} → ${user.role_code} @ ${user.group_code}`);
     }

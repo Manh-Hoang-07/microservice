@@ -44,7 +44,7 @@ export async function seedPermissions(prisma: PrismaClient): Promise<Map<string,
       if (parentId) {
         await prisma.permission.update({
           where: { code: perm.code },
-          data: { parent_id: parentId },
+          data: { parentId: parentId },
         });
       }
     }

@@ -8,11 +8,11 @@ export async function seedRoleContexts(
   for (const [, roleId] of roleMap) {
     for (const [, contextId] of contextMap) {
       const exists = await prisma.roleContext.findUnique({
-        where: { role_id_context_id: { role_id: roleId, context_id: contextId } },
+        where: { roleId_contextId: { roleId, contextId } },
       });
       if (!exists) {
         await prisma.roleContext.create({
-          data: { role_id: roleId, context_id: contextId },
+          data: { roleId, contextId },
         });
       }
     }

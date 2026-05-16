@@ -28,7 +28,7 @@ export async function seedContexts(prisma: PrismaClient): Promise<Map<string, bi
     const created = await prisma.context.create({
       data: {
         type: ctx.type,
-        ref_id: ctx.ref_id ? BigInt(ctx.ref_id) : null,
+        refId: ctx.ref_id ? BigInt(ctx.ref_id) : null,
         name: ctx.name,
         code: ctx.code,
         status: ctx.status,

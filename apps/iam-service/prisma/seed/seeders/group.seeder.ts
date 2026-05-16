@@ -40,7 +40,7 @@ export async function seedGroups(
         code: g.code,
         name: g.name,
         status: g.status,
-        context_id: contextId,
+        contextId: contextId,
       },
     });
     codeToId.set(g.code, created.id);
