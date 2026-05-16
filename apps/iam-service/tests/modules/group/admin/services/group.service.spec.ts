@@ -47,6 +47,9 @@ jest.mock('../../../../../src/modules/group/repositories/group.repository', () =
 jest.mock('../../../../../src/rbac/services/rbac-cache.service', () => ({ RbacCacheService: jest.fn() }));
 jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
 jest.mock('../../../../../src/rbac/repositories/rbac.repository', () => ({ RbacRepository: jest.fn() }));
+jest.mock('../../../../../src/modules/group/constants/group-owner.constants', () => ({
+  GROUP_OWNER_ROLE_CODE: 'group_owner',
+}));
 
 // ---------------------------------------------------------------------------
 // Imports
@@ -81,9 +84,14 @@ function createService(overrides: Record<string, any> = {}) {
     bumpVersion: jest.fn().mockResolvedValue(undefined),
     clearAllUserCaches: jest.fn().mockResolvedValue(undefined),
   };
+  const rbacRepo = overrides.rbacRepo ?? {
+    findRoleByCode: jest.fn().mockResolvedValue({ id: BigInt(99) }),
+    assignRoleToUser: jest.fn().mockResolvedValue({ count: 1 }),
+    revokeOwnerRoleInGroup: jest.fn().mockResolvedValue({ count: 1 }),
+  };
   const i18n = {} as any;
-  const service = new GroupService(repo as any, rbacCache as any, i18n);
-  return { service, repo, rbacCache };
+  const service = new GroupService(repo as any, rbacCache as any, rbacRepo as any, i18n);
+  return { service, repo, rbacCache, rbacRepo };
 }
 
 // ---------------------------------------------------------------------------
@@ -236,6 +244,129 @@ describe('GroupService', () => {
       expect(result.message).toBe('group.MEMBER_REMOVED');
       expect(repo.removeMember).toHaveBeenCalledWith(BigInt(1), BigInt(42));
       expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(42));
+    });
+  });
+
+  // --- create: owner role ---
+  describe('create — owner role', () => {
+    it('grants group_owner role after creation when ownerId provided', async () => {
+      const { service, repo, rbacRepo, rbacCache } = createService();
+      repo.findByCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue({ id: BigInt(5) });
+
+      await service.create({ type: 'team', code: 'x', name: 'X', contextId: '1', ownerId: '50' } as any);
+
+      expect(rbacRepo.assignRoleToUser).toHaveBeenCalledWith(BigInt(50), BigInt(99), BigInt(5));
+      expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(50));
+    });
+
+    it('does NOT assign role when ownerId not provided', async () => {
+      const { service, repo, rbacRepo } = createService();
+      repo.findByCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue({ id: BigInt(5) });
+
+      await service.create({ type: 'team', code: 'x', name: 'X', contextId: '1' } as any);
+
+      expect(rbacRepo.assignRoleToUser).not.toHaveBeenCalled();
+    });
+
+    it('skips assignment when role code not found in DB', async () => {
+      const { service, repo, rbacRepo, rbacCache } = createService();
+      repo.findByCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue({ id: BigInt(5) });
+      rbacRepo.findRoleByCode.mockResolvedValue(null);
+
+      await service.create({ type: 'team', code: 'x', name: 'X', contextId: '1', ownerId: '50' } as any);
+
+      expect(rbacRepo.assignRoleToUser).not.toHaveBeenCalled();
+      expect(rbacCache.clearAllUserCaches).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- update: owner role ---
+  describe('update — owner role', () => {
+    it('grants to new owner and revokes from old when ownerId changes', async () => {
+      const { service, repo, rbacRepo, rbacCache } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), ownerId: BigInt(10) });
+      repo.update.mockResolvedValue({ id: BigInt(1) });
+
+      await service.update(BigInt(1), { ownerId: '20' } as any);
+
+      expect(rbacRepo.assignRoleToUser).toHaveBeenCalledWith(BigInt(20), BigInt(99), BigInt(1));
+      expect(rbacRepo.revokeOwnerRoleInGroup).toHaveBeenCalledWith(BigInt(10), BigInt(1), BigInt(99));
+      expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(20));
+      expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(10));
+    });
+
+    it('only revokes old owner when ownerId set to null', async () => {
+      const { service, repo, rbacRepo, rbacCache } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), ownerId: BigInt(10) });
+      repo.update.mockResolvedValue({ id: BigInt(1) });
+
+      await service.update(BigInt(1), { ownerId: null } as any);
+
+      expect(rbacRepo.assignRoleToUser).not.toHaveBeenCalled();
+      expect(rbacRepo.revokeOwnerRoleInGroup).toHaveBeenCalledWith(BigInt(10), BigInt(1), BigInt(99));
+      expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(10));
+    });
+
+    it('only grants to new owner when group had no previous owner', async () => {
+      const { service, repo, rbacRepo, rbacCache } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), ownerId: null });
+      repo.update.mockResolvedValue({ id: BigInt(1) });
+
+      await service.update(BigInt(1), { ownerId: '30' } as any);
+
+      expect(rbacRepo.assignRoleToUser).toHaveBeenCalledWith(BigInt(30), BigInt(99), BigInt(1));
+      expect(rbacRepo.revokeOwnerRoleInGroup).not.toHaveBeenCalled();
+      expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(30));
+    });
+
+    it('does NOT touch roles when ownerId not in dto', async () => {
+      const { service, repo, rbacRepo } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), ownerId: BigInt(10) });
+      repo.update.mockResolvedValue({ id: BigInt(1) });
+
+      await service.update(BigInt(1), { name: 'New Name' } as any);
+
+      expect(rbacRepo.assignRoleToUser).not.toHaveBeenCalled();
+      expect(rbacRepo.revokeOwnerRoleInGroup).not.toHaveBeenCalled();
+    });
+
+    it('does NOT touch roles when ownerId value is unchanged', async () => {
+      const { service, repo, rbacRepo } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), ownerId: BigInt(10) });
+      repo.update.mockResolvedValue({ id: BigInt(1) });
+
+      await service.update(BigInt(1), { ownerId: '10' } as any);
+
+      expect(rbacRepo.assignRoleToUser).not.toHaveBeenCalled();
+      expect(rbacRepo.revokeOwnerRoleInGroup).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- delete: owner cache ---
+  describe('delete — owner cache', () => {
+    it('clears owner cache after deletion', async () => {
+      const { service, repo, rbacCache } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), ownerId: BigInt(7) });
+      repo.delete.mockResolvedValue({});
+
+      await service.delete(BigInt(1));
+
+      expect(rbacCache.bumpVersion).toHaveBeenCalled();
+      expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith(BigInt(7));
+    });
+
+    it('does NOT call clearAllUserCaches when group has no owner', async () => {
+      const { service, repo, rbacCache } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), ownerId: null });
+      repo.delete.mockResolvedValue({});
+
+      await service.delete(BigInt(1));
+
+      expect(rbacCache.bumpVersion).toHaveBeenCalled();
+      expect(rbacCache.clearAllUserCaches).not.toHaveBeenCalled();
     });
   });
 });

@@ -70,6 +70,7 @@ export async function seedRoles(
   const groupOwnerId = codeToId.get('group_owner');
   if (groupOwnerId) {
     const ownerPermCodes = [
+      'group.owner',
       'comic.manage', 'comic.view', 'comic.create', 'comic.update', 'comic.delete', 'comic.approve',
       'chapter.view', 'chapter.create', 'chapter.update', 'chapter.delete',
       'post.manage', 'post_category.manage', 'post_tag.manage',

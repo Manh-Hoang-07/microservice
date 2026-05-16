@@ -33,6 +33,16 @@ export class RbacRepository {
     });
   }
 
+  findRoleByCode(code: string) {
+    return this.prisma.role.findFirst({ where: { code, status: 'active' } });
+  }
+
+  revokeOwnerRoleInGroup(userId: RbacId, groupId: RbacId, roleId: RbacId) {
+    return this.prisma.userRoleAssignment.deleteMany({
+      where: { userId: toPk(userId), groupId: toPk(groupId), roleId: toPk(roleId) },
+    });
+  }
+
   async syncRolesInGroup(
     userId: RbacId,
     groupId: RbacId,

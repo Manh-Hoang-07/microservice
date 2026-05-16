@@ -31,6 +31,8 @@
   { "code": "profile.view", "name": "Xem hồ sơ chi tiết", "status": "active", "parent_code": "user.manage" },
   { "code": "profile.update", "name": "Sửa hồ sơ cá nhân", "status": "active", "parent_code": "user.manage" },
 
+  { "code": "group.owner", "name": "Chủ nhóm (Group Owner)", "status": "active", "parent_code": null },
+
   { "code": "group.manage", "name": "Quản lý nhóm & context", "status": "active", "parent_code": null },
   { "code": "group.member.manage", "name": "Quản lý thành viên nhóm", "status": "active", "parent_code": "group.manage" },
   { "code": "group.member.add", "name": "Thêm thành viên nhóm", "status": "active", "parent_code": "group.member.manage" },

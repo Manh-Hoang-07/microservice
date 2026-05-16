@@ -1,21 +1,46 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CrudService, t, getSessionUserId, parseQueryOptions, createPaginationMeta } from '@package/common';
-import { PrimaryKey } from 'src/types';
+import { PrimaryKey, toPrimaryKey } from 'src/types';
 import { GroupRepository } from '../../repositories/group.repository';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
+import { RbacRepository } from '../../../../rbac/repositories/rbac.repository';
 import { CreateGroupDto } from '../dtos/create-group.dto';
 import { UpdateGroupDto } from '../dtos/update-group.dto';
 import { AddMemberDto } from '../dtos/add-member.dto';
+import { GROUP_OWNER_ROLE_CODE } from '../../constants/group-owner.constants';
 
 @Injectable()
 export class GroupService extends CrudService<GroupRepository> {
+  private cachedOwnerRoleId: bigint | null | undefined = undefined;
+
   constructor(
     groupRepo: GroupRepository,
     private readonly rbacCache: RbacCacheService,
+    private readonly rbacRepo: RbacRepository,
     private readonly i18n: I18nService,
   ) {
     super(groupRepo);
+  }
+
+  private async getOwnerRoleId(): Promise<bigint | null> {
+    if (this.cachedOwnerRoleId !== undefined) return this.cachedOwnerRoleId;
+    const role = await this.rbacRepo.findRoleByCode(GROUP_OWNER_ROLE_CODE);
+    this.cachedOwnerRoleId = role?.id ?? null;
+    return this.cachedOwnerRoleId;
+  }
+
+  private async grantOwnerRole(userId: bigint, groupId: bigint): Promise<boolean> {
+    const roleId = await this.getOwnerRoleId();
+    if (!roleId) return false;
+    await this.rbacRepo.assignRoleToUser(userId, roleId, groupId);
+    return true;
+  }
+
+  private async revokeOwnerRole(userId: bigint, groupId: bigint): Promise<void> {
+    const roleId = await this.getOwnerRoleId();
+    if (!roleId) return;
+    await this.rbacRepo.revokeOwnerRoleInGroup(userId, groupId, roleId);
   }
 
   async getOne(id: any) {
@@ -37,19 +62,40 @@ export class GroupService extends CrudService<GroupRepository> {
       createdUserId: actorId,
     };
     if (dto.ownerId) data.ownerId = dto.ownerId;
-    return this.repository.create(data);
+    const newGroup = await this.repository.create(data);
+    if (dto.ownerId) {
+      const ownerId = toPrimaryKey(dto.ownerId);
+      const granted = await this.grantOwnerRole(ownerId, newGroup.id);
+      if (granted) await this.rbacCache.clearAllUserCaches(ownerId);
+    }
+    return newGroup;
   }
 
   async update(id: PrimaryKey, dto: UpdateGroupDto) {
-    await this.getOne(id);
+    const group = await this.getOne(id);
     const actorId = getSessionUserId();
     const data: any = { updatedUserId: actorId };
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.status !== undefined) data.status = dto.status;
+
     if ('ownerId' in dto) {
       data.ownerId = dto.ownerId ? dto.ownerId : null;
+      const oldOwnerId = group.ownerId ? toPrimaryKey(group.ownerId) : null;
+      const newOwnerId = dto.ownerId ? toPrimaryKey(dto.ownerId) : null;
+      const ownerChanged = String(oldOwnerId ?? '') !== String(newOwnerId ?? '');
+      if (ownerChanged) {
+        if (newOwnerId) {
+          const granted = await this.grantOwnerRole(newOwnerId, toPrimaryKey(id));
+          if (granted) await this.rbacCache.clearAllUserCaches(newOwnerId);
+        }
+        if (oldOwnerId) {
+          await this.revokeOwnerRole(oldOwnerId, toPrimaryKey(id));
+          await this.rbacCache.clearAllUserCaches(oldOwnerId);
+        }
+      }
     }
+
     const result = await this.repository.update(id, data);
     if (dto.status !== undefined) {
       await this.rbacCache.bumpVersion();
@@ -58,9 +104,12 @@ export class GroupService extends CrudService<GroupRepository> {
   }
 
   async delete(id: PrimaryKey) {
-    await this.getOne(id);
+    const group = await this.getOne(id);
     await this.repository.delete(id);
     await this.rbacCache.bumpVersion();
+    if (group.ownerId) {
+      await this.rbacCache.clearAllUserCaches(toPrimaryKey(group.ownerId));
+    }
     return { message: t(this.i18n, 'group.DELETED') };
   }
 
@@ -88,4 +137,3 @@ export class GroupService extends CrudService<GroupRepository> {
     return { message: t(this.i18n, 'group.MEMBER_REMOVED') };
   }
 }
-

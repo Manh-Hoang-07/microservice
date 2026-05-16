@@ -630,6 +630,48 @@
     "required_permission_code": "comic.manage"
   },
   {
+    "code": "owner-group-management",
+    "name": "Quản lý nhóm",
+    "path": null,
+    "icon": "🏢",
+    "type": "group",
+    "status": "active",
+    "parent_id": null,
+    "sort_order": 45,
+    "is_public": false,
+    "show_in_menu": true,
+    "group": "admin",
+    "required_permission_code": "group.owner"
+  },
+  {
+    "code": "owner-group-detail",
+    "name": "Thông tin nhóm",
+    "path": "/owner/groups",
+    "icon": null,
+    "type": "route",
+    "status": "active",
+    "parent_code": "owner-group-management",
+    "sort_order": 1,
+    "is_public": false,
+    "show_in_menu": true,
+    "group": "admin",
+    "required_permission_code": "group.owner"
+  },
+  {
+    "code": "owner-group-members",
+    "name": "Danh sách thành viên",
+    "path": "/owner/groups/:id/members",
+    "icon": null,
+    "type": "route",
+    "status": "active",
+    "parent_code": "owner-group-management",
+    "sort_order": 2,
+    "is_public": false,
+    "show_in_menu": true,
+    "group": "admin",
+    "required_permission_code": "group.owner"
+  },
+  {
     "code": "public-home",
     "name": "Trang chủ",
     "path": "/",
