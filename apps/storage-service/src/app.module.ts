@@ -8,6 +8,7 @@ import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { join } from 'path';
 import storageConfig from './core/config/storage.config';
 import { envValidationSchema } from './core/config/env.validation';
+import { RedisModule, RedisService } from '@package/redis';
 import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, BigIntSerializationInterceptor } from '@package/common';
 import { CoreModule } from './core/core.module';
 import { UploadModule } from './modules/upload/upload.module';
@@ -33,6 +34,7 @@ import { UploadModule } from './modules/upload/upload.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     CoreModule,
+    RedisModule,
     UploadModule,
     HealthModule.register('storage-service'),
     MetricsModule,
@@ -50,9 +52,9 @@ import { UploadModule } from './modules/upload/upload.module';
     },
     {
       provide: APP_GUARD,
-      useFactory: (reflector: Reflector, config: ConfigService) =>
-        new RbacGuard(reflector, config),
-      inject: [Reflector, ConfigService],
+      useFactory: (reflector: Reflector, config: ConfigService, redis: RedisService) =>
+        new RbacGuard(reflector, config, redis),
+      inject: [Reflector, ConfigService, RedisService],
     },
     {
       provide: APP_INTERCEPTOR,

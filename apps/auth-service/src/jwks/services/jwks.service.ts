@@ -114,6 +114,10 @@ export class JwksService implements OnModuleInit {
       token,
       async (header) => this.resolveKey(header.kid),
       {
+        // Lock the signature algorithm to RS256. Without an explicit allowlist
+        // jose's defaults could let an attacker downgrade to HS256 and sign
+        // with the public key (alg-confusion attack).
+        algorithms: ['RS256'],
         issuer: this.config.get<string>('jwt.issuer'),
         audience: this.config.get<string>('jwt.audience'),
       },
@@ -122,9 +126,11 @@ export class JwksService implements OnModuleInit {
   }
 
   private resolveKey(kid: string | undefined): CryptoKey {
-    // No kid header? Fall back to current key (legacy tokens issued before
-    // kid was added).
-    if (!kid) return this.current!.publicKey;
+    // Reject tokens without a `kid` header. Every token we sign carries a kid
+    // (see signToken). A missing kid is either an attacker-crafted token or a
+    // very old legacy token — both should re-authenticate rather than be
+    // accepted against an arbitrary key.
+    if (!kid) throw new Error('JWT missing kid header');
     if (this.current && this.current.kid === kid) return this.current.publicKey;
     const match = this.extra.find((k) => k.kid === kid);
     if (match) return match.publicKey;

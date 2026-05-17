@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Permission, AuditLog, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { PermissionService } from '../services/permission.service';
 import { CreatePermissionDto } from '../dtos/create-permission.dto';
@@ -29,6 +29,7 @@ export class PermissionController {
   }
 
   @Permission('permission.manage')
+  @AuditLog({ action: 'permission.create', resource: 'permission', includeBody: true })
   @Post()
   create(@Body() dto: CreatePermissionDto) {
     const ctx = session()!;
@@ -36,6 +37,7 @@ export class PermissionController {
   }
 
   @Permission('permission.manage')
+  @AuditLog({ action: 'permission.update', resource: 'permission', includeBody: true })
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePermissionDto) {
     const ctx = session()!;
@@ -43,6 +45,7 @@ export class PermissionController {
   }
 
   @Permission('permission.manage')
+  @AuditLog({ action: 'permission.delete', resource: 'permission' })
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.service.delete(toPrimaryKey(id));

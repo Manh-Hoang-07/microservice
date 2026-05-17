@@ -53,7 +53,7 @@ describe('PublicGeneralConfigService', () => {
   describe('getConfig', () => {
     it('should return cached config from Redis', async () => {
       const redis = makeMockRedis();
-      const cached = { site_name: 'Cached', contact_channels: [] };
+      const cached = { siteName: 'Cached', contactChannels: [] };
       redis.get.mockResolvedValue(JSON.stringify(cached));
 
       const service = new PublicGeneralConfigService(
@@ -69,8 +69,8 @@ describe('PublicGeneralConfigService', () => {
       const redis = makeMockRedis();
       const configService = makeMockGeneralConfigService();
       configService.getConfig.mockResolvedValue({
-        site_name: 'My Site',
-        contact_channels: '[{"type":"email","value":"a@b.com"}]',
+        siteName: 'My Site',
+        contactChannels: '[{"type":"email","value":"a@b.com"}]',
       });
 
       const service = new PublicGeneralConfigService(
@@ -80,8 +80,8 @@ describe('PublicGeneralConfigService', () => {
 
       const result = await service.getConfig();
 
-      expect(result.site_name).toBe('My Site');
-      expect(result.contact_channels).toEqual([{ type: 'email', value: 'a@b.com' }]);
+      expect(result.siteName).toBe('My Site');
+      expect(result.contactChannels).toEqual([{ type: 'email', value: 'a@b.com' }]);
     });
 
     it('should return empty object when config is null', async () => {
@@ -96,14 +96,14 @@ describe('PublicGeneralConfigService', () => {
 
       const result = await service.getConfig();
 
-      expect(result).toEqual({ contact_channels: [] });
+      expect(result).toEqual({ contactChannels: [] });
     });
 
-    it('should handle contact_channels as array', async () => {
+    it('should handle contactChannels as array', async () => {
       const redis = makeMockRedis();
       const configService = makeMockGeneralConfigService();
       configService.getConfig.mockResolvedValue({
-        contact_channels: [{ type: 'phone', value: '123' }],
+        contactChannels: [{ type: 'phone', value: '123' }],
       });
 
       const service = new PublicGeneralConfigService(
@@ -112,14 +112,14 @@ describe('PublicGeneralConfigService', () => {
       );
 
       const result = await service.getConfig();
-      expect(result.contact_channels).toEqual([{ type: 'phone', value: '123' }]);
+      expect(result.contactChannels).toEqual([{ type: 'phone', value: '123' }]);
     });
 
-    it('should handle invalid JSON contact_channels string', async () => {
+    it('should handle invalid JSON contactChannels string', async () => {
       const redis = makeMockRedis();
       const configService = makeMockGeneralConfigService();
       configService.getConfig.mockResolvedValue({
-        contact_channels: 'not-valid-json',
+        contactChannels: 'not-valid-json',
       });
 
       const service = new PublicGeneralConfigService(
@@ -128,14 +128,14 @@ describe('PublicGeneralConfigService', () => {
       );
 
       const result = await service.getConfig();
-      expect(result.contact_channels).toEqual([]);
+      expect(result.contactChannels).toEqual([]);
     });
 
-    it('should handle non-array contact_channels', async () => {
+    it('should handle non-array contactChannels', async () => {
       const redis = makeMockRedis();
       const configService = makeMockGeneralConfigService();
       configService.getConfig.mockResolvedValue({
-        contact_channels: '{"not":"an-array"}',
+        contactChannels: '{"not":"an-array"}',
       });
 
       const service = new PublicGeneralConfigService(
@@ -144,14 +144,14 @@ describe('PublicGeneralConfigService', () => {
       );
 
       const result = await service.getConfig();
-      expect(result.contact_channels).toEqual([]);
+      expect(result.contactChannels).toEqual([]);
     });
 
-    it('should set contact_channels to [] when missing', async () => {
+    it('should set contactChannels to [] when missing', async () => {
       const redis = makeMockRedis();
       const configService = makeMockGeneralConfigService();
       configService.getConfig.mockResolvedValue({
-        site_name: 'NoChannels',
+        siteName: 'NoChannels',
       });
 
       const service = new PublicGeneralConfigService(
@@ -160,12 +160,12 @@ describe('PublicGeneralConfigService', () => {
       );
 
       const result = await service.getConfig();
-      expect(result.contact_channels).toEqual([]);
+      expect(result.contactChannels).toEqual([]);
     });
 
     it('should work without Redis', async () => {
       const configService = makeMockGeneralConfigService();
-      configService.getConfig.mockResolvedValue({ site_name: 'X' });
+      configService.getConfig.mockResolvedValue({ siteName: 'X' });
 
       const service = new PublicGeneralConfigService(
         configService as any,
@@ -173,7 +173,7 @@ describe('PublicGeneralConfigService', () => {
       );
 
       const result = await service.getConfig();
-      expect(result.site_name).toBe('X');
+      expect(result.siteName).toBe('X');
     });
   });
 });

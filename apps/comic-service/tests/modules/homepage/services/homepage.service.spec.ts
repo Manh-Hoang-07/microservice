@@ -67,7 +67,7 @@ describe('HomepageService', () => {
       expect(result).toEqual(comics);
       expect(homepageRepo.findComics).toHaveBeenCalledWith(
         ['published'],
-        { stats: { view_count: 'desc' } },
+        { stats: { viewCount: 'desc' } },
         10,
       );
     });
@@ -80,7 +80,7 @@ describe('HomepageService', () => {
 
       expect(homepageRepo.findComics).toHaveBeenCalledWith(
         ['published'],
-        { stats: { follow_count: 'desc' } },
+        { stats: { followCount: 'desc' } },
         5,
       );
     });
@@ -93,7 +93,7 @@ describe('HomepageService', () => {
 
       expect(homepageRepo.findComics).toHaveBeenCalledWith(
         ['published'],
-        { created_at: 'desc' },
+        { createdAt: 'desc' },
         10,
       );
     });
@@ -106,7 +106,7 @@ describe('HomepageService', () => {
 
       expect(homepageRepo.findComics).toHaveBeenCalledWith(
         ['published'],
-        { last_chapter_updated_at: 'desc' },
+        { lastChapterUpdatedAt: 'desc' },
         10,
       );
     });

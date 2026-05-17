@@ -1,5 +1,5 @@
 // Decorators
-export { Permission, Public, Internal, PERMS_KEY } from './decorators/permission.decorator';
+export { Permission, Public, Internal, Authenticated, PERMS_KEY } from './decorators/permission.decorator';
 
 // Filters
 export { GlobalExceptionFilter } from './filters/global-exception.filter';
@@ -8,6 +8,9 @@ export { GlobalExceptionFilter } from './filters/global-exception.filter';
 export { JwtGuard } from './guards/jwt.guard';
 export { InternalGuard } from './guards/internal.guard';
 export { RbacGuard } from './guards/rbac.guard';
+
+// RBAC utilities
+export { RbacVersionTracker } from './rbac/rbac-version-tracker';
 
 // Interceptors
 export { BigIntSerializationInterceptor } from './interceptors/bigint-serialization.interceptor';
@@ -42,7 +45,6 @@ export { PrismaRepository, PrismaDelegate, IPaginatedResult, IPaginationOptions,
 // Base service
 export { IRepository, ListService } from './services/list.service';
 export { CrudService } from './services/crud.service';
-export { GroupAwareService } from './services/group-aware.service';
 
 // Health
 export { HealthModule } from './health/health.module';
@@ -65,4 +67,4 @@ export { SessionContextService } from './session/session-context.service';
 export { SessionContextMiddleware } from './session/session-context.middleware';
 export { SessionModule } from './session/session.module';
 export { session } from './session/session-context.storage';
-export { getSessionGroupId, getSessionUserId } from './session/group-filter.helper';
+export { getSessionUserId } from './session/group-filter.helper';

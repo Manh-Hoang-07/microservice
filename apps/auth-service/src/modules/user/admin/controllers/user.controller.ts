@@ -9,7 +9,7 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { Permission } from '@package/common';
+import { Permission, AuditLog } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminUserService } from '../services/user.service';
 import { UserQueryDto } from '../dtos/user-query.dto';
@@ -43,12 +43,14 @@ export class AdminUserController {
   }
 
   @Permission('user.manage')
+  @AuditLog({ action: 'user.create', resource: 'user', includeBody: true })
   @Post()
   create(@Body() dto: CreateUserDto) {
     return this.adminUserService.create(dto);
   }
 
   @Permission('user.manage')
+  @AuditLog({ action: 'user.update', resource: 'user', includeBody: true })
   @Put(':id')
   update(
     @Param('id') id: string,
@@ -58,12 +60,14 @@ export class AdminUserController {
   }
 
   @Permission('user.manage')
+  @AuditLog({ action: 'user.delete', resource: 'user' })
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.adminUserService.delete(toPrimaryKey(id));
   }
 
   @Permission('user.manage')
+  @AuditLog({ action: 'user.password.admin_reset', resource: 'user' })
   @Patch(':id/password')
   changePassword(
     @Param('id') id: string,
@@ -73,6 +77,7 @@ export class AdminUserController {
   }
 
   @Permission('user.manage')
+  @AuditLog({ action: 'user.status_change', resource: 'user', includeBody: true })
   @Patch(':id/status')
   changeStatus(@Param('id') id: string, @Body() dto: ChangeStatusDto) {
     return this.adminUserService.changeStatus(toPrimaryKey(id), dto);

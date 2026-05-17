@@ -1,3 +1,15 @@
+// ---------------------------------------------------------------------------
+// Module mocks — must come before any import that transitively loads them.
+// ---------------------------------------------------------------------------
+jest.mock('@package/common', () => {
+  const actual = jest.requireActual('@package/common');
+  return {
+    ...actual,
+    t: (_i18n: any, key: string) => key,
+    getSessionUserId: jest.fn(),
+  };
+});
+
 jest.mock('bcryptjs', () => ({ hash: jest.fn().mockResolvedValue('hashed-pw') }));
 jest.mock('src/types', () => ({ PrimaryKey: BigInt }), { virtual: true });
 jest.mock('../../../src/modules/user/repositories/user-admin.repository', () => ({ UserAdminRepository: jest.fn() }));
@@ -6,22 +18,21 @@ jest.mock('../../../src/modules/user/admin/dtos/update-user.dto', () => ({ Updat
 jest.mock('../../../src/modules/user/admin/dtos/admin-change-password.dto', () => ({ AdminChangePasswordDto: jest.fn() }));
 jest.mock('../../../src/modules/user/admin/dtos/change-status.dto', () => ({ ChangeStatusDto: jest.fn() }));
 jest.mock('../../../src/modules/user/admin/dtos/user-query.dto', () => ({ UserQueryDto: jest.fn() }));
-jest.mock('@package/common', () => ({
-  getSessionGroupId: jest.fn().mockReturnValue(null),
-}));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import { getSessionUserId } from '@package/common';
 import { AdminUserService } from '../../../src/modules/user/admin/services/user.service';
 import { UserAdminRepository } from '../../../src/modules/user/repositories/user-admin.repository';
-import { getSessionGroupId } from '@package/common';
-const mockGetSessionGroupId = getSessionGroupId as jest.MockedFunction<typeof getSessionGroupId>;
+
+const mockedGetSessionUserId = getSessionUserId as jest.MockedFunction<typeof getSessionUserId>;
 
 describe('AdminUserService', () => {
   let service: AdminUserService;
   let userRepo: jest.Mocked<Partial<UserAdminRepository>>;
   let configService: jest.Mocked<Partial<ConfigService>>;
+  let i18n: { t: jest.Mock };
 
   const mockUser = {
     id: 1n,
@@ -31,6 +42,7 @@ describe('AdminUserService', () => {
     password: 'secret',
     rememberToken: 'token123',
     status: 1,
+    name: 'Test User',
   };
 
   const sanitizedUser = {
@@ -39,6 +51,7 @@ describe('AdminUserService', () => {
     username: 'testuser',
     phone: '0123456789',
     status: 1,
+    name: 'Test User',
   };
 
   beforeEach(() => {
@@ -57,79 +70,25 @@ describe('AdminUserService', () => {
       get: jest.fn().mockReturnValue(12),
     };
 
+    i18n = { t: jest.fn((key: string) => key) };
+
+    mockedGetSessionUserId.mockReset();
+    mockedGetSessionUserId.mockReturnValue(null);
+
     service = new AdminUserService(
       userRepo as any,
       configService as any,
+      i18n as any,
     );
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-    mockGetSessionGroupId.mockReturnValue(null);
-  });
-
-  describe('getList', () => {
-    it('should delegate to repository findAll with query as-is when no sessionGroupId', async () => {
-      const query = { page: 1, limit: 10 };
-      const repoResult = { data: [mockUser], meta: { total: 1 } };
-      userRepo.findAll!.mockResolvedValue(repoResult);
-
-      const result = await service.getList(query as any);
-
-      expect(userRepo.findAll).toHaveBeenCalledWith(query);
-      expect(result).toEqual(repoResult);
-    });
-
-    it('adds groupId to query when sessionGroupId is set', async () => {
-      mockGetSessionGroupId.mockReturnValue(5n);
-      userRepo.findAll!.mockResolvedValue({ data: [], meta: { total: 0 } });
-
-      await service.getList({ page: 1, limit: 10 } as any);
-
-      expect(userRepo.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({ groupId: '5' }),
-      );
-    });
-
-    it('does not add groupId when system context (null)', async () => {
-      mockGetSessionGroupId.mockReturnValue(null);
-      const repoResult = { data: [mockUser], meta: { total: 1 } };
-      userRepo.findAll!.mockResolvedValue(repoResult);
-      const query = { page: 1, limit: 10 };
-
-      const result = await service.getList(query as any);
-
-      expect(userRepo.findAll).toHaveBeenCalledWith(query);
-      expect(result).toEqual(repoResult);
-    });
-  });
-
-  describe('getSimpleList', () => {
-    it('adds groupId to query when sessionGroupId is set', async () => {
-      mockGetSessionGroupId.mockReturnValue(8n);
-      userRepo.findAllSimple!.mockResolvedValue({ data: [] });
-
-      await service.getSimpleList({} as any);
-
-      expect(userRepo.findAllSimple).toHaveBeenCalledWith(
-        expect.objectContaining({ groupId: '8' }),
-      );
-    });
-
-    it('does not add groupId when system context', async () => {
-      mockGetSessionGroupId.mockReturnValue(null);
-      userRepo.findAllSimple!.mockResolvedValue({ data: [] });
-      const query = { limit: 50 };
-
-      await service.getSimpleList(query as any);
-
-      expect(userRepo.findAllSimple).toHaveBeenCalledWith(query);
-    });
   });
 
   describe('getOne', () => {
     it('should return sanitized user without password and rememberToken', async () => {
-      userRepo.findById!.mockResolvedValue(mockUser);
+      userRepo.findById!.mockResolvedValue(mockUser as any);
 
       const result = await service.getOne(1n);
 
@@ -143,12 +102,13 @@ describe('AdminUserService', () => {
       userRepo.findById!.mockResolvedValue(null);
 
       await expect(service.getOne(1n)).rejects.toThrow(NotFoundException);
-      await expect(service.getOne(1n)).rejects.toThrow('User not found');
+      await expect(service.getOne(1n)).rejects.toThrow('auth.USER_NOT_FOUND');
     });
   });
 
   describe('create', () => {
     const createDto = {
+      name: 'New User',
       email: 'new@example.com',
       username: 'newuser',
       phone: '0987654321',
@@ -156,12 +116,13 @@ describe('AdminUserService', () => {
     };
 
     it('should hash password, call createWithProfile, and return sanitized user', async () => {
-      userRepo.checkUnique!.mockResolvedValue(null);
-      userRepo.createWithProfile!.mockResolvedValue({ id: 2n });
-      userRepo.findById!.mockResolvedValue({ ...mockUser, id: 2n });
-
       const actorId = 10n;
-      const result = await service.create(createDto as any, actorId);
+      mockedGetSessionUserId.mockReturnValue(actorId);
+      userRepo.checkUnique!.mockResolvedValue(null);
+      userRepo.createWithProfile!.mockResolvedValue({ id: 2n } as any);
+      userRepo.findById!.mockResolvedValue({ ...mockUser, id: 2n } as any);
+
+      const result = await service.create(createDto as any);
 
       expect(bcrypt.hash).toHaveBeenCalledWith('plaintext', 12);
       expect(userRepo.createWithProfile).toHaveBeenCalledWith(
@@ -172,6 +133,7 @@ describe('AdminUserService', () => {
           password: 'hashed-pw',
           createdUserId: actorId,
           updatedUserId: actorId,
+          searchText: expect.any(String),
         }),
         undefined,
       );
@@ -179,27 +141,44 @@ describe('AdminUserService', () => {
       expect(result).not.toHaveProperty('rememberToken');
     });
 
+    it('should set createdUserId/updatedUserId to null when no session user', async () => {
+      mockedGetSessionUserId.mockReturnValue(null);
+      userRepo.checkUnique!.mockResolvedValue(null);
+      userRepo.createWithProfile!.mockResolvedValue({ id: 2n } as any);
+      userRepo.findById!.mockResolvedValue({ ...mockUser, id: 2n } as any);
+
+      await service.create(createDto as any);
+
+      expect(userRepo.createWithProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdUserId: null,
+          updatedUserId: null,
+        }),
+        undefined,
+      );
+    });
+
     it('should throw BadRequestException for duplicate email', async () => {
       userRepo.checkUnique!.mockResolvedValue({ field: 'email', value: 'new@example.com' });
 
       await expect(service.create(createDto as any)).rejects.toThrow(BadRequestException);
-      await expect(service.create(createDto as any)).rejects.toThrow(
-        'email "new@example.com" is already taken',
-      );
+      await expect(service.create(createDto as any)).rejects.toThrow('auth.EMAIL_IN_USE');
     });
 
     it('should include profile data with actor IDs when provided', async () => {
+      const actorId = 10n;
+      mockedGetSessionUserId.mockReturnValue(actorId);
+
       const dtoWithProfile = {
         ...createDto,
         profile: { first_name: 'John', last_name: 'Doe' },
       };
-      const actorId = 10n;
 
       userRepo.checkUnique!.mockResolvedValue(null);
-      userRepo.createWithProfile!.mockResolvedValue({ id: 3n });
-      userRepo.findById!.mockResolvedValue({ ...mockUser, id: 3n });
+      userRepo.createWithProfile!.mockResolvedValue({ id: 3n } as any);
+      userRepo.findById!.mockResolvedValue({ ...mockUser, id: 3n } as any);
 
-      await service.create(dtoWithProfile as any, actorId);
+      await service.create(dtoWithProfile as any);
 
       expect(userRepo.createWithProfile).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -225,18 +204,20 @@ describe('AdminUserService', () => {
     };
 
     beforeEach(() => {
-      userRepo.findById!.mockResolvedValue(mockUser);
+      userRepo.findById!.mockResolvedValue(mockUser as any);
       userRepo.checkUnique!.mockResolvedValue(null);
     });
 
     it('should update user and profile data', async () => {
+      const actorId = 5n;
+      mockedGetSessionUserId.mockReturnValue(actorId);
+
       const dtoWithProfile = {
         ...updateDto,
         profile: { first_name: 'Jane' },
       };
-      const actorId = 5n;
 
-      await service.update(1n, dtoWithProfile as any, actorId);
+      await service.update(1n, dtoWithProfile as any);
 
       expect(userRepo.updateWithProfile).toHaveBeenCalledWith(
         1n,
@@ -245,6 +226,7 @@ describe('AdminUserService', () => {
           username: 'updateduser',
           phone: '0111222333',
           updatedUserId: actorId,
+          searchText: expect.any(String),
         }),
         expect.objectContaining({
           first_name: 'Jane',
@@ -255,9 +237,10 @@ describe('AdminUserService', () => {
     });
 
     it('should hash password when included in update', async () => {
+      mockedGetSessionUserId.mockReturnValue(5n);
       const dtoWithPassword = { ...updateDto, password: 'newpass' };
 
-      await service.update(1n, dtoWithPassword as any, 5n);
+      await service.update(1n, dtoWithPassword as any);
 
       expect(bcrypt.hash).toHaveBeenCalledWith('newpass', 12);
       expect(userRepo.updateWithProfile).toHaveBeenCalledWith(
@@ -275,40 +258,40 @@ describe('AdminUserService', () => {
   });
 
   describe('delete', () => {
-    it('should delete user and return success', async () => {
-      userRepo.findById!.mockResolvedValue(mockUser);
-      userRepo.delete!.mockResolvedValue(undefined);
+    it('should delete user and return success with message', async () => {
+      userRepo.findById!.mockResolvedValue(mockUser as any);
+      userRepo.delete!.mockResolvedValue(undefined as any);
 
       const result = await service.delete(1n);
 
       expect(userRepo.findById).toHaveBeenCalledWith(1n);
       expect(userRepo.delete).toHaveBeenCalledWith(1n);
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, message: 'auth.USER_DELETED' });
     });
   });
 
   describe('changePassword', () => {
     it('should hash and update password', async () => {
-      userRepo.findById!.mockResolvedValue(mockUser);
-      userRepo.update!.mockResolvedValue(undefined);
+      userRepo.findById!.mockResolvedValue(mockUser as any);
+      userRepo.update!.mockResolvedValue(undefined as any);
 
       const result = await service.changePassword(1n, { password: 'newpassword' } as any);
 
       expect(bcrypt.hash).toHaveBeenCalledWith('newpassword', 12);
       expect(userRepo.update).toHaveBeenCalledWith(1n, { password: 'hashed-pw' });
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, message: 'auth.PASSWORD_CHANGED' });
     });
   });
 
   describe('changeStatus', () => {
     it('should update user status', async () => {
-      userRepo.findById!.mockResolvedValue(mockUser);
-      userRepo.update!.mockResolvedValue(undefined);
+      userRepo.findById!.mockResolvedValue(mockUser as any);
+      userRepo.update!.mockResolvedValue(undefined as any);
 
       const result = await service.changeStatus(1n, { status: 0 } as any);
 
       expect(userRepo.update).toHaveBeenCalledWith(1n, { status: 0 });
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, message: 'auth.STATUS_CHANGED' });
     });
   });
 });

@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Authenticated, session } from '@package/common';
 import { UserMenuService } from '../services/menu.service';
 
 @Controller('user/menus')
@@ -8,7 +8,7 @@ export class UserMenuController {
     private readonly service: UserMenuService,
   ) {}
 
-  @Permission('user')
+  @Authenticated()
   @Get()
   async getUserMenuTree() {
     const ctx = session()!;

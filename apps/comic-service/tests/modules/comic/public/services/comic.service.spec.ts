@@ -59,6 +59,8 @@ function makeMockRedis() {
     del: jest.fn().mockResolvedValue(1),
     incr: jest.fn().mockResolvedValue(1),
     setnx: jest.fn().mockResolvedValue(true),
+    pfadd: jest.fn().mockResolvedValue(1),
+    expire: jest.fn().mockResolvedValue(1),
     hincrby: jest.fn().mockResolvedValue(1),
     isEnabled: jest.fn().mockReturnValue(true),
   };
@@ -181,15 +183,14 @@ describe('PublicComicService', () => {
       comicRepo.findIdBySlug.mockResolvedValue({ id: 1n });
       comicRepo.findPublicChapters.mockResolvedValue([{ id: 100n }]);
       comicRepo.countPublicChapters.mockResolvedValue(1);
-      redis.setnx.mockResolvedValue(true);
+      redis.pfadd.mockResolvedValue(1);
 
       const result = await service.getChaptersBySlug('test', {}, 'user-ip');
 
       expect(result.data).toHaveLength(1);
-      expect(redis.setnx).toHaveBeenCalledWith(
-        expect.stringContaining('comic:view:seen:'),
-        '1',
-        300,
+      expect(redis.pfadd).toHaveBeenCalledWith(
+        expect.stringContaining('comic:views:hll:'),
+        'user-ip',
       );
       expect(redis.hincrby).toHaveBeenCalledWith('comic:views:buffer', '1', 1);
     });
@@ -199,7 +200,7 @@ describe('PublicComicService', () => {
       comicRepo.findIdBySlug.mockResolvedValue({ id: 1n });
       comicRepo.findPublicChapters.mockResolvedValue([]);
       comicRepo.countPublicChapters.mockResolvedValue(0);
-      redis.setnx.mockResolvedValue(false);
+      redis.pfadd.mockResolvedValue(0);
 
       await service.getChaptersBySlug('test', {}, 'user-ip');
 
@@ -214,7 +215,7 @@ describe('PublicComicService', () => {
 
       await service.getChaptersBySlug('test', {});
 
-      expect(redis.setnx).not.toHaveBeenCalled();
+      expect(redis.pfadd).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException when comic not found by slug', async () => {

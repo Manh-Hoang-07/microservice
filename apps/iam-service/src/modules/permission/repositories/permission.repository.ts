@@ -6,7 +6,6 @@ import { toPrimaryKey } from 'src/types';
 export interface PermissionFilter {
   search?: string;
   status?: string;
-  scope?: string;
   parentId?: any;
 }
 
@@ -39,10 +38,6 @@ export class PermissionRepository {
 
     if (filter.status) {
       andConditions.push({ status: filter.status });
-    }
-
-    if (filter.scope) {
-      andConditions.push({ scope: filter.scope });
     }
 
     if (filter.parentId) {

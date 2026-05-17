@@ -24,4 +24,15 @@ export class InternalRbacController {
     const permSet = await this.rbacService.getPermissions(query.userId);
     return { permissions: Array.from(permSet) };
   }
+
+  /**
+   * Returns the user's full effective permission set (after hierarchy
+   * expansion). Designed for RbacGuard to cache one entry per user and
+   * evaluate locally instead of POSTing /check per distinct perm tuple.
+   */
+  @Get('effective')
+  async getEffective(@Query(ValidationPipe) query: RbacPermissionsQueryDto) {
+    const permSet = await this.rbacService.getEffectivePermissions(query.userId);
+    return { permissions: Array.from(permSet) };
+  }
 }

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Delete, Param, Query } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Authenticated, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserFollowService } from '../services/follows.service';
 import { ListFollowsQueryDto } from '../dtos/list-follows.query.dto';
@@ -8,21 +8,21 @@ import { ListFollowsQueryDto } from '../dtos/list-follows.query.dto';
 export class UserFollowController {
   constructor(private readonly followService: UserFollowService) {}
 
-  @Permission('user')
+  @Authenticated()
   @Get('follows')
   async getList(@Query() query: ListFollowsQueryDto) {
     const userId = toPrimaryKey(session()!.userId!);
     return this.followService.getList(userId, query);
   }
 
-  @Permission('user')
+  @Authenticated()
   @Post('comics/:id/follow')
   async follow(@Param('id') id: string) {
     const userId = toPrimaryKey(session()!.userId!);
     return this.followService.follow(userId, toPrimaryKey(id));
   }
 
-  @Permission('user')
+  @Authenticated()
   @Delete('comics/:id/follow')
   async unfollow(@Param('id') id: string) {
     const userId = toPrimaryKey(session()!.userId!);

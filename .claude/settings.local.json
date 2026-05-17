@@ -158,7 +158,17 @@
       "Bash(npx ts-node -P tsconfig.seed.json -e ' *)",
       "Bash(grep -v \"^$\")",
       "Bash(DATABASE_URL=\"postgresql://root:123456@160.191.50.85:5432/iam_db\" npx prisma db execute --stdin --schema=prisma/schema.prisma)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(npm -w apps/comic-service run build)",
+      "Bash(npm -w apps/storage-service run build)",
+      "Bash(npm -w apps/post-service run build)",
+      "Bash(npm -w apps/marketing-service run build)",
+      "Bash(npm -w apps/notification-service run build)",
+      "Bash(npm -w apps/introduction-service run build)",
+      "Bash(npm -w apps/config-service run build)",
+      "Bash(npm -w apps/auth-service run build)",
+      "Bash(python3 -m json.tool)",
+      "Bash(npm -w apps/iam-service exec prisma generate)"
     ]
   }
 }

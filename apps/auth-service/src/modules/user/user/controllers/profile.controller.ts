@@ -4,7 +4,7 @@ import {
   Get,
   Patch,
 } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Authenticated, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { ProfileService } from '../services/profile.service';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
@@ -16,14 +16,14 @@ export class ProfileController {
     private readonly profileService: ProfileService,
   ) {}
 
-  @Permission('user')
+  @Authenticated()
   @Get()
   async getProfile() {
     const ctx = session()!;
     return this.profileService.getProfile(toPrimaryKey(ctx.userId!));
   }
 
-  @Permission('user')
+  @Authenticated()
   @Patch()
   async updateProfile(
     @Body() dto: UpdateProfileDto,
@@ -35,7 +35,7 @@ export class ProfileController {
     );
   }
 
-  @Permission('user')
+  @Authenticated()
   @Patch('change-password')
   async changePassword(
     @Body() dto: ChangePasswordDto,

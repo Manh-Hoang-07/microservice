@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { parseQueryOptions, createPaginationMeta, t } from '@package/common';
 import { PrimaryKey } from 'src/types';
@@ -6,10 +6,11 @@ import { assertNoCycle } from '../../../../helpers/hierarchy.helper';
 import { PermissionFilter, PermissionRepository } from '../../repositories/permission.repository';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
 import { RbacPermissionIndexService } from '../../../../rbac/services/rbac-permission-index.service';
+import { RbacService } from '../../../../rbac/services/rbac.service';
+import { PERM } from '../../../../rbac/constants/rbac.constants';
 import { ListPermissionsAdminQueryDto } from '../dtos/list-permission.query.dto';
 import { CreatePermissionDto } from '../dtos/create-permission.dto';
 import { UpdatePermissionDto } from '../dtos/update-permission.dto';
-import { PermissionScope } from '../../enums/permission-scope.enum';
 
 @Injectable()
 export class PermissionService {
@@ -17,14 +18,28 @@ export class PermissionService {
     private readonly repo: PermissionRepository,
     private readonly rbacCache: RbacCacheService,
     private readonly permIndex: RbacPermissionIndexService,
+    private readonly rbacService: RbacService,
     private readonly i18n: I18nService,
   ) {}
+
+  /**
+   * Changing a permission's parent redistributes implicit grants — every
+   * holder of the new parent code transitively gains access to this
+   * permission's routes. To prevent a `permission.manage` admin from
+   * laundering low-privilege perms into high-privilege ones (or vice
+   * versa), restrict hierarchy edits to callers who hold `system.manage`.
+   */
+  private async assertCanEditHierarchy(actorId: PrimaryKey): Promise<void> {
+    const perms = await this.rbacService.getPermissions(actorId);
+    if (!this.rbacService.hasCode(perms, PERM.SYSTEM.MANAGE)) {
+      throw new ForbiddenException(t(this.i18n, 'permission.HIERARCHY_RESTRICTED'));
+    }
+  }
 
   async getList(query: ListPermissionsAdminQueryDto) {
     const options = parseQueryOptions(query);
     const filter: PermissionFilter = {};
     if (query.status) filter.status = query.status;
-    if (query.scope) filter.scope = query.scope;
     if (query.search) filter.search = query.search;
 
     const skipCount = query.skipCount === 'true';
@@ -48,10 +63,12 @@ export class PermissionService {
     if (existing) {
       throw new ConflictException(t(this.i18n, 'permission.CODE_EXISTS'));
     }
+    if (dto.parentId) {
+      await this.assertCanEditHierarchy(actorId);
+    }
     const data: any = {
       code: dto.code,
       name: dto.name,
-      scope: dto.scope ?? PermissionScope.context,
       createdUserId: actorId,
     };
     if (dto.parentId) data.parent = { connect: { id: dto.parentId } };
@@ -62,7 +79,10 @@ export class PermissionService {
   }
 
   async update(id: PrimaryKey, dto: UpdatePermissionDto, actorId: PrimaryKey) {
-    await this.getOne(id);
+    const entity = await this.getOne(id);
+    if ('parentId' in dto && String(dto.parentId ?? '') !== String(entity.parentId ?? '')) {
+      await this.assertCanEditHierarchy(actorId);
+    }
     if (dto.parentId) {
       await assertNoCycle(
         id,
@@ -90,7 +110,14 @@ export class PermissionService {
   }
 
   async delete(id: PrimaryKey) {
-    await this.getOne(id);
+    const entity = await this.getOne(id);
+
+    // `system.manage` underpins every admin route. Removing it would lock
+    // every administrator out of the system.
+    if (entity.code === PERM.SYSTEM.MANAGE) {
+      throw new ForbiddenException(t(this.i18n, 'permission.SYSTEM_MANAGE_PROTECTED'));
+    }
+
     await this.repo.delete(id);
     await this.rbacCache.bumpVersion();
     await this.permIndex.publishRefresh();

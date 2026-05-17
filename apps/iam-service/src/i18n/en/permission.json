@@ -2,5 +2,7 @@
   "NOT_FOUND": "Permission not found.",
   "CODE_EXISTS": "Permission code already exists.",
   "CYCLE_DETECTED": "Setting this parent would create a permission hierarchy cycle.",
-  "DELETED": "Permission deleted successfully."
+  "DELETED": "Permission deleted successfully.",
+  "SYSTEM_MANAGE_PROTECTED": "Cannot delete the system.manage permission — it grants every admin route.",
+  "HIERARCHY_RESTRICTED": "Changing permission hierarchy requires system.manage."
 }

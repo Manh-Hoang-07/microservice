@@ -100,7 +100,7 @@ describe('MenuService (admin)', () => {
         q: 'test',
         status: 'active',
         type: 'page',
-        parent_id: '1',
+        parentId: '1',
         group: 'admin',
       });
 
@@ -168,7 +168,7 @@ describe('MenuService (admin)', () => {
       repo.findByCode.mockResolvedValue(null);
       repo.findById.mockResolvedValue(null);
 
-      await expect(service.create({ name: 'Child', parent_id: '999' }))
+      await expect(service.create({ name: 'Child', parentId: '999' }))
         .rejects.toThrow(BadRequestException);
     });
 
@@ -193,7 +193,7 @@ describe('MenuService (admin)', () => {
 
   // --- createWithUser ---
   describe('createWithUser', () => {
-    it('should set created_user_id from userId', async () => {
+    it('should set createdUserId from userId', async () => {
       const { service, repo } = createService();
       repo.findByCode.mockResolvedValue(null);
       const dto = { name: 'User Menu' };
@@ -201,7 +201,7 @@ describe('MenuService (admin)', () => {
       await service.createWithUser(dto, '42');
 
       expect(repo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ created_user_id: '42' }),
+        expect.objectContaining({ createdUserId: '42' }),
       );
     });
   });
@@ -246,15 +246,15 @@ describe('MenuService (admin)', () => {
         .rejects.toThrow(NotFoundException);
     });
 
-    it('should validate parent exists when parent_id set', async () => {
+    it('should validate parent exists when parentId set', async () => {
       const { service, repo } = createService();
       // First call: getOne for the menu itself; second call: parent lookup
       repo.findById
-        .mockResolvedValueOnce({ id: '1', code: 'menu1', parent_id: null })
+        .mockResolvedValueOnce({ id: '1', code: 'menu1', parentId: null })
         .mockResolvedValueOnce(null) // assertNoCycle walk
         .mockResolvedValueOnce(null); // parent check
 
-      await expect(service.update('1', { parent_id: '99' }))
+      await expect(service.update('1', { parentId: '99' }))
         .rejects.toThrow(BadRequestException);
     });
 
@@ -270,7 +270,7 @@ describe('MenuService (admin)', () => {
 
   // --- updateById ---
   describe('updateById', () => {
-    it('should set updated_user_id from userId', async () => {
+    it('should set updatedUserId from userId', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: '1', code: 'x' });
       repo.update.mockResolvedValue({ id: '1' });
@@ -279,7 +279,7 @@ describe('MenuService (admin)', () => {
 
       expect(repo.update).toHaveBeenCalledWith(
         '1',
-        expect.objectContaining({ updated_user_id: '42' }),
+        expect.objectContaining({ updatedUserId: '42' }),
       );
     });
   });
@@ -321,11 +321,11 @@ describe('MenuService (admin)', () => {
 
   // --- cycle detection ---
   describe('assertNoCycle (via update)', () => {
-    it('should reject setting parent_id to self', async () => {
+    it('should reject setting parentId to self', async () => {
       const { service, repo } = createService();
-      repo.findById.mockResolvedValue({ id: '1', code: 'self', parent_id: null });
+      repo.findById.mockResolvedValue({ id: '1', code: 'self', parentId: null });
 
-      await expect(service.update('1', { parent_id: '1' }))
+      await expect(service.update('1', { parentId: '1' }))
         .rejects.toThrow(BadRequestException);
     });
 
@@ -333,39 +333,39 @@ describe('MenuService (admin)', () => {
       const { service, repo } = createService();
       // getOne finds menu '1'
       repo.findById
-        .mockResolvedValueOnce({ id: '1', code: 'a', parent_id: null })
+        .mockResolvedValueOnce({ id: '1', code: 'a', parentId: null })
         // assertNoCycle: look up candidate parent '2'
-        .mockResolvedValueOnce({ id: '2', parent_id: '1' });
+        .mockResolvedValueOnce({ id: '2', parentId: '1' });
 
-      await expect(service.update('1', { parent_id: '2' }))
+      await expect(service.update('1', { parentId: '2' }))
         .rejects.toThrow(BadRequestException);
     });
 
     it('should reject deeper cycle: A -> B -> C -> A', async () => {
       const { service, repo } = createService();
       repo.findById
-        .mockResolvedValueOnce({ id: '1', code: 'a', parent_id: null })
+        .mockResolvedValueOnce({ id: '1', code: 'a', parentId: null })
         // assertNoCycle: walk from '3' up
-        .mockResolvedValueOnce({ id: '3', parent_id: '2' })
-        .mockResolvedValueOnce({ id: '2', parent_id: '1' });
+        .mockResolvedValueOnce({ id: '3', parentId: '2' })
+        .mockResolvedValueOnce({ id: '2', parentId: '1' });
 
-      await expect(service.update('1', { parent_id: '3' }))
+      await expect(service.update('1', { parentId: '3' }))
         .rejects.toThrow(BadRequestException);
     });
 
     it('should allow valid parent assignment', async () => {
       const { service, repo } = createService();
       repo.findById
-        .mockResolvedValueOnce({ id: '1', code: 'a', parent_id: null })
+        .mockResolvedValueOnce({ id: '1', code: 'a', parentId: null })
         // assertNoCycle: walk from '2' — no parent
-        .mockResolvedValueOnce({ id: '2', parent_id: null })
+        .mockResolvedValueOnce({ id: '2', parentId: null })
         // parent validation
-        .mockResolvedValueOnce({ id: '2', parent_id: null });
-      repo.update.mockResolvedValue({ id: '1', parent_id: '2' });
+        .mockResolvedValueOnce({ id: '2', parentId: null });
+      repo.update.mockResolvedValue({ id: '1', parentId: '2' });
 
-      const result = await service.update('1', { parent_id: '2' });
+      const result = await service.update('1', { parentId: '2' });
 
-      expect(result).toEqual({ id: '1', parent_id: '2' });
+      expect(result).toEqual({ id: '1', parentId: '2' });
     });
   });
 

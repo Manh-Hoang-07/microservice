@@ -19,7 +19,7 @@ import { Response } from 'express';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { UploadService } from '../services/upload.service';
 import { FileValidationService } from '../services/file-validation.service';
-import { Permission } from '@package/common';
+import { Permission, Public } from '@package/common';
 import { UploadResponseDto } from '../dtos/upload.dto';
 import { FileMetadata } from '../interfaces/upload-strategy.interface';
 import { Throttle } from '@nestjs/throttler/dist/throttler.decorator';
@@ -147,7 +147,7 @@ export class UploadController {
   }
 
   @Get('allowed-types')
-  @Permission('public')
+  @Public()
   async getAllowedTypes(): Promise<{ types: string[]; maxSize: number }> {
     const types = this.fileValidationService.getAllowedFileTypes();
     return { types, maxSize: this.maxFileSize };

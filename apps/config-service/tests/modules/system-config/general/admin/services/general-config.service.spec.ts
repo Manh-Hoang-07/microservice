@@ -36,7 +36,7 @@ function makeMockRepo() {
   return {
     getConfig: jest.fn().mockResolvedValue(null),
     upsert: jest.fn().mockImplementation((_create: any, _update: any) =>
-      Promise.resolve({ id: '1', site_name: 'My Site' }),
+      Promise.resolve({ id: '1', siteName: 'My Site' }),
     ),
   };
 }
@@ -66,7 +66,7 @@ describe('GeneralConfigService', () => {
   describe('getConfig', () => {
     it('should return config from repository', async () => {
       const { service, repo } = createService();
-      const config = { id: '1', site_name: 'My Site' };
+      const config = { id: '1', siteName: 'My Site' };
       repo.getConfig.mockResolvedValue(config);
 
       const result = await service.getConfig();
@@ -85,14 +85,14 @@ describe('GeneralConfigService', () => {
       const { service, repo, redis } = createService();
       repo.getConfig.mockResolvedValue(null);
 
-      const dto = { site_name: 'New Site' };
+      const dto = { siteName: 'New Site' };
       (buildConfigPayload as jest.Mock).mockReturnValue({ ...dto });
 
       const result = await service.updateConfig(dto as any, '1');
 
       expect(repo.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          site_name: 'New Site',
+          siteName: 'New Site',
           timezone: 'Asia/Ho_Chi_Minh',
           locale: 'vi',
           currency: 'VND',
@@ -108,7 +108,7 @@ describe('GeneralConfigService', () => {
       repo.getConfig.mockResolvedValue({ id: '1' });
 
       const dto = {
-        site_name: 'Custom',
+        siteName: 'Custom',
         timezone: 'UTC',
         locale: 'en',
         currency: 'USD',
@@ -119,7 +119,7 @@ describe('GeneralConfigService', () => {
 
       expect(repo.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          site_name: 'Custom',
+          siteName: 'Custom',
           timezone: 'UTC',
           locale: 'en',
           currency: 'USD',
@@ -133,9 +133,9 @@ describe('GeneralConfigService', () => {
       repo.getConfig.mockResolvedValue(null);
       repo.upsert.mockResolvedValue(null);
 
-      (buildConfigPayload as jest.Mock).mockReturnValue({ site_name: 'X' });
+      (buildConfigPayload as jest.Mock).mockReturnValue({ siteName: 'X' });
 
-      await expect(service.updateConfig({ site_name: 'X' } as any))
+      await expect(service.updateConfig({ siteName: 'X' } as any))
         .rejects.toThrow(InternalServerErrorException);
     });
 
@@ -143,14 +143,14 @@ describe('GeneralConfigService', () => {
       const { service, repo } = createService();
       repo.getConfig.mockResolvedValue(null);
 
-      const dto = { site_name: 'X' };
+      const dto = { siteName: 'X' };
       (buildConfigPayload as jest.Mock).mockReturnValue({ ...dto });
 
       await service.updateConfig(dto as any, '1');
 
       expect(buildConfigPayload).toHaveBeenCalledWith(
         dto,
-        ['site_country_id', 'site_province_id', 'site_ward_id'],
+        ['siteCountryId', 'siteProvinceId', 'siteWardId'],
         '1',
         null,
       );
@@ -162,9 +162,9 @@ describe('GeneralConfigService', () => {
       const service = new GeneralConfigService(repo as any, i18n as any, undefined);
 
       repo.getConfig.mockResolvedValue(null);
-      (buildConfigPayload as jest.Mock).mockReturnValue({ site_name: 'NoRedis' });
+      (buildConfigPayload as jest.Mock).mockReturnValue({ siteName: 'NoRedis' });
 
-      await expect(service.updateConfig({ site_name: 'NoRedis' } as any)).resolves.toBeDefined();
+      await expect(service.updateConfig({ siteName: 'NoRedis' } as any)).resolves.toBeDefined();
     });
   });
 });

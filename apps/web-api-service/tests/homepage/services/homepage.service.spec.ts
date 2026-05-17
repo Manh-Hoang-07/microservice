@@ -107,7 +107,7 @@ describe('GatewayHomepageService', () => {
       await service.getHomepageData();
 
       const ttls = cache.getOrSet.mock.calls.map((c: any[]) => c[2]?.ttlSeconds);
-      expect(ttls).toEqual([420, 1200, 120, 120, 43200, 300]);
+      expect(ttls).toEqual([420, 1200, 120, 120, 3600, 300]);
     });
 
     it('passes shouldCache predicates that reject empty arrays', async () => {

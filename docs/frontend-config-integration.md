@@ -292,7 +292,6 @@ Lấy cây menu admin theo quyền của user đang đăng nhập.
 
 **Headers:**
 - `Authorization: Bearer {token}` (bắt buộc)
-- `x-group-id: {groupId}` (tùy chọn — nếu user thuộc nhiều group)
 
 **Response `data`:** Mảng cây menu, chỉ gồm item user có quyền.
 

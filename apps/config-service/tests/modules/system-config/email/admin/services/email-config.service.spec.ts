@@ -34,7 +34,7 @@ function makeMockRepo() {
   return {
     getConfig: jest.fn().mockResolvedValue(null),
     upsert: jest.fn().mockImplementation((_create: any, _update: any) =>
-      Promise.resolve({ id: '1', smtp_host: 'smtp.test.com', smtp_password: 'secret' }),
+      Promise.resolve({ id: '1', smtpHost: 'smtp.test.com', smtpPassword: 'secret' }),
     ),
   };
 }
@@ -61,14 +61,14 @@ describe('EmailConfigService', () => {
       const { service, repo } = createService();
       repo.getConfig.mockResolvedValue({
         id: '1',
-        smtp_host: 'smtp.test.com',
-        smtp_password: 'real-password',
+        smtpHost: 'smtp.test.com',
+        smtpPassword: 'real-password',
       });
 
       const result = await service.getConfig();
 
-      expect(result.smtp_password).toBe('******');
-      expect(result.smtp_host).toBe('smtp.test.com');
+      expect(result.smtpPassword).toBe('******');
+      expect(result.smtpHost).toBe('smtp.test.com');
     });
 
     it('should return null when no config exists', async () => {
@@ -85,11 +85,11 @@ describe('EmailConfigService', () => {
       const { service, repo } = createService();
       repo.getConfig.mockResolvedValue({
         id: '1',
-        smtp_password: 'real-password',
+        smtpPassword: 'real-password',
       });
 
       const result = await service.getRawConfig();
-      expect(result.smtp_password).toBe('real-password');
+      expect(result.smtpPassword).toBe('real-password');
     });
   });
 
@@ -99,11 +99,11 @@ describe('EmailConfigService', () => {
       repo.getConfig.mockResolvedValue(null);
 
       const dto = {
-        smtp_host: 'smtp.test.com',
-        smtp_username: 'user',
-        smtp_password: 'pass',
-        from_email: 'test@test.com',
-        from_name: 'Test',
+        smtpHost: 'smtp.test.com',
+        smtpUsername: 'user',
+        smtpPassword: 'pass',
+        fromEmail: 'test@test.com',
+        fromName: 'Test',
       };
 
       (buildConfigPayload as jest.Mock).mockReturnValue({ ...dto });
@@ -111,14 +111,14 @@ describe('EmailConfigService', () => {
       const result = await service.updateConfig(dto as any, '1');
 
       expect(repo.upsert).toHaveBeenCalled();
-      expect(result.smtp_password).toBe('******');
+      expect(result.smtpPassword).toBe('******');
     });
 
     it('should throw BadRequestException when required field missing on first write', async () => {
       const { service, repo } = createService();
       repo.getConfig.mockResolvedValue(null);
 
-      const dto = { smtp_host: 'smtp.test.com' };
+      const dto = { smtpHost: 'smtp.test.com' };
       (buildConfigPayload as jest.Mock).mockReturnValue({ ...dto });
 
       await expect(service.updateConfig(dto as any))
@@ -127,12 +127,12 @@ describe('EmailConfigService', () => {
 
     it('should strip masked password placeholder on update', async () => {
       const { service, repo } = createService();
-      const existing = { id: '1', smtp_password: 'real-pass' };
+      const existing = { id: '1', smtpPassword: 'real-pass' };
       repo.getConfig.mockResolvedValue(existing);
 
       const dto: any = {
-        smtp_host: 'new-host',
-        smtp_password: '******',
+        smtpHost: 'new-host',
+        smtpPassword: '******',
       };
 
       (buildConfigPayload as jest.Mock).mockImplementation((d: any) => ({ ...d }));
@@ -140,19 +140,19 @@ describe('EmailConfigService', () => {
       await service.updateConfig(dto, '1');
 
       // The masked password should have been removed from dto
-      expect(dto.smtp_password).toBeUndefined();
+      expect(dto.smtpPassword).toBeUndefined();
     });
 
     it('should strip password when existing config and no password provided', async () => {
       const { service, repo } = createService();
-      repo.getConfig.mockResolvedValue({ id: '1', smtp_password: 'real-pass' });
+      repo.getConfig.mockResolvedValue({ id: '1', smtpPassword: 'real-pass' });
 
-      const dto: any = { smtp_host: 'new-host' };
+      const dto: any = { smtpHost: 'new-host' };
       (buildConfigPayload as jest.Mock).mockReturnValue({ ...dto });
 
       await service.updateConfig(dto, '1');
 
-      expect(dto.smtp_password).toBeUndefined();
+      expect(dto.smtpPassword).toBeUndefined();
     });
 
     it('should throw InternalServerErrorException when upsert returns null', async () => {
@@ -160,7 +160,7 @@ describe('EmailConfigService', () => {
       repo.getConfig.mockResolvedValue({ id: '1' });
       repo.upsert.mockResolvedValue(null);
 
-      const dto: any = { smtp_host: 'host' };
+      const dto: any = { smtpHost: 'host' };
       (buildConfigPayload as jest.Mock).mockReturnValue({ ...dto });
 
       await expect(service.updateConfig(dto))

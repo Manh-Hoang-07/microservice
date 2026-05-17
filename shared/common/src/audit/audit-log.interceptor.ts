@@ -68,7 +68,9 @@ export class AuditLogInterceptor implements NestInterceptor {
       route: req.route?.path ?? req.originalUrl ?? req.url ?? '',
       ip: req.ip ?? req.headers?.['x-forwarded-for'] ?? null,
       user_agent: req.headers?.['user-agent'] ?? null,
-      actor: req.userId ?? req.user?.id ?? 'anonymous',
+      // JwtGuard sets req.user = JWT payload; the user id lives in `sub`.
+      // Keep the legacy fallbacks for any handler that injects them manually.
+      actor: req.user?.sub ?? req.userId ?? req.user?.id ?? 'anonymous',
       request_id: req.requestId ?? req.headers?.['x-request-id'] ?? null,
     };
     if (meta.includeBody && req.body && typeof req.body === 'object') {

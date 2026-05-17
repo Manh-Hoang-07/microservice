@@ -25,9 +25,16 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<any> {
     const id = profile?.id;
-    const email = profile?.emails?.[0]?.value;
+    const emailEntry = profile?.emails?.[0];
+    const email = emailEntry?.value;
     if (!id || !email) {
       return done(new Error('Google profile missing id or email'), undefined);
+    }
+    // Reject unverified Google emails. Google lets users add emails to their
+    // account without proving ownership; logging in with such an email would
+    // let an attacker hijack an existing account that uses that email.
+    if (emailEntry?.verified !== true && emailEntry?.verified !== 'true') {
+      return done(new Error('Google email not verified'), undefined);
     }
     const user = {
       googleId: String(id),

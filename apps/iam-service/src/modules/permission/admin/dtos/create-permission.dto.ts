@@ -1,5 +1,4 @@
-import { IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
-import { PermissionScope } from '../../enums/permission-scope.enum';
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreatePermissionDto {
   @IsString()
@@ -14,10 +13,6 @@ export class CreatePermissionDto {
   @IsString()
   @MaxLength(150)
   name?: string;
-
-  @IsOptional()
-  @IsEnum(PermissionScope)
-  scope?: PermissionScope;
 
   @IsOptional()
   @IsString()

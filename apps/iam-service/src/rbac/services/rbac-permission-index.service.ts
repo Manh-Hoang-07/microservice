@@ -80,6 +80,30 @@ export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy
     return required.some((need) => this.matchesAssigned(assignedCodes, need));
   }
 
+  /**
+   * Walk the permission hierarchy DOWN: given the set of codes a user
+   * directly holds, return every code that user implicitly has by
+   * permission inheritance (each child grants when an ancestor is held).
+   *
+   * Used by `/internal/rbac/effective` so that guards can cache one set
+   * per user and evaluate locally with a single `Set.has(needed)`
+   * instead of round-tripping IAM for every distinct permission tuple.
+   */
+  expandAssigned(assignedCodes: Set<string>): Set<string> {
+    // system.manage shortcut: every active permission is implicitly granted.
+    if (assignedCodes.has(PERM.SYSTEM.MANAGE)) {
+      return new Set(this.permissionByCode.keys());
+    }
+    const expanded = new Set(assignedCodes);
+    for (const code of this.permissionByCode.keys()) {
+      if (expanded.has(code)) continue;
+      if (this.grants(code, (c) => assignedCodes.has(c))) {
+        expanded.add(code);
+      }
+    }
+    return expanded;
+  }
+
   private async ensurePermissionIndexes(force = false): Promise<void> {
     if (
       !force &&

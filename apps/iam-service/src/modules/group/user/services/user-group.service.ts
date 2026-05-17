@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ListService, session } from '@package/common';
+import { ListService, getSessionUserId } from '@package/common';
 import { GroupRepository } from '../../repositories/group.repository';
-import { toPrimaryKey } from 'src/types';
 
 @Injectable()
 export class UserGroupService extends ListService<GroupRepository> {
@@ -10,9 +9,9 @@ export class UserGroupService extends ListService<GroupRepository> {
   }
 
   async getList(_query: Record<string, any> = {}): Promise<any> {
-    const sess = session();
-    if (!sess?.userId) return { data: [], meta: { total: 0, page: 1, limit: 0 } };
-    const rows = await this.repository.findUserGroups(toPrimaryKey(sess.userId));
+    const userId = getSessionUserId();
+    if (!userId) return { data: [], meta: { total: 0, page: 1, limit: 0 } };
+    const rows = await this.repository.findUserGroups(userId);
     const data = rows.map((r) => ({ ...r.group, joinedAt: r.joinedAt }));
     return { data, meta: { total: data.length, page: 1, limit: data.length } };
   }

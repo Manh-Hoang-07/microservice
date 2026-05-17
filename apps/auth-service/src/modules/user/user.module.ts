@@ -6,10 +6,12 @@ import { AdminUserController } from './admin/controllers/user.controller';
 import { AdminUserService } from './admin/services/user.service';
 import { ProfileController } from './user/controllers/profile.controller';
 import { ProfileService } from './user/services/profile.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     EnumModule.register({ path: 'users/enums', enums: UserEnums }),
+    AuthModule,
   ],
   controllers: [AdminUserController, ProfileController],
   providers: [UserAdminRepository, AdminUserService, ProfileService],

@@ -29,7 +29,6 @@ export async function seedPermissions(prisma: PrismaClient): Promise<Map<string,
       data: {
         code: perm.code,
         name: perm.name,
-        scope: 'context',
         status: perm.status,
       },
     });

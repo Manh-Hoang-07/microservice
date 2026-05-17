@@ -77,7 +77,7 @@ function makeMockRbacService() {
   return {
     assignRoleToUser: jest.fn().mockResolvedValue(undefined),
     assertCallerCanGrantRole: jest.fn().mockResolvedValue(undefined),
-    syncRolesInGroup: jest.fn().mockResolvedValue(undefined),
+    syncUserRoles: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -118,20 +118,12 @@ describe('UserRoleService', () => {
   describe('getUserRoles', () => {
     it('should return user roles from repo', () => {
       const { service, repo } = createService();
-      const roles = [{ roleId: 'r1', groupId: 'g1' }];
+      const roles = [{ roleId: 'r1' }];
       repo.getUserRoles.mockReturnValue(roles);
 
-      const result = service.getUserRoles('u1', 'g1');
+      const result = service.getUserRoles('u1');
       expect(result).toEqual(roles);
-      expect(repo.getUserRoles).toHaveBeenCalledWith('u1', 'g1');
-    });
-
-    it('should work without groupId', () => {
-      const { service, repo } = createService();
-      repo.getUserRoles.mockReturnValue([]);
-
-      service.getUserRoles('u1');
-      expect(repo.getUserRoles).toHaveBeenCalledWith('u1', undefined);
+      expect(repo.getUserRoles).toHaveBeenCalledWith('u1');
     });
   });
 
@@ -142,30 +134,14 @@ describe('UserRoleService', () => {
 
       const result = await service.assignRole(
         'u1',
-        { roleId: 'r1', groupId: 'g1' } as any,
-        { id: 'actor', groupId: null },
-      );
-
-      expect(rbacService.assignRoleToUser).toHaveBeenCalledWith('u1', 'r1', 'g1', {
-        id: 'actor',
-        groupId: null,
-      });
-      expect(result.message).toBe('rbac.ROLE_ASSIGNED');
-    });
-
-    it('should default actor groupId to null when undefined', async () => {
-      const { service, rbacService } = createService();
-
-      await service.assignRole(
-        'u1',
-        { roleId: 'r1', groupId: 'g1' } as any,
+        { roleId: 'r1' } as any,
         { id: 'actor' },
       );
 
-      expect(rbacService.assignRoleToUser).toHaveBeenCalledWith('u1', 'r1', 'g1', {
+      expect(rbacService.assignRoleToUser).toHaveBeenCalledWith('u1', 'r1', {
         id: 'actor',
-        groupId: null,
       });
+      expect(result.message).toBe('rbac.ROLE_ASSIGNED');
     });
   });
 
@@ -176,10 +152,10 @@ describe('UserRoleService', () => {
       rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set(['role.view']));
       repo.removeRole.mockResolvedValue(1);
 
-      const result = await service.removeRole('u1', 'r1', 'g1', { id: 'actor', groupId: null });
+      const result = await service.removeRole('u1', 'r1', { id: 'actor' });
 
-      expect(rbacService.assertCallerCanGrantRole).toHaveBeenCalledWith('actor', null, ['r1']);
-      expect(repo.removeRole).toHaveBeenCalledWith('u1', 'r1', 'g1');
+      expect(rbacService.assertCallerCanGrantRole).toHaveBeenCalledWith('actor', ['r1']);
+      expect(repo.removeRole).toHaveBeenCalledWith('u1', 'r1');
       expect(rbacCache.bumpVersion).toHaveBeenCalled();
       expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith('u1');
       expect(result.message).toBe('rbac.ROLE_REMOVED');
@@ -191,7 +167,7 @@ describe('UserRoleService', () => {
       repo.removeRole.mockResolvedValue(0);
 
       await expect(
-        service.removeRole('u1', 'r1', 'g1', { id: 'actor', groupId: null }),
+        service.removeRole('u1', 'r1', { id: 'actor' }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -201,7 +177,7 @@ describe('UserRoleService', () => {
       rbacRepo.countUsersWithPermission.mockResolvedValue(1);
 
       await expect(
-        service.removeRole('u1', 'r1', 'g1', { id: 'actor', groupId: null }),
+        service.removeRole('u1', 'r1', { id: 'actor' }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -211,7 +187,7 @@ describe('UserRoleService', () => {
       rbacRepo.countUsersWithPermission.mockResolvedValue(3);
       repo.removeRole.mockResolvedValue(1);
 
-      const result = await service.removeRole('u1', 'r1', 'g1', { id: 'actor', groupId: null });
+      const result = await service.removeRole('u1', 'r1', { id: 'actor' });
       expect(result.message).toBe('rbac.ROLE_REMOVED');
     });
 
@@ -220,24 +196,24 @@ describe('UserRoleService', () => {
       rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set(['role.view']));
       repo.removeRole.mockResolvedValue(1);
 
-      await service.removeRole('u1', 'r1', 'g1', { id: 'actor', groupId: null });
+      await service.removeRole('u1', 'r1', { id: 'actor' });
       expect(rbacRepo.countUsersWithPermission).not.toHaveBeenCalled();
     });
   });
 
   // --- syncRoles ---
   describe('syncRoles', () => {
-    it('should delegate to rbacService.syncRolesInGroup', async () => {
+    it('should delegate to rbacService.syncUserRoles', async () => {
       const { service, rbacService } = createService();
 
       const result = await service.syncRoles(
         'u1',
-        { groupId: 'g1', roleIds: ['r1', 'r2'] } as any,
-        { id: 'actor', groupId: 'g5' },
+        { roleIds: ['r1', 'r2'] } as any,
+        { id: 'actor' },
       );
 
-      expect(rbacService.syncRolesInGroup).toHaveBeenCalledWith(
-        'u1', 'g1', ['r1', 'r2'], { id: 'actor', groupId: 'g5' },
+      expect(rbacService.syncUserRoles).toHaveBeenCalledWith(
+        'u1', ['r1', 'r2'], { id: 'actor' },
       );
       expect(result.message).toBe('rbac.ROLES_SYNCED');
     });

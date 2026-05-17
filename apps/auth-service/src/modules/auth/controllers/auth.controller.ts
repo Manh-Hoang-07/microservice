@@ -26,7 +26,7 @@ import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendOtpDto } from '../dto/send-otp.dto';
 import { LogoutDto } from '../dto/logout.dto';
-import { Public, Permission } from '@package/common';
+import { Public, Authenticated, AuditLog } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import {
   REFRESH_COOKIE,
@@ -57,6 +57,7 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @AuditLog({ action: 'auth.login', resource: 'auth' })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -71,12 +72,14 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @AuditLog({ action: 'auth.register', resource: 'auth' })
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
+  @AuditLog({ action: 'auth.logout', resource: 'auth' })
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
@@ -92,7 +95,8 @@ export class AuthController {
     return { success: true };
   }
 
-  @Permission('user')
+  @Authenticated()
+  @AuditLog({ action: 'auth.logout_all', resource: 'auth' })
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   async logoutAll(
@@ -122,7 +126,7 @@ export class AuthController {
     return result;
   }
 
-  @Permission('user')
+  @Authenticated()
   @Get('me')
   async me(@Req() req: Request) {
     const userId = requireUserId(req);
@@ -131,6 +135,7 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @AuditLog({ action: 'auth.forgot_password', resource: 'auth' })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -140,6 +145,7 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @AuditLog({ action: 'auth.reset_password', resource: 'auth' })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {
@@ -169,6 +175,7 @@ export class AuthController {
   }
 
   @Public()
+  @AuditLog({ action: 'auth.google_callback', resource: 'auth' })
   @Get('google/callback')
   @UseGuards(GoogleOAuthGuard)
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {

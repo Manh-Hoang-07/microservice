@@ -94,9 +94,9 @@ import { StatsModule } from './modules/stats/stats.module';
     // decoration-only and any authenticated user reaches admin endpoints.
     {
       provide: APP_GUARD,
-      useFactory: (reflector: Reflector, config: ConfigService) =>
-        new RbacGuard(reflector, config),
-      inject: [Reflector, ConfigService],
+      useFactory: (reflector: Reflector, config: ConfigService, redis: RedisService) =>
+        new RbacGuard(reflector, config, redis),
+      inject: [Reflector, ConfigService, RedisService],
     },
     {
       provide: APP_INTERCEPTOR,

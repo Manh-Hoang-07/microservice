@@ -131,7 +131,7 @@ describe('PublicCountryService', () => {
       const result = await service.getProvinces('1');
       expect(result).toEqual({ data: [{ id: '10' }], meta: { total: 1 } });
       expect(provinceService.getList).toHaveBeenCalledWith(
-        expect.objectContaining({ country_id: '1', status: 'active' }),
+        expect.objectContaining({ countryId: '1', status: 'active' }),
       );
     });
 

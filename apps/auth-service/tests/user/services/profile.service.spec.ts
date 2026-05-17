@@ -38,8 +38,16 @@ const mockConfig = {
   get: jest.fn(),
 };
 
+const mockTokenService = {
+  revokeAllUserSessions: jest.fn().mockResolvedValue(undefined),
+};
+
 function createService(): ProfileService {
-  return new ProfileService(mockUserRepo as any, mockConfig as any);
+  return new ProfileService(
+    mockUserRepo as any,
+    mockConfig as any,
+    mockTokenService as any,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -152,20 +160,21 @@ describe('ProfileService', () => {
       mockConfig.get.mockReturnValue('10');
       mockUserRepo.update.mockResolvedValue(undefined);
 
-      const dto = { old_password: 'old123', password: 'new456' };
+      const dto = { oldPassword: 'old123', password: 'new456' };
 
       const result = await service.changePassword(1n, dto as any);
 
       expect(bcrypt.compare).toHaveBeenCalledWith('old123', 'hashed_old');
       expect(bcrypt.hash).toHaveBeenCalledWith('new456', 10);
       expect(mockUserRepo.update).toHaveBeenCalledWith(1n, { password: 'hashed_new' });
+      expect(mockTokenService.revokeAllUserSessions).toHaveBeenCalledWith(1n);
       expect(result).toEqual({ success: true });
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockUserRepo.findByIdWithPassword.mockResolvedValue(null);
 
-      const dto = { old_password: 'old123', password: 'new456' };
+      const dto = { oldPassword: 'old123', password: 'new456' };
 
       await expect(service.changePassword(1n, dto as any)).rejects.toThrow(NotFoundException);
     });
@@ -174,7 +183,7 @@ describe('ProfileService', () => {
       const user = { id: 1n, password: null };
       mockUserRepo.findByIdWithPassword.mockResolvedValue(user);
 
-      const dto = { old_password: 'old123', password: 'new456' };
+      const dto = { oldPassword: 'old123', password: 'new456' };
 
       await expect(service.changePassword(1n, dto as any)).rejects.toThrow(BadRequestException);
     });
@@ -184,7 +193,7 @@ describe('ProfileService', () => {
       mockUserRepo.findByIdWithPassword.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const dto = { old_password: 'wrong', password: 'new456' };
+      const dto = { oldPassword: 'wrong', password: 'new456' };
 
       await expect(service.changePassword(1n, dto as any)).rejects.toThrow(BadRequestException);
     });

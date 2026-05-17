@@ -9,8 +9,8 @@
 
 - ❌ **Bỏ hoàn toàn khái niệm "Context"** (system context, group context)
 - ❌ **Quyền KHÔNG còn scope theo group nữa** — mỗi user có 1 bộ permissions toàn cục
+- ❌ **Header `x-group-id` đã gỡ bỏ hoàn toàn** — không gửi nữa, BE không đọc
 - ✅ Vẫn còn `Group` nhưng chỉ là dữ liệu (chủ nhóm, thành viên) — không liên quan auth
-- ✅ Header `x-group-id` **vẫn được chấp nhận** nhưng IAM bỏ qua. Có thể dùng cho data filtering ở các service khác (comic, post...) nếu cần
 - ✅ Trang chọn nhóm/context trên UI (nếu có) → **gỡ bỏ**
 
 ---
@@ -73,8 +73,7 @@ Response:
 - **Trước:** đọc header `x-group-id`, menu phụ thuộc group
 - **Sau:** chỉ cần JWT token. Menu trả về dựa vào permissions toàn cục của user.
 
-Header gửi: `Authorization: Bearer <token>` (như cũ).
-Header `x-group-id` nếu có thì FE vẫn gửi được, BE bỏ qua.
+Header gửi: `Authorization: Bearer <token>` (như cũ). Header `x-group-id` đã gỡ.
 
 ### 2. Gán role cho user
 
@@ -114,7 +113,7 @@ Body **đã đổi:**
 
 `PUT /api/iam/roles/:id/permissions`
 
-Body giữ nguyên `{ permissionIds: [...] }`. Bỏ header `x-group-id` (không còn ảnh hưởng).
+Body giữ nguyên `{ permissionIds: [...] }`.
 
 ---
 
@@ -197,19 +196,6 @@ Quản lý Bài viết (group.post)
 
 ---
 
-## Header `x-group-id` — Khi nào dùng?
-
-| Use case | Có cần `x-group-id`? |
-|----------|----------------------|
-| Check permission (IAM) | ❌ **Không**. IAM ignore. |
-| Lấy menu user | ❌ Không cần. |
-| Lấy roles của user | ❌ Không cần. |
-| List comic/post/... lọc theo group (sau này) | ✅ Có. BE service dùng cho data filtering. |
-
-→ **Kết luận cho FE:** Có thể vẫn gửi `x-group-id` cho mọi API (không hại), nhưng KHÔNG cần thiết cho phần auth/menu/role.
-
----
-
 ## Checklist tích hợp FE
 
 - [ ] Gỡ trang/dropdown chọn Context (nếu có)
@@ -220,7 +206,7 @@ Quản lý Bài viết (group.post)
   - Body sync roles
   - Query xóa role
 - [ ] Cập nhật trang "Quản lý vai trò" (Role detail) — nếu hiển thị `roleContexts`, gỡ section đó
-- [ ] (Tuỳ chọn) Vẫn giữ dropdown chọn group/`x-group-id` nếu cần cho các module sẽ làm sau (comic/post owner panel)
+- [ ] Gỡ mọi chỗ gửi header `x-group-id` — BE không còn đọc
 
 ---
 

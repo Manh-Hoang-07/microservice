@@ -67,6 +67,8 @@ function makeMockRedis() {
     del: jest.fn().mockResolvedValue(undefined),
     incr: jest.fn().mockResolvedValue(1),
     setnx: jest.fn().mockResolvedValue(true),
+    pfadd: jest.fn().mockResolvedValue(1),
+    expire: jest.fn().mockResolvedValue(1),
     hincrby: jest.fn().mockResolvedValue(1),
     isEnabled: jest.fn().mockReturnValue(true),
   };
@@ -152,10 +154,9 @@ describe('PublicPostService', () => {
       const result = await service.getBySlug('test-post', 'user-ip-123');
 
       expect(postRepo.findBySlug).toHaveBeenCalledWith('test-post', ['published']);
-      expect(redis.setnx).toHaveBeenCalledWith(
-        expect.stringContaining('post:view:seen:'),
-        '1',
-        300,
+      expect(redis.pfadd).toHaveBeenCalledWith(
+        expect.stringContaining('post:views:hll:'),
+        'user-ip-123',
       );
       expect(redis.hincrby).toHaveBeenCalledWith('post:views:buffer', expect.any(String), 1);
       expect(result.categories).toBeDefined();
@@ -164,7 +165,7 @@ describe('PublicPostService', () => {
     it('should not increment view count on duplicate request', async () => {
       const post = makePost();
       postRepo.findBySlug.mockResolvedValue(post);
-      redis.setnx.mockResolvedValue(false);
+      redis.pfadd.mockResolvedValue(0);
 
       await service.getBySlug('test-post', 'user-ip-123');
 
@@ -176,7 +177,7 @@ describe('PublicPostService', () => {
 
       await service.getBySlug('test-post');
 
-      expect(redis.setnx).not.toHaveBeenCalled();
+      expect(redis.pfadd).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when slug not found', async () => {

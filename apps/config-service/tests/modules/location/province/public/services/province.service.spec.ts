@@ -118,7 +118,7 @@ describe('PublicProvinceService', () => {
 
       await service.getByCountry('5');
       expect(provinceService.getList).toHaveBeenCalledWith(
-        expect.objectContaining({ country_id: '5', status: 'active' }),
+        expect.objectContaining({ countryId: '5', status: 'active' }),
       );
     });
   });
@@ -136,7 +136,7 @@ describe('PublicProvinceService', () => {
 
       await service.getWards('10');
       expect(wardService.getList).toHaveBeenCalledWith(
-        expect.objectContaining({ province_id: '10', status: 'active' }),
+        expect.objectContaining({ provinceId: '10', status: 'active' }),
       );
     });
 

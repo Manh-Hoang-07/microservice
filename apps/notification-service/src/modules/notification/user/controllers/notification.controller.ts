@@ -1,5 +1,5 @@
 import { Controller, Get, Patch, Param, Query } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Authenticated, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserNotificationService } from '../services/notification.service';
 import { ListNotificationsUserQueryDto } from '../dtos/list-notifications.query.dto';
@@ -10,35 +10,35 @@ export class UserNotificationController {
     private readonly notifService: UserNotificationService,
   ) {}
 
-  @Permission('user')
+  @Authenticated()
   @Get()
   getList(@Query() query: ListNotificationsUserQueryDto) {
     const ctx = session()!;
     return this.notifService.getList(ctx.userId!, query);
   }
 
-  @Permission('user')
+  @Authenticated()
   @Get('unread/count')
   getUnreadCount() {
     const ctx = session()!;
     return this.notifService.getUnreadCount(ctx.userId!);
   }
 
-  @Permission('user')
+  @Authenticated()
   @Get(':id')
   getOne(@Param('id') id: string) {
     const ctx = session()!;
     return this.notifService.getOne(ctx.userId!, toPrimaryKey(id));
   }
 
-  @Permission('user')
+  @Authenticated()
   @Patch(':id/read')
   markAsRead(@Param('id') id: string) {
     const ctx = session()!;
     return this.notifService.markAsRead(ctx.userId!, toPrimaryKey(id));
   }
 
-  @Permission('user')
+  @Authenticated()
   @Patch('read-all')
   markAllAsRead() {
     const ctx = session()!;

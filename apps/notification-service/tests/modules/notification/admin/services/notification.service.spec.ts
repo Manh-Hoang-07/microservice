@@ -17,7 +17,7 @@ import { NotificationRepository } from '../../../../../src/modules/notification/
 describe('AdminNotificationService', () => {
   let service: AdminNotificationService;
   let notifRepo: jest.Mocked<Partial<NotificationRepository>>;
-  let redis: { del: jest.Mock; isEnabled: jest.Mock };
+  let redis: { del: jest.Mock; deleteMany: jest.Mock; isEnabled: jest.Mock };
   let i18n: any;
 
   const mockNotification = {
@@ -45,6 +45,7 @@ describe('AdminNotificationService', () => {
 
     redis = {
       del: jest.fn().mockResolvedValue(1),
+      deleteMany: jest.fn().mockResolvedValue(1),
       isEnabled: jest.fn().mockReturnValue(true),
     };
 
@@ -149,8 +150,7 @@ describe('AdminNotificationService', () => {
 
       await service.send(dto as any);
 
-      expect(redis.del).toHaveBeenCalledWith('notif:unread:1');
-      expect(redis.del).toHaveBeenCalledWith('notif:unread:2');
+      expect(redis.deleteMany).toHaveBeenCalledWith(['notif:unread:1', 'notif:unread:2']);
     });
 
     it('should return createMany result', async () => {
@@ -195,7 +195,7 @@ describe('AdminNotificationService', () => {
 
       await service.create({ userId: '42', title: 'T', message: 'M' });
 
-      expect(redis.del).toHaveBeenCalledWith('notif:unread:42');
+      expect(redis.deleteMany).toHaveBeenCalledWith(['notif:unread:42']);
     });
   });
 
@@ -223,9 +223,8 @@ describe('AdminNotificationService', () => {
 
       await service.createMany(notifications);
 
-      expect(redis.del).toHaveBeenCalledTimes(2);
-      expect(redis.del).toHaveBeenCalledWith('notif:unread:1');
-      expect(redis.del).toHaveBeenCalledWith('notif:unread:2');
+      expect(redis.deleteMany).toHaveBeenCalledTimes(1);
+      expect(redis.deleteMany).toHaveBeenCalledWith(['notif:unread:1', 'notif:unread:2']);
     });
   });
 

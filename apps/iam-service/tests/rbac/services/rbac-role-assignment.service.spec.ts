@@ -36,7 +36,6 @@ jest.mock('../../../src/rbac/repositories/rbac.repository', () => ({
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
-import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { RbacRoleAssignmentService } from '../../../src/rbac/services/rbac-role-assignment.service';
 
 // ---------------------------------------------------------------------------
@@ -45,8 +44,7 @@ import { RbacRoleAssignmentService } from '../../../src/rbac/services/rbac-role-
 function makeMockRbacRepo() {
   return {
     assignRoleToUser: jest.fn(),
-    findActiveGroup: jest.fn(),
-    syncRolesInGroup: jest.fn(),
+    syncUserRoles: jest.fn(),
     getActivePermissionCodes: jest.fn(),
   };
 }
@@ -72,57 +70,29 @@ describe('RbacRoleAssignmentService', () => {
       const { service, rbacRepo } = createService();
       rbacRepo.assignRoleToUser.mockResolvedValue(undefined);
 
-      await service.assignRoleToUser('u1', 'r1', 'g1');
-      expect(rbacRepo.assignRoleToUser).toHaveBeenCalledWith('u1', 'r1', 'g1');
+      await service.assignRoleToUser('u1', 'r1');
+      expect(rbacRepo.assignRoleToUser).toHaveBeenCalledWith('u1', 'r1');
     });
   });
 
-  // --- syncRolesInGroup ---
-  describe('syncRolesInGroup', () => {
-    it('should throw NotFoundException when group not found', async () => {
+  // --- syncUserRoles ---
+  describe('syncUserRoles', () => {
+    it('should delegate to rbacRepo and return before/after', async () => {
       const { service, rbacRepo } = createService();
-      rbacRepo.findActiveGroup.mockResolvedValue(null);
+      rbacRepo.syncUserRoles.mockResolvedValue({ before: [BigInt(2)], after: [BigInt(1)] });
 
-      await expect(
-        service.syncRolesInGroup('u1', 'g1', ['r1']),
-      ).rejects.toThrow(NotFoundException);
+      const result = await service.syncUserRoles('u1', ['r1']);
+      expect(result).toEqual({ before: [BigInt(2)], after: [BigInt(1)] });
+      expect(rbacRepo.syncUserRoles).toHaveBeenCalledWith('u1', ['r1']);
     });
 
-    it('should sync roles when group exists', async () => {
+    it('should handle empty role list', async () => {
       const { service, rbacRepo } = createService();
-      rbacRepo.findActiveGroup.mockResolvedValue({ id: BigInt(1), contextId: BigInt(10) });
-      rbacRepo.syncRolesInGroup.mockResolvedValue({ before: [], after: [BigInt(1)] });
+      rbacRepo.syncUserRoles.mockResolvedValue({ before: [BigInt(1)], after: [] });
 
-      const result = await service.syncRolesInGroup('u1', 'g1', ['r1']);
-      expect(result).toEqual({ before: [], after: [BigInt(1)] });
-      expect(rbacRepo.syncRolesInGroup).toHaveBeenCalledWith(
-        'u1', 'g1', ['r1'], BigInt(10), false,
-      );
-    });
-
-    it('should throw BadRequestException when invalid roles detected', async () => {
-      const { service, rbacRepo } = createService();
-      rbacRepo.findActiveGroup.mockResolvedValue({ id: BigInt(1), contextId: BigInt(10) });
-      rbacRepo.syncRolesInGroup.mockResolvedValue({
-        before: [],
-        after: [],
-        invalidRoleIds: [BigInt(99)],
-      });
-
-      await expect(
-        service.syncRolesInGroup('u1', 'g1', ['r99']),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should pass skipValidation flag through', async () => {
-      const { service, rbacRepo } = createService();
-      rbacRepo.findActiveGroup.mockResolvedValue({ id: BigInt(1), contextId: BigInt(10) });
-      rbacRepo.syncRolesInGroup.mockResolvedValue({ before: [], after: [] });
-
-      await service.syncRolesInGroup('u1', 'g1', ['r1'], true);
-      expect(rbacRepo.syncRolesInGroup).toHaveBeenCalledWith(
-        'u1', 'g1', ['r1'], BigInt(10), true,
-      );
+      const result = await service.syncUserRoles('u1', []);
+      expect(result).toEqual({ before: [BigInt(1)], after: [] });
+      expect(rbacRepo.syncUserRoles).toHaveBeenCalledWith('u1', []);
     });
   });
 
@@ -132,17 +102,9 @@ describe('RbacRoleAssignmentService', () => {
       const { service, rbacRepo } = createService();
       rbacRepo.getActivePermissionCodes.mockResolvedValue(['perm.a', 'perm.b']);
 
-      const result = await service.getActivePermissionCodes('u1', null);
+      const result = await service.getActivePermissionCodes('u1');
       expect(result).toEqual(['perm.a', 'perm.b']);
-      expect(rbacRepo.getActivePermissionCodes).toHaveBeenCalledWith('u1', null);
-    });
-
-    it('should pass groupId when provided', async () => {
-      const { service, rbacRepo } = createService();
-      rbacRepo.getActivePermissionCodes.mockResolvedValue(['perm.c']);
-
-      await service.getActivePermissionCodes('u1', 'g5');
-      expect(rbacRepo.getActivePermissionCodes).toHaveBeenCalledWith('u1', 'g5');
+      expect(rbacRepo.getActivePermissionCodes).toHaveBeenCalledWith('u1');
     });
   });
 });

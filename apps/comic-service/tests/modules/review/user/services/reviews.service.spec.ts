@@ -72,7 +72,7 @@ describe('UserReviewService', () => {
   describe('createOrUpdate()', () => {
     it('upserts review and syncs rating stats', async () => {
       const { service, reviewRepo, redis } = buildService();
-      const review = { id: 1n, user_id: 1n, comic_id: 10n, rating: 5 };
+      const review = { id: 1n, userId: 1n, comicId: 10n, rating: 5 };
       reviewRepo.upsert.mockResolvedValue(review);
 
       const result = await service.createOrUpdate(1n, { comicId: 10n, rating: 5, content: 'Great!' } as any);
@@ -87,7 +87,7 @@ describe('UserReviewService', () => {
   describe('delete()', () => {
     it('deletes own review and syncs rating stats', async () => {
       const { service, reviewRepo, redis } = buildService();
-      reviewRepo.findById.mockResolvedValue({ id: 1n, user_id: 1n, comic_id: 10n });
+      reviewRepo.findById.mockResolvedValue({ id: 1n, userId: 1n, comicId: 10n });
 
       const result = await service.delete(1n, 1n);
 
@@ -106,7 +106,7 @@ describe('UserReviewService', () => {
 
     it('throws ForbiddenException when not owner', async () => {
       const { service, reviewRepo } = buildService();
-      reviewRepo.findById.mockResolvedValue({ id: 1n, user_id: 2n });
+      reviewRepo.findById.mockResolvedValue({ id: 1n, userId: 2n });
 
       await expect(service.delete(1n, 1n)).rejects.toThrow(ForbiddenException);
     });

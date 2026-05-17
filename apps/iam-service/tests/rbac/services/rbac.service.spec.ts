@@ -75,7 +75,7 @@ function makeMockRoleAssignment() {
   return {
     getActivePermissionCodes: jest.fn(),
     assignRoleToUser: jest.fn(),
-    syncRolesInGroup: jest.fn(),
+    syncUserRoles: jest.fn(),
   };
 }
 
@@ -119,7 +119,7 @@ describe('RbacService', () => {
       rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['role.view'] });
       permIndex.hasAnyRequiredFromAssigned.mockReturnValue(true);
 
-      const result = await service.hasPermissions('1', null, ['role.view']);
+      const result = await service.hasPermissions('1', ['role.view']);
       expect(result).toBe(true);
       expect(permIndex.hasAnyRequiredFromAssigned).toHaveBeenCalledWith(
         new Set(['role.view']),
@@ -132,7 +132,7 @@ describe('RbacService', () => {
       rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['role.view'] });
       permIndex.hasAnyRequiredFromAssigned.mockReturnValue(false);
 
-      const result = await service.hasPermissions('1', null, ['system.manage']);
+      const result = await service.hasPermissions('1', ['system.manage']);
       expect(result).toBe(false);
     });
   });
@@ -143,7 +143,7 @@ describe('RbacService', () => {
       const { service, rbacCache } = createService();
       rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['a', 'b'] });
 
-      const result = await service.getPermissions('1', null);
+      const result = await service.getPermissions('1');
       expect(result).toEqual(new Set(['a', 'b']));
     });
 
@@ -154,18 +154,18 @@ describe('RbacService', () => {
       roleAssignment.getActivePermissionCodes.mockResolvedValue(['x', 'y']);
       rbacCache.setPermissions.mockResolvedValue(undefined);
 
-      const result = await service.getPermissions('1', null);
+      const result = await service.getPermissions('1');
       expect(result).toEqual(new Set(['x', 'y']));
       expect(permIndex.prepare).toHaveBeenCalled();
-      expect(roleAssignment.getActivePermissionCodes).toHaveBeenCalledWith('1', null);
-      expect(rbacCache.setPermissions).toHaveBeenCalledWith('1', null, ['x', 'y']);
+      expect(roleAssignment.getActivePermissionCodes).toHaveBeenCalledWith('1');
+      expect(rbacCache.setPermissions).toHaveBeenCalledWith('1', ['x', 'y']);
     });
 
     it('should filter out empty strings from codes', async () => {
       const { service, rbacCache } = createService();
       rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['a', '', 'b'] });
 
-      const result = await service.getPermissions('1', null);
+      const result = await service.getPermissions('1');
       expect(result).toEqual(new Set(['a', 'b']));
     });
   });
@@ -182,9 +182,9 @@ describe('RbacService', () => {
       rbacCache.setPermissions.mockResolvedValue(undefined);
       rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['perm1'] });
 
-      // Fire two concurrent refreshes for the same scope
-      const p1 = service.refreshPermissions('1', null);
-      const p2 = service.refreshPermissions('1', null);
+      // Fire two concurrent refreshes for the same user
+      const p1 = service.refreshPermissions('1');
+      const p2 = service.refreshPermissions('1');
 
       // Unblock
       resolveRefresh();
@@ -207,7 +207,7 @@ describe('RbacService', () => {
         (assigned: Set<string>, code: string) => assigned.has('system.manage') && code === 'system.manage',
       );
 
-      await expect(service.assertCallerCanGrantRole('1', null, [BigInt(10)])).resolves.toBeUndefined();
+      await expect(service.assertCallerCanGrantRole('1', [BigInt(10)])).resolves.toBeUndefined();
     });
 
     it('should throw ForbiddenException on privilege escalation', async () => {
@@ -217,35 +217,21 @@ describe('RbacService', () => {
       permIndex.matchesAssigned.mockReturnValue(false);
 
       await expect(
-        service.assertCallerCanGrantRole('1', null, [BigInt(10)]),
+        service.assertCallerCanGrantRole('1', [BigInt(10)]),
       ).rejects.toThrow(ForbiddenException);
     });
 
     it('should pass with empty roleIds', async () => {
       const { service } = createService();
-      await expect(service.assertCallerCanGrantRole('1', null, [])).resolves.toBeUndefined();
+      await expect(service.assertCallerCanGrantRole('1', [])).resolves.toBeUndefined();
     });
 
     it('should pass when target codes set is empty', async () => {
       const { service, rbacRepo, rbacCache } = createService();
       rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set());
       // getPermissions should not even be called
-      await expect(service.assertCallerCanGrantRole('1', null, [BigInt(1)])).resolves.toBeUndefined();
+      await expect(service.assertCallerCanGrantRole('1', [BigInt(1)])).resolves.toBeUndefined();
       expect(rbacCache.getPermissions).not.toHaveBeenCalled();
-    });
-
-    it('should require system scope for system.* permissions', async () => {
-      const { service, rbacCache, permIndex, rbacRepo } = createService();
-      rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set(['system.config.view']));
-      // Actor has the perm in scoped context but NOT in system scope
-      rbacCache.getPermissions
-        .mockResolvedValueOnce({ cached: true, codes: [] }) // system scope: empty
-        .mockResolvedValueOnce({ cached: true, codes: ['system.config.view'] }); // group scope
-      permIndex.matchesAssigned.mockReturnValue(false);
-
-      await expect(
-        service.assertCallerCanGrantRole('1', 'g1', [BigInt(10)]),
-      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -254,7 +240,7 @@ describe('RbacService', () => {
     it('should pass with empty targetCodes', async () => {
       const { service } = createService();
       await expect(
-        service.assertCallerCanGrantPermissionCodes('1', null, []),
+        service.assertCallerCanGrantPermissionCodes('1', []),
       ).resolves.toBeUndefined();
     });
 
@@ -267,7 +253,7 @@ describe('RbacService', () => {
       );
 
       await expect(
-        service.assertCallerCanGrantPermissionCodes('1', null, ['role.create']),
+        service.assertCallerCanGrantPermissionCodes('1', ['role.create']),
       ).resolves.toBeUndefined();
     });
 
@@ -277,34 +263,19 @@ describe('RbacService', () => {
       permIndex.matchesAssigned.mockReturnValue(false);
 
       await expect(
-        service.assertCallerCanGrantPermissionCodes('1', null, ['admin.secret']),
+        service.assertCallerCanGrantPermissionCodes('1', ['admin.secret']),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should require system scope for system.* permission codes', async () => {
+    it('should pass when actor holds all target codes', async () => {
       const { service, rbacCache, permIndex } = createService();
-      // Actor has the perm in scoped context but NOT in system scope
-      rbacCache.getPermissions
-        .mockResolvedValueOnce({ cached: true, codes: [] }) // system scope
-        .mockResolvedValueOnce({ cached: true, codes: ['system.config.view'] }); // group scope
-      permIndex.matchesAssigned.mockReturnValue(false);
-
-      await expect(
-        service.assertCallerCanGrantPermissionCodes('1', 'g1', ['system.config.view']),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should pass when actor holds all target codes in combined scopes', async () => {
-      const { service, rbacCache, permIndex } = createService();
-      rbacCache.getPermissions
-        .mockResolvedValueOnce({ cached: true, codes: [] }) // system scope: no system.manage
-        .mockResolvedValueOnce({ cached: true, codes: ['role.create'] }); // group scope
+      rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['role.create'] });
       permIndex.matchesAssigned.mockImplementation(
         (assigned: Set<string>, code: string) => assigned.has(code),
       );
 
       await expect(
-        service.assertCallerCanGrantPermissionCodes('1', 'g1', ['role.create']),
+        service.assertCallerCanGrantPermissionCodes('1', ['role.create']),
       ).resolves.toBeUndefined();
     });
   });
@@ -324,32 +295,32 @@ describe('RbacService', () => {
       roleAssignment.getActivePermissionCodes.mockResolvedValue(['p1']);
       rbacCache.setPermissions.mockResolvedValue(undefined);
 
-      await service.assignRoleToUser('u1', '1', 'g1', { id: 'actor1', groupId: null });
+      await service.assignRoleToUser('u1', '1', { id: 'actor1' });
 
-      expect(roleAssignment.assignRoleToUser).toHaveBeenCalledWith('u1', '1', 'g1');
+      expect(roleAssignment.assignRoleToUser).toHaveBeenCalledWith('u1', '1');
       expect(rbacCache.bumpVersion).toHaveBeenCalled();
       expect(rbacCache.clearAllUserCaches).toHaveBeenCalledWith('u1');
     });
   });
 
-  // --- syncRolesInGroup ---
-  describe('syncRolesInGroup', () => {
+  // --- syncUserRoles ---
+  describe('syncUserRoles', () => {
     it('should check existing roles can be revoked then sync', async () => {
       const { service, rbacCache, permIndex, roleAssignment, rbacRepo } = createService();
       // assertCallerCanGrantRole for new roles => pass (empty target codes)
       rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set());
       rbacRepo.getExistingRoleIds.mockResolvedValue([BigInt(5)]);
-      roleAssignment.syncRolesInGroup.mockResolvedValue({ before: [], after: [] });
+      roleAssignment.syncUserRoles.mockResolvedValue({ before: [], after: [] });
       rbacCache.bumpVersion.mockResolvedValue(undefined);
       rbacCache.clearAllUserCaches.mockResolvedValue(undefined);
       permIndex.prepare.mockResolvedValue(undefined);
       roleAssignment.getActivePermissionCodes.mockResolvedValue([]);
       rbacCache.setPermissions.mockResolvedValue(undefined);
 
-      await service.syncRolesInGroup('u1', 'g1', ['1'], { id: 'actor', groupId: null });
+      await service.syncUserRoles('u1', ['1'], { id: 'actor' });
 
-      expect(rbacRepo.getExistingRoleIds).toHaveBeenCalledWith('u1', 'g1');
-      expect(roleAssignment.syncRolesInGroup).toHaveBeenCalled();
+      expect(rbacRepo.getExistingRoleIds).toHaveBeenCalledWith('u1');
+      expect(roleAssignment.syncUserRoles).toHaveBeenCalled();
       expect(rbacCache.bumpVersion).toHaveBeenCalled();
     });
 
@@ -357,14 +328,14 @@ describe('RbacService', () => {
       const { service, rbacCache, permIndex, roleAssignment, rbacRepo } = createService();
       rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set());
       rbacRepo.getExistingRoleIds.mockResolvedValue([]); // no existing roles
-      roleAssignment.syncRolesInGroup.mockResolvedValue({ before: [], after: [] });
+      roleAssignment.syncUserRoles.mockResolvedValue({ before: [], after: [] });
       rbacCache.bumpVersion.mockResolvedValue(undefined);
       rbacCache.clearAllUserCaches.mockResolvedValue(undefined);
       permIndex.prepare.mockResolvedValue(undefined);
       roleAssignment.getActivePermissionCodes.mockResolvedValue([]);
       rbacCache.setPermissions.mockResolvedValue(undefined);
 
-      await service.syncRolesInGroup('u1', 'g1', ['1'], { id: 'actor', groupId: null });
+      await service.syncUserRoles('u1', ['1'], { id: 'actor' });
 
       // assertCallerCanGrantRole called once for new roles, NOT called for existing
       expect(rbacRepo.getPermissionCodesForRoles).toHaveBeenCalledTimes(1);

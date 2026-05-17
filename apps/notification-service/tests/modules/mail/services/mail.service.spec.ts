@@ -71,10 +71,20 @@ describe('MailService', () => {
       isEnabled: jest.fn().mockReturnValue(true),
     };
 
+    const fileLogger = {
+      create: jest.fn().mockReturnValue({
+        addDebug: jest.fn(),
+        addInfo: jest.fn(),
+        addException: jest.fn(),
+        save: jest.fn(),
+      }),
+    };
+
     service = new MailService(
       configClient as any,
       templateRepo as any,
       redis as any,
+      fileLogger as any,
     );
 
     // Initialize (loads config + creates transporter)
@@ -184,10 +194,19 @@ describe('MailService', () => {
 
     it('should throw Error when transporter is not configured', async () => {
       // Create a service without initializing
+      const uninitFileLogger = {
+        create: jest.fn().mockReturnValue({
+          addDebug: jest.fn(),
+          addInfo: jest.fn(),
+          addException: jest.fn(),
+          save: jest.fn(),
+        }),
+      };
       const uninitService = new MailService(
         configClient as any,
         templateRepo as any,
         redis as any,
+        uninitFileLogger as any,
       );
       configClient.getEmailConfig!.mockResolvedValue(null);
       await uninitService.onModuleInit();

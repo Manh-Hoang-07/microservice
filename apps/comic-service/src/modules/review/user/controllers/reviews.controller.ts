@@ -1,5 +1,5 @@
 import { Controller, Post, Delete, Body, Param } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Authenticated, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { UserReviewService } from '../services/reviews.service';
 import { CreateReviewDto } from '../dtos/create-review.dto';
@@ -8,14 +8,14 @@ import { CreateReviewDto } from '../dtos/create-review.dto';
 export class UserReviewController {
   constructor(private readonly reviewService: UserReviewService) {}
 
-  @Permission('user')
+  @Authenticated()
   @Post()
   async createOrUpdate(@Body() dto: CreateReviewDto) {
     const userId = toPrimaryKey(session()!.userId!);
     return this.reviewService.createOrUpdate(userId, dto);
   }
 
-  @Permission('user')
+  @Authenticated()
   @Delete(':id')
   async delete(@Param('id') id: string) {
     const userId = toPrimaryKey(session()!.userId!);

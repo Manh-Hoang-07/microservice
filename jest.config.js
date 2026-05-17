@@ -41,7 +41,7 @@ module.exports = {
       },
     }],
   },
-  // Force jest to transform jose (ESM-only) instead of ignoring it
+  // Force jest to transform ESM-only deps instead of ignoring them.
   transformIgnorePatterns: [
     '/node_modules/(?!(jose)/)',
   ],
@@ -55,6 +55,10 @@ module.exports = {
     '^@package/tracing$': '<rootDir>/shared/tracing/src/index.ts',
     '^@package/circuit-breaker$': '<rootDir>/shared/circuit-breaker/src/index.ts',
     '^@package/shared-types$': '<rootDir>/shared/shared-types/src/index.ts',
+    // isomorphic-dompurify pulls in jsdom + a long ESM-only dep tree
+    // (@exodus/bytes, whatwg-*, etc.). For unit tests we don't exercise
+    // the sanitizer — stub it with an identity passthrough.
+    '^isomorphic-dompurify$': '<rootDir>/shared/common/tests/__mocks__/isomorphic-dompurify.ts',
   },
   collectCoverageFrom: [
     'shared/*/src/**/*.ts',

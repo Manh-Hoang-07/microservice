@@ -104,9 +104,9 @@ import { ViewTrackingModule } from './modules/view-tracking/view-tracking.module
     },
     {
       provide: APP_GUARD,
-      useFactory: (reflector: Reflector, config: ConfigService) =>
-        new RbacGuard(reflector, config),
-      inject: [Reflector, ConfigService],
+      useFactory: (reflector: Reflector, config: ConfigService, redis: RedisService) =>
+        new RbacGuard(reflector, config, redis),
+      inject: [Reflector, ConfigService, RedisService],
     },
     {
       provide: APP_INTERCEPTOR,

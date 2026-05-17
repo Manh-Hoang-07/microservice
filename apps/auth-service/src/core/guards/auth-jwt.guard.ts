@@ -8,13 +8,17 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { I18nService } from 'nestjs-i18n';
+import { timingSafeEqual } from 'crypto';
 import { t } from '@package/common';
 import { JwksService } from '../../jwks/services/jwks.service';
 import { TokenBlacklistService } from '../security/services/token-blacklist.service';
 import { IamClient } from '../../clients/iam.client';
 
 const PERMS_KEY = 'perms_required';
-const AUTH_ONLY_PERMS = new Set(['user']);
+// Sentinel permissions that require ONLY a valid JWT (no IAM call).
+// 'user' is legacy; 'authenticated' is the canonical marker from
+// @package/common's @Authenticated() decorator.
+const AUTH_ONLY_PERMS = new Set(['user', 'authenticated']);
 
 @Injectable()
 export class AuthJwtGuard implements CanActivate {
@@ -45,7 +49,7 @@ export class AuthJwtGuard implements CanActivate {
     }
 
     if (permissions.includes('internal')) {
-      return true;
+      return this.checkInternal(context);
     }
 
     const request = context.switchToHttp().getRequest();
@@ -117,5 +121,28 @@ export class AuthJwtGuard implements CanActivate {
     const auth = request.headers?.authorization as string | undefined;
     if (!auth?.startsWith('Bearer ')) return null;
     return auth.slice(7);
+  }
+
+  // Validates the shared inter-service secret in a timing-safe way. Without
+  // this, every @Internal() route on auth-service was reachable by anyone
+  // who could hit the network.
+  private checkInternal(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const secret = request.headers?.['x-internal-secret'] as string | undefined;
+    const expected =
+      this.config.get<string>('INTERNAL_API_SECRET') ||
+      this.config.get<string>('app.internalApiSecret') ||
+      '';
+    if (!expected) {
+      throw new UnauthorizedException(t(this.i18n, 'auth.INTERNAL_SECRET_NOT_CONFIGURED'));
+    }
+    if (
+      !secret ||
+      secret.length !== expected.length ||
+      !timingSafeEqual(Buffer.from(secret), Buffer.from(expected))
+    ) {
+      throw new UnauthorizedException(t(this.i18n, 'auth.INVALID_INTERNAL_SECRET'));
+    }
+    return true;
   }
 }

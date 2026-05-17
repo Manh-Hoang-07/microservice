@@ -83,7 +83,7 @@ describe('RbacCacheService', () => {
   describe('getPermissions', () => {
     it('should return cached:false when redis is disabled', async () => {
       const { service } = createService({ redisEnabled: false });
-      const result = await service.getPermissions('u1', null);
+      const result = await service.getPermissions('u1');
       expect(result).toEqual({ codes: [], cached: false });
     });
 
@@ -92,7 +92,7 @@ describe('RbacCacheService', () => {
       redis.hgetall.mockResolvedValue({ version: '1' });
       redis.get.mockResolvedValue('codes:v1:["role.view","role.create"]');
 
-      const result = await service.getPermissions('u1', null);
+      const result = await service.getPermissions('u1');
       expect(result).toEqual({ codes: ['role.view', 'role.create'], cached: true });
     });
 
@@ -101,7 +101,7 @@ describe('RbacCacheService', () => {
       redis.hgetall.mockResolvedValue({ version: '1' });
       redis.get.mockResolvedValue(null);
 
-      const result = await service.getPermissions('u1', null);
+      const result = await service.getPermissions('u1');
       expect(result).toEqual({ codes: [], cached: false });
     });
 
@@ -110,27 +110,27 @@ describe('RbacCacheService', () => {
       redis.hgetall.mockResolvedValue({ version: '1' });
       redis.get.mockResolvedValue('b64:v1:some-legacy-data');
 
-      const result = await service.getPermissions('u1', null);
+      const result = await service.getPermissions('u1');
       expect(result).toEqual({ codes: [], cached: false });
       expect(redis.del).toHaveBeenCalled();
     });
 
-    it('should use group-specific cache key when groupId provided', async () => {
+    it('should build a versioned per-user cache key', async () => {
       const { service, redis } = createService();
       redis.hgetall.mockResolvedValue({ version: '2' });
       redis.get.mockResolvedValue('codes:v1:["perm1"]');
 
-      await service.getPermissions('u1', 'g5');
-      expect(redis.get).toHaveBeenCalledWith('rbac:v2:u:u1:g:g5');
+      await service.getPermissions('u1');
+      expect(redis.get).toHaveBeenCalledWith('rbac:v2:u:u1');
     });
 
-    it('should use system cache key when groupId is null', async () => {
+    it('should default version to 1 when redis returns no version metadata', async () => {
       const { service, redis } = createService();
       redis.hgetall.mockResolvedValue({ version: '1' });
       redis.get.mockResolvedValue(null);
 
-      await service.getPermissions('u1', null);
-      expect(redis.get).toHaveBeenCalledWith('rbac:v1:u:u1:g:system');
+      await service.getPermissions('u1');
+      expect(redis.get).toHaveBeenCalledWith('rbac:v1:u:u1');
     });
   });
 
@@ -138,7 +138,7 @@ describe('RbacCacheService', () => {
   describe('setPermissions', () => {
     it('should not write when redis is disabled', async () => {
       const { service, redis } = createService({ redisEnabled: false });
-      await service.setPermissions('u1', null, ['a']);
+      await service.setPermissions('u1', ['a']);
       expect(redis.multi).not.toHaveBeenCalled();
     });
 
@@ -147,10 +147,10 @@ describe('RbacCacheService', () => {
       redis.hgetall.mockResolvedValue({ version: '3' });
       redis.multi.mockResolvedValue(undefined);
 
-      await service.setPermissions('u1', 'g1', ['a', 'b']);
+      await service.setPermissions('u1', ['a', 'b']);
       expect(redis.multi).toHaveBeenCalledWith(
         expect.arrayContaining([
-          expect.arrayContaining(['SET', 'rbac:v3:u:u1:g:g1']),
+          expect.arrayContaining(['SET', 'rbac:v3:u:u1']),
         ]),
       );
     });
@@ -163,13 +163,13 @@ describe('RbacCacheService', () => {
       redis.hgetall.mockResolvedValue({ version: '1' });
       redis.del.mockResolvedValue(undefined);
 
-      await service.clearUserCache('u1', null);
-      expect(redis.del).toHaveBeenCalledWith('rbac:v1:u:u1:g:system');
+      await service.clearUserCache('u1');
+      expect(redis.del).toHaveBeenCalledWith('rbac:v1:u:u1');
     });
 
     it('should noop when redis disabled', async () => {
       const { service, redis } = createService({ redisEnabled: false });
-      await service.clearUserCache('u1', null);
+      await service.clearUserCache('u1');
       expect(redis.del).not.toHaveBeenCalled();
     });
   });
@@ -180,7 +180,7 @@ describe('RbacCacheService', () => {
       const { service, redis } = createService();
       redis.hgetall.mockResolvedValue({ version: '1' });
       redis.multi.mockResolvedValue(undefined);
-      redis.smembers.mockResolvedValue(['rbac:v1:u:u1:g:system', 'rbac:v1:u:u1:g:g1']);
+      redis.smembers.mockResolvedValue(['rbac:v1:u:u1']);
       redis.deleteMany.mockResolvedValue(undefined);
       redis.del.mockResolvedValue(undefined);
       redis.publish.mockResolvedValue(undefined);
@@ -189,7 +189,7 @@ describe('RbacCacheService', () => {
 
       expect(redis.multi).toHaveBeenCalled();
       expect(redis.smembers).toHaveBeenCalled();
-      expect(redis.deleteMany).toHaveBeenCalledWith(['rbac:v1:u:u1:g:system', 'rbac:v1:u:u1:g:g1']);
+      expect(redis.deleteMany).toHaveBeenCalledWith(['rbac:v1:u:u1']);
       expect(redis.publish).toHaveBeenCalled();
     });
 

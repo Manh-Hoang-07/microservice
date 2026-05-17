@@ -37,17 +37,3 @@ describe('RbacRepository — findRoleByCode', () => {
   });
 });
 
-describe('RbacRepository — revokeOwnerRoleInGroup', () => {
-  afterEach(() => jest.clearAllMocks());
-
-  it('deletes the exact user/group/role assignment', async () => {
-    const { repo, mockPrisma } = makeRepo();
-    mockPrisma.userRoleAssignment.deleteMany.mockResolvedValue({ count: 1 });
-
-    await repo.revokeOwnerRoleInGroup(BigInt(1), BigInt(2), BigInt(3));
-
-    expect(mockPrisma.userRoleAssignment.deleteMany).toHaveBeenCalledWith({
-      where: { userId: BigInt(1), groupId: BigInt(2), roleId: BigInt(3) },
-    });
-  });
-});

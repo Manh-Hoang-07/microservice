@@ -37,16 +37,25 @@ import { AdminStatsService } from '../../../../../src/modules/stats/admin/servic
 function makeMockStatsRepo() {
   return {
     countComics: jest.fn().mockResolvedValue(0),
-    aggregateViews: jest.fn().mockResolvedValue({ _sum: { view_count: 0 } }),
-    aggregateFollows: jest.fn().mockResolvedValue({ _sum: { follow_count: 0 } }),
+    aggregateViews: jest.fn().mockResolvedValue({ _sum: { viewCount: 0 } }),
+    aggregateFollows: jest.fn().mockResolvedValue({ _sum: { followCount: 0 } }),
     findTopComics: jest.fn().mockResolvedValue([]),
+  };
+}
+
+function makeMockRedis() {
+  return {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue('OK'),
+    isEnabled: jest.fn().mockReturnValue(false),
   };
 }
 
 function buildService() {
   const statsRepo = makeMockStatsRepo();
-  const service = new AdminStatsService(statsRepo as any);
-  return { service, statsRepo };
+  const redis = makeMockRedis();
+  const service = new AdminStatsService(statsRepo as any, redis as any);
+  return { service, statsRepo, redis };
 }
 
 // ---------------------------------------------------------------------------
@@ -61,8 +70,8 @@ describe('AdminStatsService', () => {
     it('returns aggregated dashboard stats', async () => {
       const { service, statsRepo } = buildService();
       statsRepo.countComics.mockResolvedValue(100);
-      statsRepo.aggregateViews.mockResolvedValue({ _sum: { view_count: 50000 } });
-      statsRepo.aggregateFollows.mockResolvedValue({ _sum: { follow_count: 3000 } });
+      statsRepo.aggregateViews.mockResolvedValue({ _sum: { viewCount: 50000 } });
+      statsRepo.aggregateFollows.mockResolvedValue({ _sum: { followCount: 3000 } });
       statsRepo.findTopComics.mockResolvedValue([{ id: 1n, title: 'Top' }]);
 
       const result = await service.getDashboard();
@@ -78,8 +87,8 @@ describe('AdminStatsService', () => {
     it('handles null sums gracefully', async () => {
       const { service, statsRepo } = buildService();
       statsRepo.countComics.mockResolvedValue(0);
-      statsRepo.aggregateViews.mockResolvedValue({ _sum: { view_count: null } });
-      statsRepo.aggregateFollows.mockResolvedValue({ _sum: { follow_count: null } });
+      statsRepo.aggregateViews.mockResolvedValue({ _sum: { viewCount: null } });
+      statsRepo.aggregateFollows.mockResolvedValue({ _sum: { followCount: null } });
 
       const result = await service.getDashboard();
 
@@ -97,7 +106,7 @@ describe('AdminStatsService', () => {
 
       expect(result).toEqual({ data: [{ id: 1n }] });
       expect(statsRepo.findTopComics).toHaveBeenCalledWith(
-        { stats: { view_count: 'desc' } },
+        { stats: { viewCount: 'desc' } },
         10,
       );
     });
@@ -109,7 +118,7 @@ describe('AdminStatsService', () => {
       await service.getTopComics({ sortBy: 'follows', limit: 5 });
 
       expect(statsRepo.findTopComics).toHaveBeenCalledWith(
-        { stats: { follow_count: 'desc' } },
+        { stats: { followCount: 'desc' } },
         5,
       );
     });
@@ -121,7 +130,7 @@ describe('AdminStatsService', () => {
       await service.getTopComics({ sortBy: 'rating' });
 
       expect(statsRepo.findTopComics).toHaveBeenCalledWith(
-        { stats: { rating_sum: 'desc' } },
+        { stats: { ratingSum: 'desc' } },
         10,
       );
     });

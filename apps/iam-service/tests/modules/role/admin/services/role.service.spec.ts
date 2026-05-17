@@ -100,6 +100,13 @@ function makeMockRbacService() {
   return { assertCallerCanGrantPermissionCodes: jest.fn().mockResolvedValue(undefined) };
 }
 
+function makeMockRbacRepo() {
+  return {
+    getPermissionCodesForRoles: jest.fn().mockResolvedValue(new Set()),
+    countUsersWithPermissionExcludingRole: jest.fn().mockResolvedValue(99),
+  };
+}
+
 function makeMockI18n() {
   return {} as any;
 }
@@ -109,10 +116,11 @@ function createService(overrides: Record<string, any> = {}) {
   const rbacCache = overrides.rbacCache ?? makeMockRbacCache();
   const permIndex = overrides.permIndex ?? makeMockPermIndex();
   const rbacService = overrides.rbacService ?? makeMockRbacService();
+  const rbacRepo = overrides.rbacRepo ?? makeMockRbacRepo();
   const i18n = overrides.i18n ?? makeMockI18n();
 
-  const service = new (RoleService as any)(repo, rbacCache, permIndex, rbacService, i18n);
-  return { service, repo, rbacCache, permIndex, rbacService, i18n };
+  const service = new (RoleService as any)(repo, rbacCache, permIndex, rbacService, rbacRepo, i18n);
+  return { service, repo, rbacCache, permIndex, rbacService, rbacRepo, i18n };
 }
 
 // ---------------------------------------------------------------------------
@@ -165,13 +173,13 @@ describe('RoleService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('should connect parent when parent_id is provided', async () => {
+    it('should connect parent when parentId is provided', async () => {
       const { service, repo } = createService();
       repo.findByCode.mockResolvedValue(null);
       repo.create.mockResolvedValue({ id: BigInt(2) });
 
       await service.create(
-        { code: 'sub-admin', name: 'Sub Admin', parent_id: BigInt(1) } as any,
+        { code: 'sub-admin', name: 'Sub Admin', parentId: BigInt(1) } as any,
         BigInt(100),
       );
       expect(repo.create).toHaveBeenCalledWith(
@@ -193,12 +201,12 @@ describe('RoleService', () => {
       expect(permIndex.publishRefresh).toHaveBeenCalled();
     });
 
-    it('should check for cycles when parent_id is provided', async () => {
+    it('should check for cycles when parentId is provided', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
-      await service.update(BigInt(1), { parent_id: BigInt(2) } as any, BigInt(100));
+      await service.update(BigInt(1), { parentId: BigInt(2) } as any, BigInt(100));
       expect(assertNoCycle).toHaveBeenCalledWith(
         BigInt(1),
         BigInt(2),
@@ -207,12 +215,12 @@ describe('RoleService', () => {
       );
     });
 
-    it('should disconnect parent when parent_id is explicitly null', async () => {
+    it('should disconnect parent when parentId is explicitly null', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
-      await service.update(BigInt(1), { parent_id: null } as any, BigInt(100));
+      await service.update(BigInt(1), { parentId: null } as any, BigInt(100));
       expect(repo.update).toHaveBeenCalledWith(
         BigInt(1),
         expect.objectContaining({ parent: { disconnect: true } }),
@@ -238,6 +246,41 @@ describe('RoleService', () => {
 
       await expect(service.delete(BigInt(999))).rejects.toThrow(NotFoundException);
     });
+
+    it('allows deleting a non-admin role even when no other admin exists', async () => {
+      const { service, repo, rbacRepo } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(2), code: 'editor' });
+      rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set(['comic.manage']));
+
+      await expect(service.delete(BigInt(2))).resolves.toEqual(
+        expect.objectContaining({ message: 'role.DELETED' }),
+      );
+      expect(repo.delete).toHaveBeenCalledWith(BigInt(2));
+    });
+
+    it('blocks deleting a system.manage role when no other user holds it', async () => {
+      const { service, repo, rbacRepo } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), code: 'super_admin' });
+      rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set(['system.manage']));
+      rbacRepo.countUsersWithPermissionExcludingRole.mockResolvedValue(0);
+
+      await expect(service.delete(BigInt(1))).rejects.toThrow(
+        /LAST_SYSTEM_ADMIN_PROTECTED/,
+      );
+      expect(repo.delete).not.toHaveBeenCalled();
+    });
+
+    it('allows deleting a system.manage role when another active admin exists', async () => {
+      const { service, repo, rbacRepo } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), code: 'super_admin' });
+      rbacRepo.getPermissionCodesForRoles.mockResolvedValue(new Set(['system.manage']));
+      rbacRepo.countUsersWithPermissionExcludingRole.mockResolvedValue(2);
+
+      await expect(service.delete(BigInt(1))).resolves.toEqual(
+        expect.objectContaining({ message: 'role.DELETED' }),
+      );
+      expect(repo.delete).toHaveBeenCalledWith(BigInt(1));
+    });
   });
 
   // --- syncPermissions ---
@@ -255,7 +298,7 @@ describe('RoleService', () => {
       );
 
       expect(rbacService.assertCallerCanGrantPermissionCodes).toHaveBeenCalledWith(
-        'actor1', null, ['role.view', 'role.create'],
+        'actor1', ['role.view', 'role.create'],
       );
       expect(repo.syncPermissions).toHaveBeenCalledWith(BigInt(1), [BigInt(10), BigInt(11)]);
       expect(rbacCache.bumpVersion).toHaveBeenCalled();

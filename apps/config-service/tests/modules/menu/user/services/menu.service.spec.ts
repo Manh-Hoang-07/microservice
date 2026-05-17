@@ -53,18 +53,18 @@ describe('UserMenuService', () => {
     iamClient.getUserPermissions.mockResolvedValue(perms);
 
     const allMenus = [
-      { id: '1', name: 'Public', show_in_menu: true, is_public: true },
-      { id: '2', name: 'Admin', show_in_menu: true, is_public: false, required_permission_code: 'admin.access' },
-      { id: '3', name: 'Hidden', show_in_menu: false, is_public: true },
+      { id: '1', name: 'Public', showInMenu: true, is_public: true },
+      { id: '2', name: 'Admin', showInMenu: true, is_public: false, required_permission_code: 'admin.access' },
+      { id: '3', name: 'Hidden', showInMenu: false, is_public: true },
     ];
     repo.findAllWithChildren.mockResolvedValue(allMenus);
 
     const service = new UserMenuService(repo as any, iamClient as any);
-    const result = await service.getUserMenuTree('user-1', 'group-1');
+    const result = await service.getUserMenuTree('user-1');
 
-    expect(iamClient.getUserPermissions).toHaveBeenCalledWith('user-1', 'group-1');
-    expect(repo.findAllWithChildren).toHaveBeenCalledWith({ status: 'active' });
-    // filterUserMenus is called with visible menus only (show_in_menu = true)
+    expect(iamClient.getUserPermissions).toHaveBeenCalledWith('user-1');
+    expect(repo.findAllWithChildren).toHaveBeenCalledWith({ status: 'active', group: 'admin' });
+    // filterUserMenus is called with visible menus only (showInMenu = true)
     expect(filterUserMenus).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ id: '1' }),
@@ -75,7 +75,7 @@ describe('UserMenuService', () => {
     expect(result).toBeDefined();
   });
 
-  it('should pass undefined groupId when not provided', async () => {
+  it('should call IAM with only userId (no groupId)', async () => {
     const repo = makeMockMenuRepo();
     const iamClient = makeMockIamClient();
     repo.findAllWithChildren.mockResolvedValue([]);
@@ -83,17 +83,17 @@ describe('UserMenuService', () => {
     const service = new UserMenuService(repo as any, iamClient as any);
     await service.getUserMenuTree('user-1');
 
-    expect(iamClient.getUserPermissions).toHaveBeenCalledWith('user-1', undefined);
+    expect(iamClient.getUserPermissions).toHaveBeenCalledWith('user-1');
   });
 
-  it('should filter out menus with show_in_menu = false', async () => {
+  it('should filter out menus with showInMenu = false', async () => {
     const repo = makeMockMenuRepo();
     const iamClient = makeMockIamClient();
     iamClient.getUserPermissions.mockResolvedValue(new Set());
 
     repo.findAllWithChildren.mockResolvedValue([
-      { id: '1', name: 'Visible', show_in_menu: true },
-      { id: '2', name: 'Invisible', show_in_menu: false },
+      { id: '1', name: 'Visible', showInMenu: true },
+      { id: '2', name: 'Invisible', showInMenu: false },
     ]);
 
     const service = new UserMenuService(repo as any, iamClient as any);

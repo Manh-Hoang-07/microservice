@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrimaryKey } from 'src/types';
 import { UserAdminRepository } from '../../repositories/user-admin.repository';
+import { TokenService } from '../../../auth/services/token.service';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
 import { ChangePasswordDto } from '../dtos/change-password.dto';
 
@@ -15,6 +16,7 @@ export class ProfileService {
   constructor(
     private readonly userRepo: UserAdminRepository,
     private readonly config: ConfigService,
+    private readonly tokenService: TokenService,
   ) {}
 
   async getProfile(userId: PrimaryKey) {
@@ -63,6 +65,12 @@ export class ProfileService {
     const rounds = Number(this.config.get('BCRYPT_ROUNDS') ?? 12);
     const hashed = await bcrypt.hash(dto.password, rounds);
     await this.userRepo.update(userId, { password: hashed });
+
+    // Treat any password change as a credential rotation — invalidate every
+    // existing session so stolen refresh tokens cannot outlive the change.
+    // resetPassword (forgot-password flow) already does this; the self-serve
+    // change-password flow must do the same.
+    await this.tokenService.revokeAllUserSessions(userId);
 
     return { success: true };
   }

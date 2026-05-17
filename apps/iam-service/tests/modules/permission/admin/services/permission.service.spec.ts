@@ -86,6 +86,15 @@ function makeMockPermIndex() {
   return { publishRefresh: jest.fn().mockResolvedValue(undefined) };
 }
 
+function makeMockRbacService() {
+  // By default the caller is a super-admin so existing tests stay green.
+  // Tests that exercise the hierarchy restriction override hasCode.
+  return {
+    getPermissions: jest.fn().mockResolvedValue(new Set(['system.manage'])),
+    hasCode: jest.fn((assigned: Set<string>, need: string) => assigned.has(need)),
+  };
+}
+
 function makeMockI18n() {
   return {} as any;
 }
@@ -94,10 +103,11 @@ function createService(overrides: Record<string, any> = {}) {
   const repo = overrides.repo ?? makeMockRepo();
   const rbacCache = overrides.rbacCache ?? makeMockRbacCache();
   const permIndex = overrides.permIndex ?? makeMockPermIndex();
+  const rbacService = overrides.rbacService ?? makeMockRbacService();
   const i18n = overrides.i18n ?? makeMockI18n();
 
-  const service = new (PermissionService as any)(repo, rbacCache, permIndex, i18n);
-  return { service, repo, rbacCache, permIndex, i18n };
+  const service = new (PermissionService as any)(repo, rbacCache, permIndex, rbacService, i18n);
+  return { service, repo, rbacCache, permIndex, rbacService, i18n };
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +142,7 @@ describe('PermissionService', () => {
       repo.create.mockResolvedValue(created);
 
       const result = await service.create(
-        { code: 'new.perm', name: 'New Perm', scope: 'context' } as any,
+        { code: 'new.perm', name: 'New Perm' } as any,
         BigInt(100),
       );
       expect(result).toEqual(created);
@@ -149,29 +159,43 @@ describe('PermissionService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('should default scope to context when not provided', async () => {
+    it('should not pass scope to repo (field deprecated)', async () => {
       const { service, repo } = createService();
       repo.findByCode.mockResolvedValue(null);
       repo.create.mockResolvedValue({ id: BigInt(1) });
 
       await service.create({ code: 'test', name: 'Test' } as any, BigInt(100));
       expect(repo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ scope: 'context' }),
+        expect.not.objectContaining({ scope: expect.anything() }),
       );
     });
 
-    it('should connect parent when parent_id provided', async () => {
+    it('should connect parent when parentId provided', async () => {
       const { service, repo } = createService();
       repo.findByCode.mockResolvedValue(null);
       repo.create.mockResolvedValue({ id: BigInt(2) });
 
       await service.create(
-        { code: 'child', name: 'Child', parent_id: BigInt(1) } as any,
+        { code: 'child', name: 'Child', parentId: BigInt(1) } as any,
         BigInt(100),
       );
       expect(repo.create).toHaveBeenCalledWith(
         expect.objectContaining({ parent: { connect: { id: BigInt(1) } } }),
       );
+    });
+
+    it('refuses to set parentId on create when caller lacks system.manage', async () => {
+      const rbacService = {
+        getPermissions: jest.fn().mockResolvedValue(new Set(['permission.manage'])),
+        hasCode: jest.fn((assigned: Set<string>, need: string) => assigned.has(need)),
+      };
+      const { service, repo } = createService({ rbacService });
+      repo.findByCode.mockResolvedValue(null);
+
+      await expect(
+        service.create({ code: 'evil', name: 'Evil', parentId: BigInt(1) } as any, BigInt(100)),
+      ).rejects.toThrow(/HIERARCHY_RESTRICTED/);
+      expect(repo.create).not.toHaveBeenCalled();
     });
   });
 
@@ -188,12 +212,41 @@ describe('PermissionService', () => {
       expect(permIndex.publishRefresh).toHaveBeenCalled();
     });
 
-    it('should check for cycles when parent_id is provided', async () => {
+    it('refuses parentId change when caller lacks system.manage', async () => {
+      const rbacService = {
+        getPermissions: jest.fn().mockResolvedValue(new Set(['permission.manage'])),
+        hasCode: jest.fn((assigned: Set<string>, need: string) => assigned.has(need)),
+      };
+      const { service, repo } = createService({ rbacService });
+      // Existing permission with parentId=5, attacker tries to repoint to 99.
+      repo.findById.mockResolvedValue({ id: BigInt(1), code: 'system.manage', parentId: BigInt(5) });
+
+      await expect(
+        service.update(BigInt(1), { parentId: BigInt(99) } as any, BigInt(100)),
+      ).rejects.toThrow(/HIERARCHY_RESTRICTED/);
+      expect(repo.update).not.toHaveBeenCalled();
+    });
+
+    it('allows non-hierarchy updates without system.manage', async () => {
+      const rbacService = {
+        getPermissions: jest.fn().mockResolvedValue(new Set(['permission.manage'])),
+        hasCode: jest.fn((assigned: Set<string>, need: string) => assigned.has(need)),
+      };
+      const { service, repo } = createService({ rbacService });
+      repo.findById.mockResolvedValue({ id: BigInt(1), code: 'x', parentId: null });
+      repo.update.mockResolvedValue({ id: BigInt(1), name: 'Renamed' });
+
+      await expect(
+        service.update(BigInt(1), { name: 'Renamed' } as any, BigInt(100)),
+      ).resolves.toEqual(expect.objectContaining({ name: 'Renamed' }));
+    });
+
+    it('should check for cycles when parentId is provided', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
-      await service.update(BigInt(1), { parent_id: BigInt(2) } as any, BigInt(100));
+      await service.update(BigInt(1), { parentId: BigInt(2) } as any, BigInt(100));
       expect(assertNoCycle).toHaveBeenCalledWith(
         BigInt(1),
         BigInt(2),
@@ -202,12 +255,12 @@ describe('PermissionService', () => {
       );
     });
 
-    it('should disconnect parent when parent_id is explicitly null', async () => {
+    it('should disconnect parent when parentId is explicitly null', async () => {
       const { service, repo } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
-      await service.update(BigInt(1), { parent_id: null } as any, BigInt(100));
+      await service.update(BigInt(1), { parentId: null } as any, BigInt(100));
       expect(repo.update).toHaveBeenCalledWith(
         BigInt(1),
         expect.objectContaining({ parent: { disconnect: true } }),
@@ -228,7 +281,7 @@ describe('PermissionService', () => {
   describe('delete', () => {
     it('should delete and bump cache/index', async () => {
       const { service, repo, rbacCache, permIndex } = createService();
-      repo.findById.mockResolvedValue({ id: BigInt(1) });
+      repo.findById.mockResolvedValue({ id: BigInt(1), code: 'comic.manage' });
       repo.delete.mockResolvedValue(undefined);
 
       const result = await service.delete(BigInt(1));
@@ -242,6 +295,14 @@ describe('PermissionService', () => {
       repo.findById.mockResolvedValue(null);
 
       await expect(service.delete(BigInt(999))).rejects.toThrow(NotFoundException);
+    });
+
+    it('refuses to delete system.manage', async () => {
+      const { service, repo } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), code: 'system.manage' });
+
+      await expect(service.delete(BigInt(1))).rejects.toThrow(/SYSTEM_MANAGE_PROTECTED/);
+      expect(repo.delete).not.toHaveBeenCalled();
     });
   });
 

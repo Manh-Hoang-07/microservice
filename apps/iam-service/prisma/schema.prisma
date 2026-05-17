@@ -40,9 +40,9 @@ model UserGroup {
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@id([userId, groupId])
-  @@index([userId], map: "user_groups_idx_user_groups_user_id")
+  // (userId) covered as prefix of (userId, joinedAt); (groupId) covered as
+  // prefix of (groupId, userId). Keep only the composite indexes.
   @@index([userId, joinedAt], map: "user_groups_idx_user_groups_user_joined_at")
-  @@index([groupId], map: "user_groups_idx_user_groups_group_id")
   @@index([groupId, userId], map: "user_groups_idx_group_user")
   @@map("user_groups")
 }
@@ -54,7 +54,6 @@ model UserGroup {
 model Permission {
   id            BigInt   @id @default(autoincrement())
   code          String   @unique @db.VarChar(120)
-  scope         String   @default("context") @db.VarChar(30)
   name          String?  @db.VarChar(150)
   status        String   @default("active") @db.VarChar(30)
   parentId      BigInt?  @map("parent_id")
@@ -67,7 +66,6 @@ model Permission {
   children  Permission[]        @relation("PermissionHierarchy")
   roleLinks RoleHasPermission[]
 
-  @@index([scope], map: "permissions_idx_scope")
   @@index([parentId], map: "permissions_idx_permissions_parent_id")
   @@map("permissions")
 }
@@ -104,7 +102,7 @@ model RoleHasPermission {
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
-  @@index([roleId], map: "role_has_permissions_idx_role_has_permissions_role_id")
+  // PK (roleId, permissionId) already covers roleId-prefixed lookups.
   @@index([permissionId], map: "role_has_permissions_idx_role_has_permissions_permission_id")
   @@map("role_has_permissions")
 }

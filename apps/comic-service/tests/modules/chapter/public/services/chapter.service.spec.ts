@@ -69,8 +69,8 @@ function buildService() {
 const sampleChapter = {
   id: 1n,
   title: 'Chapter 1',
-  chapter_index: 1,
-  comic_id: 10n,
+  chapterIndex: 1,
+  comicId: 10n,
   status: 'published',
 };
 
@@ -173,7 +173,7 @@ describe('PublicChapterService', () => {
   describe('getPrev()', () => {
     it('returns previous chapter', async () => {
       const { service, chapterRepo } = buildService();
-      chapterRepo.findById.mockResolvedValue({ ...sampleChapter, chapter_index: 3 });
+      chapterRepo.findById.mockResolvedValue({ ...sampleChapter, chapterIndex: 3 });
       chapterRepo.findPublishedNeighbor.mockResolvedValue({ id: 2n, chapter_index: 2 });
 
       const result = await service.getPrev(3n);

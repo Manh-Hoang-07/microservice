@@ -201,12 +201,12 @@ describe('RedisService.getOrSet', () => {
     expect(factory).toHaveBeenCalledTimes(1);
   });
 
-  it('BigInt in result is serialized as Number in cache', async () => {
+  it('BigInt in result is serialized as String in cache', async () => {
     const { svc, mockClient } = makeService({
       get: jest.fn(async () => null),
       set: jest.fn(async () => 'OK'),
     });
-    const valueWithBigInt = { id: BigInt(9007199254740993), title: 'test' };
+    const valueWithBigInt = { id: BigInt('9007199254740993'), title: 'test' };
     const factory = jest.fn(async () => valueWithBigInt);
 
     await svc.getOrSet('key:bigint', factory, 60);
@@ -214,8 +214,9 @@ describe('RedisService.getOrSet', () => {
     const setCall = mockClient.set.mock.calls[0];
     const serialized = setCall[1] as string;
     const parsed = JSON.parse(serialized);
-    // BigInt 9007199254740993n gets converted to Number via (_, v) => Number(v)
-    expect(typeof parsed.id).toBe('number');
+    // BigInt 9007199254740993n gets converted to String via (_, v) => String(v)
+    expect(typeof parsed.id).toBe('string');
+    expect(parsed.id).toBe('9007199254740993');
     expect(parsed.title).toBe('test');
   });
 

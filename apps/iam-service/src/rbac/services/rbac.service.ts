@@ -38,6 +38,19 @@ export class RbacService {
     return this.refreshPermissions(userId);
   }
 
+  /**
+   * Returns the user's effective permission set after walking the
+   * permission hierarchy DOWN (every child of a held ancestor is
+   * implicitly granted). Designed for guard-side caching: callers can
+   * evaluate `required.some(r => set.has(r))` locally without an IAM
+   * round-trip per distinct permission tuple.
+   */
+  async getEffectivePermissions(userId: RbacId): Promise<Set<string>> {
+    await this.permissionIndexService.prepare();
+    const direct = await this.getPermissions(userId);
+    return this.permissionIndexService.expandAssigned(direct);
+  }
+
   async refreshPermissions(userId: RbacId): Promise<Set<string>> {
     const key = String(userId);
     const pending = this.refreshInFlight.get(key);

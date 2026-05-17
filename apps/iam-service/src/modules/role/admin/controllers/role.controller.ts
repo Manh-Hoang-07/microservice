@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Permission, AuditLog, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { RoleService } from '../services/role.service';
 import { CreateRoleDto } from '../dtos/create-role.dto';
@@ -24,6 +24,7 @@ export class RoleController {
   }
 
   @Permission('role.manage')
+  @AuditLog({ action: 'role.create', resource: 'role', includeBody: true })
   @Post()
   create(@Body() dto: CreateRoleDto) {
     const ctx = session()!;
@@ -31,6 +32,7 @@ export class RoleController {
   }
 
   @Permission('role.manage')
+  @AuditLog({ action: 'role.update', resource: 'role', includeBody: true })
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
     const ctx = session()!;
@@ -38,12 +40,14 @@ export class RoleController {
   }
 
   @Permission('role.manage')
+  @AuditLog({ action: 'role.delete', resource: 'role' })
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.service.delete(toPrimaryKey(id));
   }
 
   @Permission('role.manage')
+  @AuditLog({ action: 'role.permissions.sync', resource: 'role', includeBody: true })
   @Put(':id/permissions')
   syncPermissions(@Param('id') id: string, @Body() dto: SyncPermissionsDto) {
     const ctx = session()!;

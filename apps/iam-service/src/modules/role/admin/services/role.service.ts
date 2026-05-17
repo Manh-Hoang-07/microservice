@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { parseQueryOptions, createPaginationMeta, t } from '@package/common';
 import { PrimaryKey } from 'src/types';
@@ -6,7 +6,9 @@ import { assertNoCycle } from '../../../../helpers/hierarchy.helper';
 import { RoleFilter, RoleRepository } from '../../repositories/role.repository';
 import { RbacCacheService } from '../../../../rbac/services/rbac-cache.service';
 import { RbacPermissionIndexService } from '../../../../rbac/services/rbac-permission-index.service';
+import { RbacRepository } from '../../../../rbac/repositories/rbac.repository';
 import { RbacService } from '../../../../rbac/services/rbac.service';
+import { PERM } from '../../../../rbac/constants/rbac.constants';
 import { ListRolesAdminQueryDto } from '../dtos/list-role.query.dto';
 import { CreateRoleDto } from '../dtos/create-role.dto';
 import { UpdateRoleDto } from '../dtos/update-role.dto';
@@ -19,6 +21,7 @@ export class RoleService {
     private readonly rbacCache: RbacCacheService,
     private readonly permIndex: RbacPermissionIndexService,
     private readonly rbacService: RbacService,
+    private readonly rbacRepo: RbacRepository,
     private readonly i18n: I18nService,
   ) {}
 
@@ -83,8 +86,23 @@ export class RoleService {
 
   async delete(id: PrimaryKey) {
     await this.getOne(id);
+
+    // Last-admin protection: refuse to delete a role if doing so would leave
+    // the system with zero users holding `system.manage`.
+    const codes = await this.rbacRepo.getPermissionCodesForRoles([id as any]);
+    if (codes.has(PERM.SYSTEM.MANAGE)) {
+      const remaining = await this.rbacRepo.countUsersWithPermissionExcludingRole(
+        PERM.SYSTEM.MANAGE,
+        id as any,
+      );
+      if (remaining < 1) {
+        throw new ForbiddenException(t(this.i18n, 'rbac.LAST_SYSTEM_ADMIN_PROTECTED'));
+      }
+    }
+
     await this.repo.delete(id);
     await this.rbacCache.bumpVersion();
+    await this.permIndex.publishRefresh();
     return { message: t(this.i18n, 'role.DELETED') };
   }
 

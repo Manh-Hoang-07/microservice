@@ -14,20 +14,32 @@ import { CircuitBreakerPolicy } from 'cockatiel';
 import { createCircuitBreaker } from '@package/circuit-breaker';
 import { RedisService } from '@package/redis';
 import { PERMS_KEY } from '../decorators/permission.decorator';
+import { RbacVersionTracker } from '../rbac/rbac-version-tracker';
 
 const RBAC_TIMEOUT_MS = 5_000;
-const RBAC_CACHE_TTL_S = 300;
+const RBAC_GUARD_CACHE_TTL_S = 60;
 
+/**
+ * Bounded staleness window after IAM bumps `rbac:meta.version`:
+ *   - up to RBAC_VERSION_TTL_MS (2s) before this guard refreshes its
+ *     local version → new cache keys
+ *   - up to RBAC_GUARD_CACHE_TTL_S (60s) before old keys expire
+ *   - worst case ~62s where a revoked permission can still pass an
+ *     allow-cache hit in flight. Acceptable for admin endpoints; tune
+ *     RBAC_GUARD_CACHE_TTL_S down if you need tighter UX.
+ */
 @Injectable()
 export class RbacGuard implements CanActivate {
   private readonly logger = new Logger(RbacGuard.name);
   private readonly breaker: CircuitBreakerPolicy;
+  private readonly versionTracker: RbacVersionTracker;
 
   constructor(
     private readonly reflector: Reflector,
     private readonly config: ConfigService,
     @Optional() @Inject(RedisService) private readonly redis?: RedisService,
   ) {
+    this.versionTracker = new RbacVersionTracker(this.redis);
     this.breaker = createCircuitBreaker({
       halfOpenAfterMs: 10_000,
       maxConsecutiveFailures: 5,
@@ -36,6 +48,14 @@ export class RbacGuard implements CanActivate {
     this.breaker.onBreak(() => {
       this.logger.warn('RBAC circuit opened — IAM service unavailable');
     });
+  }
+
+  private async buildCacheKey(userId: string): Promise<string> {
+    const v = await this.versionTracker.get();
+    // One entry per user (not per perm-tuple). 100 admin endpoints × 5
+    // distinct perm tuples now share 1 cache entry per user instead of
+    // 500 — and a single fetch covers every endpoint they hit.
+    return `rbac:guard:v${v}:u:${userId}`;
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -51,82 +71,79 @@ export class RbacGuard implements CanActivate {
     const user = request.user;
     if (!user?.sub) throw new UnauthorizedException('Authentication required');
 
+    // @Authenticated() — JWT da verify boi JwtGuard, khong can goi IAM.
+    if (permissions.includes('authenticated')) return true;
+
     const iamUrl = this.config.get<string>('IAM_INTERNAL_URL');
     if (!iamUrl) {
       const env = this.config.get<string>('NODE_ENV') ?? process.env.NODE_ENV;
-      if (env === 'production') {
+      // Bypass only in explicit local development. Staging/test/unset must fail closed.
+      if (env !== 'development') {
         throw new ForbiddenException('Permission service not configured');
       }
       return true;
     }
 
     const userId = String(user.sub);
-
-    // Check Redis cache first
-    const cacheKey = `rbac:${userId}:${permissions.sort().join(',')}`;
-    try {
-      const cached = await this.redis?.get(cacheKey);
-      if (cached !== null && cached !== undefined) {
-        const result = JSON.parse(cached) as { allowed: boolean };
-        if (!result.allowed) throw new ForbiddenException('Permission denied');
-        return true;
-      }
-    } catch (err) {
-      if (err instanceof ForbiddenException) throw err;
-      // Redis unavailable — fall through to HTTP call
-    }
+    const cacheKey = await this.buildCacheKey(userId);
 
     const secret =
       this.config.get<string>('INTERNAL_API_SECRET') ||
       this.config.get<string>('app.internalApiSecret') ||
       '';
 
-    let data: { allowed: boolean };
+    // Fetch the user's full effective permission set (after hierarchy
+    // expansion) and cache it per user. Subsequent guards on the same
+    // user re-use this entry — no second HTTP call regardless of the
+    // route's @Permission(...) tuple. getOrSet dedups concurrent misses.
+    let effective: string[];
     try {
-      data = await this.breaker.execute(async () => {
+      const fetchEffective = async () => this.breaker.execute(async () => {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), RBAC_TIMEOUT_MS);
         let res: Response;
         try {
-          res = await fetch(`${iamUrl}/internal/rbac/check`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-internal-secret': secret,
+          res = await fetch(
+            `${iamUrl}/internal/rbac/effective?userId=${encodeURIComponent(userId)}`,
+            {
+              method: 'GET',
+              headers: { 'x-internal-secret': secret },
+              signal: controller.signal,
             },
-            body: JSON.stringify({
-              userId,
-              permissions,
-            }),
-            signal: controller.signal,
-          });
+          );
         } finally {
           clearTimeout(timer);
         }
 
         if (!res.ok) {
-          if (res.status >= 500) {
-            throw new Error(`IAM returned ${res.status}`);
-          }
-          throw new ForbiddenException('Permission denied');
+          if (res.status >= 500) throw new Error(`IAM returned ${res.status}`);
+          // 4xx → no permissions resolved (treated as deny).
+          return [] as string[];
         }
-
-        return (await res.json()) as { allowed: boolean };
+        const body = (await res.json()) as { permissions?: string[] };
+        return Array.isArray(body?.permissions) ? body.permissions : [];
       });
+
+      if (this.redis?.isEnabled()) {
+        effective = await this.redis.getOrSet<string[]>(
+          cacheKey,
+          fetchEffective,
+          RBAC_GUARD_CACHE_TTL_S,
+        );
+      } else {
+        effective = await fetchEffective();
+      }
     } catch (err) {
-      if (err instanceof ForbiddenException) throw err;
       this.logger.error(`RBAC check failed: ${(err as Error).message}`);
       throw new ForbiddenException('Permission check unavailable');
     }
 
-    // Cache the result in Redis
-    try {
-      await this.redis?.set(cacheKey, JSON.stringify(data), RBAC_CACHE_TTL_S);
-    } catch {
-      // Redis unavailable — not critical
-    }
-
-    if (!data.allowed) throw new ForbiddenException('Permission denied');
+    // Allow if ANY required permission is present in the effective set.
+    // Hierarchy expansion happened IAM-side, so a simple membership test
+    // is correct here.
+    const set = new Set(effective);
+    const allowed = permissions.some((p) => set.has(p));
+    if (!allowed) throw new ForbiddenException('Permission denied');
     return true;
   }
 }

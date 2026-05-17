@@ -95,7 +95,7 @@ describe('UserCommentService', () => {
 
     it('creates a top-level comment', async () => {
       const { service, commentRepo } = buildService();
-      const created = { id: 1n, ...dto, user_id: 1n };
+      const created = { id: 1n, ...dto, userId: 1n };
       commentRepo.create.mockResolvedValue(created);
 
       const result = await service.create(1n, dto);
@@ -199,7 +199,7 @@ describe('UserCommentService', () => {
   describe('update()', () => {
     it('updates comment content', async () => {
       const { service, commentRepo } = buildService();
-      commentRepo.findById.mockResolvedValue({ id: 1n, user_id: 1n });
+      commentRepo.findById.mockResolvedValue({ id: 1n, userId: 1n });
       commentRepo.update.mockResolvedValue({ id: 1n, content: 'Updated' });
 
       const result = await service.update(1n, 1n, 'Updated');
@@ -217,7 +217,7 @@ describe('UserCommentService', () => {
 
     it('throws ForbiddenException when not owner', async () => {
       const { service, commentRepo } = buildService();
-      commentRepo.findById.mockResolvedValue({ id: 1n, user_id: 2n });
+      commentRepo.findById.mockResolvedValue({ id: 1n, userId: 2n });
 
       await expect(service.update(1n, 1n, 'x')).rejects.toThrow(ForbiddenException);
     });
@@ -229,7 +229,7 @@ describe('UserCommentService', () => {
   describe('delete()', () => {
     it('soft-deletes by setting status to deleted', async () => {
       const { service, commentRepo } = buildService();
-      commentRepo.findById.mockResolvedValue({ id: 1n, user_id: 1n });
+      commentRepo.findById.mockResolvedValue({ id: 1n, userId: 1n });
       commentRepo.update.mockResolvedValue({ id: 1n, status: 'deleted' });
 
       const result = await service.delete(1n, 1n);
@@ -247,7 +247,7 @@ describe('UserCommentService', () => {
 
     it('throws ForbiddenException when not owner', async () => {
       const { service, commentRepo } = buildService();
-      commentRepo.findById.mockResolvedValue({ id: 1n, user_id: 2n });
+      commentRepo.findById.mockResolvedValue({ id: 1n, userId: 2n });
 
       await expect(service.delete(1n, 1n)).rejects.toThrow(ForbiddenException);
     });

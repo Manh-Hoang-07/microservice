@@ -69,26 +69,39 @@ export class RbacRepository {
   }
 
   /**
-   * Resolve the user's effective permission codes.
+   * Resolve the user's effective permission codes, expanding the role
+   * hierarchy: a user who holds role X also inherits every permission
+   * attached to X's ancestor roles (parent → parent's parent → ...).
+   *
+   * Implemented as a Postgres recursive CTE so the entire walk happens
+   * in one round-trip and `UNION` naturally dedupes even if legacy data
+   * contains a cycle.
+   *
    * Permissions are global (no group/context scope).
    */
   async getActivePermissionCodes(userId: RbacId): Promise<string[]> {
-    const rows = await this.prisma.roleHasPermission.findMany({
-      where: {
-        role: {
-          status: 'active',
-          userRoleAssignments: {
-            some: { userId: toPk(userId) },
-          },
-        },
-        permission: { status: 'active' },
-      },
-      select: { permission: { select: { code: true } } },
-    });
+    const uid = toPk(userId);
+    const rows = await this.prisma.$queryRaw<Array<{ code: string }>>`
+      WITH RECURSIVE role_tree AS (
+        SELECT r.id, r.parent_id
+        FROM roles r
+        INNER JOIN user_role_assignments ura ON ura.role_id = r.id
+        WHERE ura.user_id = ${uid} AND r.status = 'active'
+        UNION
+        SELECT p.id, p.parent_id
+        FROM roles p
+        INNER JOIN role_tree rt ON p.id = rt.parent_id
+        WHERE p.status = 'active'
+      )
+      SELECT DISTINCT perm.code
+      FROM role_tree rt
+      INNER JOIN role_has_permissions rhp ON rhp.role_id = rt.id
+      INNER JOIN permissions perm ON perm.id = rhp.permission_id
+      WHERE perm.status = 'active'
+    `;
     const out = new Set<string>();
-    for (const r of rows as any[]) {
-      const code = r?.permission?.code;
-      if (typeof code === 'string' && code.length) out.add(code);
+    for (const r of rows) {
+      if (typeof r.code === 'string' && r.code.length) out.add(r.code);
     }
     return Array.from(out);
   }
@@ -106,6 +119,30 @@ export class RbacRepository {
   async countUsersWithPermission(permissionCode: string): Promise<number> {
     const rows = await this.prisma.userRoleAssignment.findMany({
       where: {
+        role: {
+          status: 'active',
+          permissions: { some: { permission: { code: permissionCode, status: 'active' } } },
+        },
+      },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    return rows.length;
+  }
+
+  /**
+   * Number of users holding `permissionCode` via active roles OTHER than the
+   * given role. Used to verify it is safe to delete a role without leaving
+   * the system with zero admins.
+   */
+  async countUsersWithPermissionExcludingRole(
+    permissionCode: string,
+    excludedRoleId: string | bigint,
+  ): Promise<number> {
+    const excluded = typeof excludedRoleId === 'bigint' ? excludedRoleId : BigInt(excludedRoleId);
+    const rows = await this.prisma.userRoleAssignment.findMany({
+      where: {
+        roleId: { not: excluded },
         role: {
           status: 'active',
           permissions: { some: { permission: { code: permissionCode, status: 'active' } } },

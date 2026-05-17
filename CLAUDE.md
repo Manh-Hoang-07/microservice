@@ -37,7 +37,7 @@ npm test                                 # Test
 ## Chuan muc code (ap dung cho chuc nang moi)
 
 ### Controller
-- `@Permission()` cho admin, `@Public()` cho public, `@Internal()` + `@UseGuards(InternalGuard)` cho noi bo
+- `@Permission()` cho admin, `@Authenticated()` cho route can login (khong check perm cu the), `@Public()` cho public, `@Internal()` + `@UseGuards(InternalGuard)` cho noi bo
 - `@AuditLog({ action })` cho create/update/delete (shared/common)
 - `ParseBigIntPipe` cho route param: `@Param('id', ParseBigIntPipe) id: bigint`
 - Lay user tu `req.user.sub`, truyen actorId xuong service

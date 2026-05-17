@@ -99,7 +99,7 @@ describe('PublicWardService', () => {
 
       await service.getByProvince('10');
       expect(wardService.getList).toHaveBeenCalledWith(
-        expect.objectContaining({ province_id: '10', status: 'active' }),
+        expect.objectContaining({ provinceId: '10', status: 'active' }),
       );
     });
 

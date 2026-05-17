@@ -67,7 +67,7 @@ describe('UserBookmarkService', () => {
   describe('getList()', () => {
     it('returns paginated bookmarks scoped to user', async () => {
       const { service, bookmarkRepo } = buildService();
-      const bookmarks = [{ id: 1n, user_id: 1n, chapter_id: 10n }];
+      const bookmarks = [{ id: 1n, userId: 1n, chapterId: 10n }];
       bookmarkRepo.findMany.mockResolvedValue(bookmarks);
       bookmarkRepo.count.mockResolvedValue(1);
 
@@ -96,7 +96,7 @@ describe('UserBookmarkService', () => {
   describe('create()', () => {
     it('upserts a bookmark', async () => {
       const { service, bookmarkRepo } = buildService();
-      const bookmark = { id: 1n, user_id: 1n, chapter_id: 10n, page_number: 5 };
+      const bookmark = { id: 1n, userId: 1n, chapterId: 10n, pageNumber: 5 };
       bookmarkRepo.upsert.mockResolvedValue(bookmark);
 
       const result = await service.create(1n, { chapterId: 10n, pageNumber: 5 } as any);
@@ -113,7 +113,7 @@ describe('UserBookmarkService', () => {
   describe('delete()', () => {
     it('deletes own bookmark', async () => {
       const { service, bookmarkRepo } = buildService();
-      bookmarkRepo.findById.mockResolvedValue({ id: 1n, user_id: 1n });
+      bookmarkRepo.findById.mockResolvedValue({ id: 1n, userId: 1n });
 
       const result = await service.delete(1n, 1n);
 
@@ -130,7 +130,7 @@ describe('UserBookmarkService', () => {
 
     it('throws ForbiddenException when not owner', async () => {
       const { service, bookmarkRepo } = buildService();
-      bookmarkRepo.findById.mockResolvedValue({ id: 1n, user_id: 2n });
+      bookmarkRepo.findById.mockResolvedValue({ id: 1n, userId: 2n });
 
       await expect(service.delete(1n, 1n)).rejects.toThrow(ForbiddenException);
     });

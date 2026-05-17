@@ -124,7 +124,7 @@ describe('AdminReviewService', () => {
   describe('delete()', () => {
     it('deletes review, syncs stats, and increments version', async () => {
       const { service, reviewRepo, redis } = buildService();
-      reviewRepo.findById.mockResolvedValue({ id: 1n, comic_id: 10n });
+      reviewRepo.findById.mockResolvedValue({ id: 1n, comicId: 10n });
 
       const result = await service.delete(1n);
 
