@@ -7,7 +7,7 @@ import { UpdateGroupDto } from '../dtos/update-group.dto';
 import { AddMemberDto } from '../dtos/add-member.dto';
 import { ListGroupsAdminQueryDto, ListGroupMembersAdminQueryDto } from '../dtos/list-group.query.dto';
 
-@Controller('groups')
+@Controller('admin/groups')
 export class GroupController {
   constructor(private readonly service: GroupService) {}
 

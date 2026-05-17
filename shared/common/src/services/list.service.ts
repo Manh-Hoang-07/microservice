@@ -66,11 +66,13 @@ export abstract class ListService<R extends IRepository<any>, T = R extends IRep
     const limit = Math.min(Number(query.limit) || 100, 100);
     const normalized = this.prepareQuery({ ...query, limit, skipCount: true });
     const filtered = await this.prepareFilters(normalized);
-    if (filtered === false) return { data: [] };
+    if (filtered === false) return [];
     if (this.repository.findSimple) {
-      return this.repository.findSimple(filtered);
+      const result = await this.repository.findSimple(filtered);
+      return result.data;
     }
-    return this.repository.findAll(filtered);
+    const result = await this.repository.findAll(filtered);
+    return result.data;
   }
 
   async getList(query: Record<string, any> = {}): Promise<IPaginatedResult<T>> {

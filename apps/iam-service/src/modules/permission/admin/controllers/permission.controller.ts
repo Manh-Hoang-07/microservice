@@ -6,7 +6,7 @@ import { CreatePermissionDto } from '../dtos/create-permission.dto';
 import { UpdatePermissionDto } from '../dtos/update-permission.dto';
 import { ListPermissionsAdminQueryDto } from '../dtos/list-permission.query.dto';
 
-@Controller('permissions')
+@Controller('admin/permissions')
 export class PermissionController {
   constructor(private readonly service: PermissionService) {}
 

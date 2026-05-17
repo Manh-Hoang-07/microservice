@@ -234,6 +234,11 @@ export class UserAdminRepository {
       andConditions.push({ id: { in: query.userIds } });
     }
 
+    if (query.ids) {
+      const ids = String(query.ids).split(',').map((s: string) => { try { return BigInt(s.trim()); } catch { return null; } }).filter(Boolean) as bigint[];
+      if (ids.length > 0) andConditions.push({ id: { in: ids } });
+    }
+
     if (andConditions.length > 0) {
       where.AND = andConditions;
     }

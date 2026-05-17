@@ -11,7 +11,7 @@ function validateId(value: string, name: string): string {
   return value;
 }
 
-@Controller('users')
+@Controller('admin/users')
 export class UserRoleController {
   constructor(private readonly service: UserRoleService) {}
 

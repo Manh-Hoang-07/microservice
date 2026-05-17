@@ -7,7 +7,7 @@ import { UpdateRoleDto } from '../dtos/update-role.dto';
 import { SyncPermissionsDto } from '../dtos/sync-permissions.dto';
 import { ListRolesAdminQueryDto } from '../dtos/list-role.query.dto';
 
-@Controller('roles')
+@Controller('admin/roles')
 export class RoleController {
   constructor(private readonly service: RoleService) {}
 

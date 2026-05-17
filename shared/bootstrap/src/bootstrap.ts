@@ -92,6 +92,8 @@ export async function createApp(options: BootstrapOptions): Promise<NestExpressA
       origin: corsOrigins,
       credentials: true,
       methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'x-request-id', 'x-internal-secret'],
+      exposedHeaders: ['x-request-id'],
     });
   }
   app.enableShutdownHooks();
