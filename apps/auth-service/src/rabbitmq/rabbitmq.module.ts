@@ -4,6 +4,8 @@ import { KAFKA_PRODUCER } from '@package/common';
 import { RabbitmqClientModule, RabbitmqProducerService } from '@package/rabbitmq-client';
 import { AuthOutboxCronService } from '../kafka/services/outbox-relay.service';
 
+// OutboxCronService lives in kafka/services/ and is intentionally shared (not duplicated).
+// KAFKA_PRODUCER token is reused so existing consumers work unchanged with RabbitMQ.
 @Module({
   imports: [
     RabbitmqClientModule.registerAsync({

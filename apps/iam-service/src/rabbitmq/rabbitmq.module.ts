@@ -6,6 +6,8 @@ import { RabbitmqClientModule, RabbitmqProducerService } from '@package/rabbitmq
 import { IamOutboxCronService } from '../kafka/services/outbox-relay.service';
 import { RbacEventPublisher } from '../kafka/services/rbac-event-publisher.service';
 
+// OutboxCronService lives in kafka/services/ and is intentionally shared (not duplicated).
+// KAFKA_PRODUCER token is reused so existing consumers work unchanged with RabbitMQ.
 @Module({
   imports: [
     ScheduleModule.forRoot(),
