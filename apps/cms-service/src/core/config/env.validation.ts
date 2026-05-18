@@ -40,7 +40,7 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().optional().allow(''),
   }),
 
-  EVENT_DRIVER: Joi.string().valid('kafka', 'local').default('local'),
+  EVENT_DRIVER: Joi.string().valid('kafka', 'local', 'rabbitmq').default('local'),
   KAFKA_BROKERS: Joi.string().optional().allow(''),
 
   OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().optional().allow(''),

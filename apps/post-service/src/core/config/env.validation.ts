@@ -52,7 +52,7 @@ export const envValidationSchema = Joi.object({
   }),
 
   // Kafka
-  EVENT_DRIVER: Joi.string().valid('kafka', 'local').default('local'),
+  EVENT_DRIVER: Joi.string().valid('kafka', 'local', 'rabbitmq').default('local'),
   KAFKA_BROKERS: Joi.string().optional().allow(''),
 
   // Observability

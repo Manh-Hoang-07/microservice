@@ -83,5 +83,5 @@ export const envValidationSchema = Joi.object({
 
   KAFKA_BROKERS: Joi.string().optional().allow(''),
   KAFKA_GROUP_ID: Joi.string().optional().allow(''),
-  EVENT_DRIVER: Joi.string().valid('local', 'kafka').default('local'),
+  EVENT_DRIVER: Joi.string().valid('local', 'kafka', 'rabbitmq').default('local'),
 }).unknown(true);
