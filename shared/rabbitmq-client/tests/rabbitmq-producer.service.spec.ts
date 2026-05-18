@@ -44,6 +44,11 @@ describe('RabbitmqProducerService', () => {
     expect(amqp.publish).not.toHaveBeenCalled();
   });
 
+  it('isEnabled returns true', () => {
+    const { service } = makeService();
+    expect(service.isEnabled()).toBe(true);
+  });
+
   it('passes headers to amqp.publish', async () => {
     const { service, amqp } = makeService();
     await service.send({

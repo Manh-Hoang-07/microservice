@@ -9,6 +9,15 @@ export class RabbitmqProducerService {
 
   constructor(private readonly amqp: AmqpConnection) {}
 
+  ping(): void {
+    // AmqpConnection lifecycle managed by @golevelup/nestjs-rabbitmq
+    // If connection fails, the library throws on publish
+  }
+
+  isEnabled(): boolean {
+    return true;
+  }
+
   async send(record: {
     topic: string;
     messages: Array<{ key?: string; value: string; headers?: Record<string, string> }>;
@@ -18,7 +27,7 @@ export class RabbitmqProducerService {
       try {
         content = JSON.parse(msg.value);
       } catch (err) {
-        this.logger.error(`Failed to parse message for routing key "${record.topic}"`);
+        this.logger.error(`Failed to parse message for routing key "${record.topic}"`, (err as Error).stack);
         throw err;
       }
       await this.amqp.publish(EXCHANGE, record.topic, content, {
