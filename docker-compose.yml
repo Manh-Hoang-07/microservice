@@ -168,46 +168,24 @@ services:
       timeout: 5s
       retries: 5
 
-  introduction-db:
+  cms-db:
     image: postgres:15-alpine
-    container_name: comic-introduction-db
+    container_name: comic-cms-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: introduction_db
-    ports:
-      - "127.0.0.1:5439:5432"
-    volumes:
-      - introduction_db_data:/var/lib/postgresql/data
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d introduction_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  marketing-db:
-    image: postgres:15-alpine
-    container_name: comic-marketing-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: marketing_db
+      POSTGRES_DB: cms_db
     ports:
       - "127.0.0.1:5440:5432"
     volumes:
-      - marketing_db_data:/var/lib/postgresql/data
+      - cms_db_data:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
           memory: 256M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d marketing_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cms_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -343,8 +321,7 @@ services:
       - notification-db
       - config-db
       - post-db
-      - introduction-db
-      - marketing-db
+      - cms-db
       - iam-db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U postgres"]
@@ -688,57 +665,28 @@ services:
         limits:
           memory: 256M
 
-  # ══ Introduction Service (:3007) ═══════════════════════════════════════════
-  introduction-service:
+  # ══ CMS Service (:3006) ═══════════════════════════════════════════════════
+  cms-service:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.service
       args:
-        SERVICE_NAME: introduction-service
-        SERVICE_PORT: "3007"
-    container_name: comic-introduction-service
-    restart: unless-stopped
-    env_file:
-      - .env.docker
-    depends_on:
-      introduction-db:
-        condition: service_healthy
-    environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3007
-      GLOBAL_PREFIX: api/introduction
-      DATABASE_URL: postgresql://postgres:postgres@introduction-db:5432/introduction_db?connection_limit=20&pool_timeout=60
-      AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-    ports:
-      - "3007:3007"
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-
-  # ══ Marketing Service (:3006) ══════════════════════════════════════════════
-  marketing-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/Dockerfile.service
-      args:
-        SERVICE_NAME: marketing-service
+        SERVICE_NAME: cms-service
         SERVICE_PORT: "3006"
-    container_name: comic-marketing-service
+    container_name: comic-cms-service
     restart: unless-stopped
     env_file:
       - .env.docker
     depends_on:
-      marketing-db:
+      cms-db:
         condition: service_healthy
       kafka:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3006
-      GLOBAL_PREFIX: api/marketing
-      DATABASE_URL: postgresql://postgres:postgres@marketing-db:5432/marketing_db?connection_limit=20&pool_timeout=60
+      GLOBAL_PREFIX: api/cms
+      DATABASE_URL: postgresql://postgres:postgres@cms-db:5432/cms_db?connection_limit=20&pool_timeout=60
       AUTH_JWKS_URL: http://auth-service:3001/.well-known/jwks.json
       KAFKA_BROKERS: kafka:9092
       EVENT_DRIVER: ${EVENT_DRIVER:-local}
@@ -795,8 +743,7 @@ volumes:
   notification_db_data:
   config_db_data:
   post_db_data:
-  introduction_db_data:
-  marketing_db_data:
+  cms_db_data:
   iam_db_data:
   # Redis
   auth_redis_data:
