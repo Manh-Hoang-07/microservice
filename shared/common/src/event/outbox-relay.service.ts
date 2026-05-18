@@ -5,6 +5,9 @@ import { IdempotencyService } from './idempotency.service';
 export interface OutboxRelayOptions {
   tableName: string;
   topicMap: Record<string, string>;
+  /** Unique prefix for the leader lock key (e.g. service name).
+   *  Prevents different services from blocking each other's relay. */
+  lockPrefix?: string;
 }
 
 /**
@@ -33,6 +36,7 @@ export class OutboxRelayService {
   private prisma: any;
   private shuttingDown = false;
   private kafkaProducer: IKafkaProducer | null = null;
+  private lockPrefix = '';
 
   constructor(
     private readonly config: ConfigService,
@@ -46,8 +50,21 @@ export class OutboxRelayService {
    * Initialize with Prisma instance and options.
    * Call this in onModuleInit of the consuming module.
    */
-  init(prisma: any, _options: OutboxRelayOptions) {
+  init(prisma: any, options: OutboxRelayOptions) {
     this.prisma = prisma;
+    if (options.lockPrefix) this.lockPrefix = options.lockPrefix;
+  }
+
+  /**
+   * Wire the event producer at runtime.
+   * CommonKafkaModule provides EVENT_PRODUCER=null as a placeholder.
+   * Each service's KafkaModule/RabbitmqModule provides the real producer,
+   * but OutboxRelayService (a global singleton) cannot see it at construction.
+   * Call this from the cron service's onModuleInit, which runs inside the
+   * correct module scope and can inject the real EVENT_PRODUCER.
+   */
+  setProducer(producer: IKafkaProducer): void {
+    this.kafkaProducer = producer;
   }
 
   isEnabled(): boolean {
@@ -74,7 +91,10 @@ export class OutboxRelayService {
       return;
     }
 
-    const acquired = await this.idempotency.tryLeaderLock(`outbox-relay:${tableName}`, 45);
+    const lockName = this.lockPrefix
+      ? `outbox-relay:${this.lockPrefix}:${tableName}`
+      : `outbox-relay:${tableName}`;
+    const acquired = await this.idempotency.tryLeaderLock(lockName, 45);
     if (!acquired) return;
 
     let claimed: any[] = [];

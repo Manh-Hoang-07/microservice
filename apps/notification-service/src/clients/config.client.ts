@@ -4,14 +4,14 @@ import { FileLogger } from '@package/bootstrap';
 import { createCircuitBreaker } from '@package/circuit-breaker';
 
 export interface EmailConfig {
-  smtp_host: string;
-  smtp_port: number;
-  smtp_secure: boolean;
-  smtp_username: string;
-  smtp_password: string;
-  from_email: string;
-  from_name?: string;
-  reply_to_email?: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUsername: string;
+  smtpPassword: string;
+  fromEmail: string;
+  fromName?: string;
+  replyToEmail?: string;
 }
 
 @Injectable()

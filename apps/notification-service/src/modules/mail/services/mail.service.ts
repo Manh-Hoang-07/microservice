@@ -88,25 +88,25 @@ export class MailService implements OnModuleInit {
       return;
     }
 
-    if (!cfg.smtp_host || !cfg.smtp_username) {
-      log.addDebug('config_incomplete', { smtp_host: cfg.smtp_host ?? '', smtp_username: cfg.smtp_username ?? '' });
+    if (!cfg.smtpHost || !cfg.smtpUsername) {
+      log.addDebug('config_incomplete', { smtpHost: cfg.smtpHost ?? '', smtpUsername: cfg.smtpUsername ?? '' });
       log.save();
       return;
     }
 
-    this.fromName = cfg.from_name ? safeHeader(cfg.from_name) : undefined;
-    if (cfg.from_email) {
+    this.fromName = cfg.fromName ? safeHeader(cfg.fromName) : undefined;
+    if (cfg.fromEmail) {
       this.fromAddress = this.fromName
-        ? `${this.fromName} <${cfg.from_email}>`
-        : cfg.from_email;
+        ? `${this.fromName} <${cfg.fromEmail}>`
+        : cfg.fromEmail;
     }
-    this.adminEmail = cfg.reply_to_email || cfg.from_email;
+    this.adminEmail = cfg.replyToEmail || cfg.fromEmail;
 
     this.transporter = nodemailer.createTransport({
-      host: cfg.smtp_host,
-      port: Number(cfg.smtp_port) || 587,
-      secure: cfg.smtp_secure ?? false,
-      auth: { user: cfg.smtp_username, pass: cfg.smtp_password },
+      host: cfg.smtpHost,
+      port: Number(cfg.smtpPort) || 587,
+      secure: cfg.smtpSecure ?? false,
+      auth: { user: cfg.smtpUsername, pass: cfg.smtpPassword },
       pool: true,
       maxConnections: 5,
       maxMessages: 100,
@@ -115,7 +115,7 @@ export class MailService implements OnModuleInit {
       socketTimeout: 30_000,
     });
     this.lastConfigLoadMs = Date.now();
-    log.addDebug('transport_ready', { host: cfg.smtp_host, port: cfg.smtp_port, from: this.fromAddress });
+    log.addDebug('transport_ready', { host: cfg.smtpHost, port: cfg.smtpPort, from: this.fromAddress });
     log.save();
   }
 

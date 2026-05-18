@@ -12,7 +12,7 @@ import { envValidationSchema } from './core/config/env.validation';
 import { CoreModule } from './core/core.module';
 import { RedisModule, RedisService } from '@package/redis';
 import { KafkaProducerService } from '@package/kafka-client';
-import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, AuditModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonEventModule, AuditModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { PrismaService } from './core/database/prisma.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './kafka/kafka.module';
@@ -55,7 +55,7 @@ const messagingModule = process.env.EVENT_DRIVER === 'rabbitmq' ? RabbitmqModule
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     CoreModule,
     RedisModule,
-    CommonKafkaModule,
+    CommonEventModule,
     messagingModule,
     HealthModule.register({
       serviceName: 'comic-service',

@@ -4,20 +4,19 @@ import { IdempotencyService } from './idempotency.service';
 import { OutboxRelayService, EVENT_PRODUCER } from './outbox-relay.service';
 
 /**
- * Bundle of shared Kafka helpers that need NestJS DI to work:
+ * Broker-agnostic event infrastructure shared across all services:
  *   - IdempotencyService → cross-replica Redis NX claims
  *   - OutboxRelayService → cron-driven outbox publisher
  *
  * Marked @Global so a single import in AppModule makes these injectable
- * across every other module in the service. Without this wrapper they were
- * bare @Injectable() classes exported from `@package/common` — Nest can't
- * resolve them at runtime even though the type imports compile fine.
+ * across every other module in the service.
  *
- * Services that use Kafka should also import their KafkaModule which
- * provides the EVENT_PRODUCER token (backed by KafkaProducerService).
+ * Each service imports its own KafkaModule or RabbitmqModule which provides
+ * the real EVENT_PRODUCER token and calls outboxRelay.setProducer() in
+ * onModuleInit to wire the producer into the global singleton.
  *
  * Usage:
- *   imports: [..., CommonKafkaModule]
+ *   imports: [..., CommonEventModule]
  */
 @Global()
 @Module({
@@ -25,10 +24,10 @@ import { OutboxRelayService, EVENT_PRODUCER } from './outbox-relay.service';
   providers: [
     IdempotencyService,
     OutboxRelayService,
-    // Default null provider — overridden by service-level KafkaModule
-    // that provides the real KafkaProducerService via this token.
+    // Null placeholder — real producer set at runtime via setProducer()
+    // in each service's KafkaModule/RabbitmqModule cron service.
     { provide: EVENT_PRODUCER, useValue: null },
   ],
   exports: [IdempotencyService, OutboxRelayService, EVENT_PRODUCER],
 })
-export class CommonKafkaModule {}
+export class CommonEventModule {}

@@ -4,8 +4,8 @@ import { I18nService } from 'nestjs-i18n';
 import { t } from '@package/common';
 import { FileLogger } from '@package/bootstrap';
 import { RedisService } from '@package/redis';
-import { MailPublisher } from '../../../kafka/services/mail-publisher.service';
 import { AttemptLimiterService } from '../../../core/security/services/attempt-limiter.service';
+import { UserRepository } from '../repositories/user.repository';
 import { generateOtp, buildOtpKey } from '../utils/otp.helper';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class AuthOtpService {
 
   constructor(
     private readonly redis: RedisService,
-    private readonly mailPublisher: MailPublisher,
+    private readonly userRepo: UserRepository,
     private readonly config: ConfigService,
     private readonly attemptLimiter: AttemptLimiterService,
     private readonly i18n: I18nService,
@@ -76,9 +76,9 @@ export class AuthOtpService {
     log.addDebug('generating OTP');
     const otp = generateOtp();
 
-    log.addDebug('publishing to Kafka');
+    log.addDebug('enqueuing mail event');
     try {
-      await this.mailPublisher.publish({
+      await this.userRepo.enqueueOutboxEvent('mail.send', {
         to: email,
         templateCode,
         variables: { otp },

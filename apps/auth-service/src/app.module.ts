@@ -9,7 +9,7 @@ import cookieParser = require('cookie-parser');
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from 'nestjs-i18n';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { RedisModule, RedisService } from '@package/redis';
-import { AuditModule, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
+import { AuditModule, GlobalExceptionFilter, HealthModule, CommonEventModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { KafkaProducerService } from '@package/kafka-client';
 import { PrismaService } from './core/database/prisma.service';
 import { CoreModule } from './core/core.module';
@@ -58,7 +58,7 @@ const messagingModule = process.env.EVENT_DRIVER === 'rabbitmq' ? RabbitmqModule
     RedisModule,
     JwksModule,
     AuthModule,
-    CommonKafkaModule,
+    CommonEventModule,
     messagingModule,
     HealthModule.register({
       serviceName: 'auth-service',

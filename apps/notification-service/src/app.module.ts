@@ -9,7 +9,7 @@ import { join } from 'path';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import { RedisModule, RedisService } from '@package/redis';
 import { envValidationSchema } from './core/config/env.validation';
-import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonKafkaModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
+import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonEventModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { PrismaService } from './core/database/prisma.service';
 import { CoreModule } from './core/core.module';
 import { ClientsModule } from './clients/clients.module';
@@ -47,7 +47,7 @@ const messagingModule = process.env.EVENT_DRIVER === 'rabbitmq' ? RabbitmqModule
     CoreModule,
     ClientsModule,
     MailModule,
-    CommonKafkaModule,
+    CommonEventModule,
     messagingModule,
     HealthModule.register({
       serviceName: 'notification-service',

@@ -81,7 +81,12 @@ export const envValidationSchema = Joi.object({
   OTP_TTL_SECONDS: Joi.number().default(300),
   BCRYPT_ROUNDS: Joi.number().integer().min(10).max(15).default(12),
 
+  EVENT_DRIVER: Joi.string().valid('local', 'kafka', 'rabbitmq').default('local'),
+  RABBITMQ_URL: Joi.alternatives().conditional('EVENT_DRIVER', {
+    is: 'rabbitmq',
+    then: Joi.string().uri().required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
   KAFKA_BROKERS: Joi.string().optional().allow(''),
   KAFKA_GROUP_ID: Joi.string().optional().allow(''),
-  EVENT_DRIVER: Joi.string().valid('local', 'kafka', 'rabbitmq').default('local'),
 }).unknown(true);

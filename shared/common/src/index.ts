@@ -50,11 +50,11 @@ export { CrudService } from './services/crud.service';
 export { HealthModule } from './health/health.module';
 export { HealthController } from './health/health.controller';
 
-// Kafka outbox
-export { OutboxRelayService, OutboxRelayOptions, EVENT_PRODUCER } from './kafka/outbox-relay.service';
-export type { IKafkaProducer } from './kafka/outbox-relay.service';
-export { IdempotencyService } from './kafka/idempotency.service';
-export { CommonKafkaModule } from './kafka/kafka-common.module';
+// Event / outbox infrastructure
+export { OutboxRelayService, OutboxRelayOptions, EVENT_PRODUCER } from './event/outbox-relay.service';
+export type { IKafkaProducer } from './event/outbox-relay.service';
+export { IdempotencyService } from './event/idempotency.service';
+export { CommonEventModule } from './event/event-common.module';
 
 // Audit log
 export { AuditLog, AUDIT_LOG_KEY, AuditLogMeta } from './audit/audit-log.decorator';

@@ -23,6 +23,10 @@ export class JwtGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Skip HTTP-specific auth for non-HTTP contexts (RabbitMQ, gRPC, WebSocket).
+    // Message handlers define their own auth at the handler level.
+    if (context.getType() !== 'http') return true;
+
     const permissions = this.reflector.getAllAndOverride<string[]>(PERMS_KEY, [
       context.getHandler(),
       context.getClass(),

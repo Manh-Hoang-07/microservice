@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { RabbitSubscribe, MessageHandlerErrorBehavior } from '@golevelup/nestjs-rabbitmq';
 import { IdempotencyService } from '@package/common';
 import { KafkaHandler } from '../kafka/interfaces/kafka-handler.interface';
@@ -17,6 +18,7 @@ const DLX = 'events.dlq';
 const queueOptions = { durable: true, deadLetterExchange: DLX };
 const errorBehavior = MessageHandlerErrorBehavior.NACK;
 
+@SkipThrottle()
 @Injectable()
 export class RabbitmqConsumerService {
   constructor(

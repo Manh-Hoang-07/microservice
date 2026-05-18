@@ -11,7 +11,7 @@ import {
   JwtGuard,
   GlobalExceptionFilter,
   HealthModule,
-  CommonKafkaModule,
+  CommonEventModule,
   AuditModule,
   BigIntSerializationInterceptor,
   SessionModule,
@@ -62,7 +62,7 @@ const messagingModule = process.env.EVENT_DRIVER === 'rabbitmq' ? RabbitmqModule
     CoreModule,
     RedisModule,
     RbacModule,
-    CommonKafkaModule,
+    CommonEventModule,
     messagingModule,
     HealthModule.register({
       serviceName: 'iam-service',

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import googleOAuthConfig from '../../core/config/google-oauth.config';
-import { KafkaModule } from '../../kafka/kafka.module';
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
@@ -20,7 +19,6 @@ import { UserRepository } from './repositories/user.repository';
   imports: [
     PassportModule,
     ConfigModule.forFeature(googleOAuthConfig),
-    KafkaModule,
   ],
   controllers: [AuthController],
   providers: [

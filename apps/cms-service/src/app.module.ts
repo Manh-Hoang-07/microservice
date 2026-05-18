@@ -16,7 +16,7 @@ import {
   RbacGuard,
   GlobalExceptionFilter,
   HealthModule,
-  CommonKafkaModule,
+  CommonEventModule,
   BigIntSerializationInterceptor,
   SessionModule,
   SessionContextMiddleware,
@@ -55,7 +55,7 @@ const messagingModule = process.env.EVENT_DRIVER === 'rabbitmq' ? RabbitmqModule
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     CoreModule,
     RedisModule,
-    CommonKafkaModule,
+    CommonEventModule,
     messagingModule,
     HealthModule.register({
       serviceName: 'cms-service',
