@@ -57,6 +57,24 @@ services:
         limits:
           memory: 128M
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: comic-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
   # ══ PostgreSQL — 1 DB per service ═════════════════════════════════════════════
   auth-db:
     image: postgres:15-alpine
@@ -737,6 +755,8 @@ volumes:
   storage_uploads:
   # Kafka
   kafka_data:
+  # RabbitMQ
+  rabbitmq_data:
   # PostgreSQL
   auth_db_data:
   comic_db_data:

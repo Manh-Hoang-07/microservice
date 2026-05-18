@@ -11,7 +11,7 @@
   "scripts": {
     "postinstall": "npm run build:shared --if-present",
     "prestart": "npm run build:shared",
-    "build:shared": "npm -w shared/shared-types run build && npm -w shared/circuit-breaker run build && npm -w shared/config run build && npm -w shared/redis run build && npm -w shared/kafka-client run build && npm -w shared/tracing run build && npm -w shared/common run build && npm -w shared/bootstrap run build",
+    "build:shared": "npm -w shared/shared-types run build && npm -w shared/circuit-breaker run build && npm -w shared/config run build && npm -w shared/redis run build && npm -w shared/kafka-client run build && npm -w shared/rabbitmq-client run build && npm -w shared/tracing run build && npm -w shared/common run build && npm -w shared/bootstrap run build",
     "build:auth": "npm -w apps/auth-service run build",
     "build:comic": "npm -w apps/comic-service run build",
     "build:config": "npm -w apps/config-service run build",
@@ -59,7 +59,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose build",
-    "docker:infra": "docker compose up -d kafka kafka-ui auth-db comic-db notification-db config-db post-db cms-db iam-db auth-redis comic-redis notification-redis post-redis web-api-redis iam-redis jaeger",
+    "docker:infra": "docker compose up -d kafka kafka-ui rabbitmq auth-db comic-db notification-db config-db post-db cms-db iam-db auth-redis comic-redis notification-redis post-redis web-api-redis iam-redis jaeger",
     "docker:infra:down": "docker compose stop kafka kafka-ui auth-db comic-db notification-db config-db post-db cms-db iam-db auth-redis comic-redis notification-redis post-redis web-api-redis iam-redis jaeger",
     "nginx:up": "docker compose --profile dev up -d nginx-dev",
     "nginx:down": "docker compose --profile dev rm -sf nginx-dev",
@@ -79,6 +79,7 @@
     "tsx": "^4.21.0"
   },
   "dependencies": {
+    "@golevelup/nestjs-rabbitmq": "^9.0.0",
     "compression": "^1.8.1",
     "isomorphic-dompurify": "^3.12.0"
   }
