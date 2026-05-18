@@ -75,4 +75,14 @@ describe('RabbitmqConsumerService', () => {
     await service.onUserRegistered({ email: 'x@x.com' });
     expect(idempotency.claim).toHaveBeenCalledWith('user.registered', '12345');
   });
+
+  it('releases idempotency claim when handler throws, allowing redelivery', async () => {
+    const error = new Error('handler failed');
+    chapterPublished.handle.mockRejectedValue(error);
+    // need a release mock on idempotency
+    (idempotency as any).release = jest.fn().mockResolvedValue(undefined);
+
+    await expect(service.onChapterPublished({ id: '99' })).rejects.toThrow('handler failed');
+    expect((idempotency as any).release).toHaveBeenCalledWith('comic.chapter.published', '99');
+  });
 });

@@ -37,7 +37,12 @@ export class RabbitmqConsumerService {
       payload?.id?.toString() ?? payload?.event_id?.toString() ?? String(Date.now());
     const claimed = await this.idempotency.claim(routingKey, eventId);
     if (!claimed) return;
-    await handler.handle(payload);
+    try {
+      await handler.handle(payload);
+    } catch (err) {
+      await this.idempotency.release(routingKey, eventId);
+      throw err;
+    }
   }
 
   @RabbitSubscribe({ exchange: EXCHANGE, routingKey: 'comic.chapter.published', queue: 'comic.chapter.published', queueOptions, errorBehavior })
