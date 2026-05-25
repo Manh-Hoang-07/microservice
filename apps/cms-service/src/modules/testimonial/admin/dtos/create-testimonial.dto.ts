@@ -5,14 +5,11 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Max,
   Min,
 } from 'class-validator';
 import { BasicStatus } from '../../../../common/enums/status.enum';
-
-const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateTestimonialDto {
   @IsString()
@@ -30,7 +27,7 @@ export class CreateTestimonialDto {
   clientCompany?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'clientAvatar must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   clientAvatar?: string;
 

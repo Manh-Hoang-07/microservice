@@ -32,12 +32,12 @@ export class CreateBannerDto {
   subtitle?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'image must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   image?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'mobileImage must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   mobileImage?: string;
 

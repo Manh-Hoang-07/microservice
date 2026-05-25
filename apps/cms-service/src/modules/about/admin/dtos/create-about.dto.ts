@@ -29,7 +29,7 @@ export class CreateAboutDto {
   content?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'image must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   image?: string;
 

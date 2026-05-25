@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminGalleryService } from '../services/gallery.service';
@@ -29,7 +29,7 @@ export class AdminGalleryController {
   }
 
   @Permission('cms.gallery.manage')
-  @Patch(':id')
+  @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateGalleryDto) {
     return this.galleryService.update(toPrimaryKey(id), dto);
   }

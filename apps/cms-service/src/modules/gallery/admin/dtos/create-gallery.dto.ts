@@ -6,13 +6,10 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
 } from 'class-validator';
 import { BasicStatus } from '../../../../common/enums/status.enum';
-
-const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateGalleryDto {
   @IsString()
@@ -30,7 +27,7 @@ export class CreateGalleryDto {
   description?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'coverImage must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   coverImage?: string;
 

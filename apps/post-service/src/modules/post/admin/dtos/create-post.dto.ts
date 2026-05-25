@@ -43,12 +43,12 @@ export class CreatePostDto {
   content?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'image must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   image?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'coverImage must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   coverImage?: string;
 

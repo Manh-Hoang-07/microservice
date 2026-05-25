@@ -162,7 +162,7 @@ export class UploadController {
   }
 
   @Get(':filename')
-  @Permission('storage:read')
+  @Public()
   async downloadFile(
     @Param('filename') filename: string,
     @Res() res: Response,
@@ -173,16 +173,12 @@ export class UploadController {
     const storageType = this.configService.get<string>('storage.type', 'local');
 
     if (storageType === 'local') {
-      const { stream } = await this.uploadService.downloadFile(safe);
-      // Hardening: prevent MIME sniffing, force download, sandbox via CSP.
-      // Override stored mimetype to octet-stream so even if a polyglot
-      // (HTML/SVG masquerading as image) slipped through validation, no
-      // browser will execute it from the storage origin.
+      const { stream, metadata } = await this.uploadService.downloadFile(safe);
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
       res.setHeader('Referrer-Policy', 'no-referrer');
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${safe}"`);
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Content-Type', metadata.mimetype || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${safe}"`);
       stream.pipe(res);
     } else {
       const { metadata } = await this.uploadService.downloadFile(safe);

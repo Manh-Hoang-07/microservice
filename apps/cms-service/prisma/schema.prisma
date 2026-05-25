@@ -84,19 +84,20 @@ model Project {
   shortDescription String?   @map("short_description") @db.VarChar(500)
   coverImage       String?   @map("cover_image") @db.VarChar(500)
   location         String?   @db.VarChar(255)
-  area             String?   @db.VarChar(255)
+  area             Float?
   startDate        DateTime? @map("start_date") @db.Date
   endDate          DateTime? @map("end_date") @db.Date
   status           String    @default("planning") @db.VarChar(30)
   clientName       String?   @map("client_name") @db.VarChar(255)
-  budget           String?   @db.VarChar(255)
+  budget           Float?
   images           Json?     @default("[]")
   featured         Boolean   @default(false)
   viewCount        Int       @default(0) @map("view_count")
   sortOrder        Int       @default(0) @map("sort_order")
-  seoTitle         String?   @map("seo_title") @db.VarChar(255)
-  seoDescription   String?   @map("seo_description") @db.VarChar(500)
-  seoKeywords      String?   @map("seo_keywords") @db.VarChar(500)
+  metaTitle        String?   @map("seo_title") @db.VarChar(255)
+  metaDescription  String?   @map("seo_description") @db.VarChar(500)
+  canonicalUrl     String?   @map("canonical_url") @db.VarChar(500)
+  ogImage          String?   @map("og_image") @db.VarChar(500)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamp(0)
 

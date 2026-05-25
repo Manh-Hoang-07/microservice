@@ -20,7 +20,7 @@ export class CreatePartnerDto {
   // URL fields validated as http(s) URLs to defeat `javascript:` / `data:`
   // smuggling that becomes XSS when the frontend renders the value.
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'logo must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   logo?: string;
 

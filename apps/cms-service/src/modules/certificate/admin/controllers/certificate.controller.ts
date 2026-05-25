@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { Permission } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminCertificateService } from '../services/certificate.service';
@@ -29,7 +29,7 @@ export class AdminCertificateController {
   }
 
   @Permission('cms.certificate.manage')
-  @Patch(':id')
+  @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateCertificateDto) {
     return this.certificateService.update(toPrimaryKey(id), dto);
   }

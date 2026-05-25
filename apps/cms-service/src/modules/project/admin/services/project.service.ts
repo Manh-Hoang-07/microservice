@@ -74,9 +74,10 @@ export class AdminProjectService {
         images: dto.images ?? [],
         featured: dto.featured,
         sortOrder: dto.sortOrder,
-        seoTitle: dto.seoTitle,
-        seoDescription: dto.seoDescription,
-        seoKeywords: dto.seoKeywords,
+        metaTitle: dto.metaTitle,
+        metaDescription: dto.metaDescription,
+        canonicalUrl: dto.canonicalUrl,
+        ogImage: dto.ogImage,
       });
       await this.clearCache();
       return result;
@@ -104,9 +105,10 @@ export class AdminProjectService {
       images: dto.images,
       featured: dto.featured,
       sortOrder: dto.sortOrder,
-      seoTitle: dto.seoTitle,
-      seoDescription: dto.seoDescription,
-      seoKeywords: dto.seoKeywords,
+      metaTitle: dto.metaTitle,
+      metaDescription: dto.metaDescription,
+      canonicalUrl: dto.canonicalUrl,
+      ogImage: dto.ogImage,
     };
     // Only regenerate slug when the source actually changed.
     const nameChanged = dto.name !== undefined && dto.name !== (current as any).name;

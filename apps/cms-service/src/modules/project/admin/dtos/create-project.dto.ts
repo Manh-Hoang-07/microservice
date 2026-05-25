@@ -5,15 +5,13 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
 } from 'class-validator';
 import { ProjectStatus } from '../../enums/project-status.enum';
-
-const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateProjectDto {
   @IsString()
@@ -35,7 +33,7 @@ export class CreateProjectDto {
   shortDescription?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'coverImage must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   coverImage?: string;
 
@@ -45,9 +43,8 @@ export class CreateProjectDto {
   location?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  area?: string;
+  @IsNumber()
+  area?: number;
 
   @IsOptional()
   @IsDateString()
@@ -67,9 +64,8 @@ export class CreateProjectDto {
   clientName?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  budget?: string;
+  @IsNumber()
+  budget?: number;
 
   @IsOptional()
   @IsArray()
@@ -88,15 +84,20 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  seoTitle?: string;
+  metaTitle?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  seoDescription?: string;
+  metaDescription?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  seoKeywords?: string;
+  canonicalUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  ogImage?: string;
 }

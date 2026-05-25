@@ -8,14 +8,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   Matches,
   MaxLength,
   Min,
 } from 'class-validator';
 import { ComicStatus } from '../../enums/comic-status.enum';
 
-const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,253}[a-z0-9])?$/;
 
 export class CreateComicDto {
@@ -36,7 +34,7 @@ export class CreateComicDto {
   description?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'coverImage must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   coverImage?: string;
 

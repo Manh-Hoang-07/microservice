@@ -4,14 +4,11 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
 } from 'class-validator';
 import { CertificateType } from '../../enums/certificate-type.enum';
 import { BasicStatus } from '../../../../common/enums/status.enum';
-
-const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateCertificateDto {
   @IsString()
@@ -19,7 +16,7 @@ export class CreateCertificateDto {
   name: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'image must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   image?: string;
 

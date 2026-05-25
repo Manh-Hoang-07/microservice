@@ -5,14 +5,11 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUrl,
   Matches,
   MaxLength,
   Min,
 } from 'class-validator';
 import { BasicStatus } from '../../../../common/enums/status.enum';
-
-const URL_OPTS = { require_protocol: true, protocols: ['http', 'https'] };
 
 export class CreateStaffDto {
   @IsString()
@@ -35,7 +32,7 @@ export class CreateStaffDto {
   bio?: string;
 
   @IsOptional()
-  @IsUrl(URL_OPTS, { message: 'avatar must be an http(s) URL.' })
+  @IsString()
   @MaxLength(500)
   avatar?: string;
 
