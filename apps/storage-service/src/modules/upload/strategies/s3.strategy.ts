@@ -21,14 +21,18 @@ import {
   UploadResult,
 } from '../interfaces/upload-strategy.interface';
 
-// TS6 tightened generic variance on SmithyClient.send() breaking AWS SDK v3 types.
-// Interface with concrete overloads restores full type safety without any generics.
+// TS6 tightened generic variance on SmithyClient.send() — conditional type maps
+// each command to its output so call sites remain fully typed without any generics.
+type S3CommandOutput<T> =
+  T extends GetObjectCommand ? GetObjectCommandOutput :
+  T extends HeadObjectCommand ? HeadObjectCommandOutput :
+  T extends ListObjectsV2Command ? ListObjectsV2CommandOutput :
+  void;
+
 interface IS3Client {
-  send(command: PutObjectCommand): Promise<unknown>;
-  send(command: GetObjectCommand): Promise<GetObjectCommandOutput>;
-  send(command: DeleteObjectCommand): Promise<unknown>;
-  send(command: ListObjectsV2Command): Promise<ListObjectsV2CommandOutput>;
-  send(command: HeadObjectCommand): Promise<HeadObjectCommandOutput>;
+  send<T extends PutObjectCommand | GetObjectCommand | DeleteObjectCommand | ListObjectsV2Command | HeadObjectCommand>(
+    command: T,
+  ): Promise<S3CommandOutput<T>>;
 }
 
 function safeExtension(originalName: string): string {
