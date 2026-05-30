@@ -41,11 +41,8 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # Environment
-.env
-.env.docker
-.env.generated
-.env.local
-.env.production
+.env*
+!.env.example
 
 # PgBouncer userlist (contains DB password)
 infrastructure/pgbouncer/userlist.txt
