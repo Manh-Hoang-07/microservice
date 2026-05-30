@@ -1,4 +1,8 @@
 import 'reflect-metadata';
+import { register } from 'tsconfig-paths';
+import { join } from 'path';
+register({ baseUrl: join(__dirname, '..'), paths: {} });
+
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
