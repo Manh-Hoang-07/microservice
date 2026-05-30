@@ -45,6 +45,7 @@ lerna-debug.log*
 .env.docker
 .env.generated
 .env.local
+.env.production
 
 # PgBouncer userlist (contains DB password)
 infrastructure/pgbouncer/userlist.txt
