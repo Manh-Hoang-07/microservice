@@ -15,7 +15,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { UploadService } from '../services/upload.service';
 import { FileValidationService } from '../services/file-validation.service';
@@ -165,7 +164,7 @@ export class UploadController {
   @Public()
   async downloadFile(
     @Param('filename') filename: string,
-    @Res() res: Response,
+    @Res() res: any,
   ): Promise<void> {
     const safe = assertSafeFilename(filename);
     // Read the configured strategy from the Nest config namespace, NOT the
