@@ -1,9 +1,9 @@
 import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
-import { sanitize, Config } from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 
-const PURIFY_OPTIONS: Config = {
-  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre'],
-  ALLOWED_ATTR: ['href', 'target', 'rel'],
+const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre'],
+  allowedAttributes: { a: ['href', 'target', 'rel'] },
 };
 
 @Injectable()
@@ -15,7 +15,7 @@ export class SanitizeHtmlPipe implements PipeTransform {
   }
 
   private clean(input: string): string {
-    return sanitize(input, PURIFY_OPTIONS) as string;
+    return sanitizeHtml(input, SANITIZE_OPTIONS);
   }
 
   private sanitizeObject(obj: any): any {
