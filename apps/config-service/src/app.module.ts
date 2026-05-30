@@ -23,7 +23,7 @@ import { PermissionModule } from './modules/permission/permission.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
+      envFilePath: ['.env', '.env.production', '.env.local'],
       load: [createAppConfig(3003, { internalApiSecret: process.env.INTERNAL_API_SECRET || '' })],
       validationSchema: envValidationSchema,
     }),

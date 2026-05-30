@@ -17,7 +17,7 @@ import { GatewaySearchModule } from './search/search.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
+      envFilePath: ['.env', '.env.production', '.env.local'],
       load: [webApiConfig],
       validationSchema: envValidationSchema,
     }),

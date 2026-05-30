@@ -27,7 +27,7 @@ const messagingModule = process.env.EVENT_DRIVER === 'rabbitmq' ? RabbitmqModule
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
+      envFilePath: ['.env', '.env.production', '.env.local'],
       load: [createAppConfig(3004, { internalApiSecret: process.env.INTERNAL_API_SECRET || '' }), createKafkaConfig('notification-service'), createRedisConfig('redis://localhost:6382')],
       validationSchema: envValidationSchema,
     }),

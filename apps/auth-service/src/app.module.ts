@@ -39,7 +39,7 @@ const messagingModule = selectMessagingModule();
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
+      envFilePath: ['.env', '.env.production', '.env.local'],
       load: [
         createAppConfig(3001, {
           internalApiSecret: process.env.INTERNAL_API_SECRET || '',

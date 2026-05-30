@@ -37,7 +37,7 @@ const messagingModule = process.env.EVENT_DRIVER === 'rabbitmq' ? RabbitmqModule
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
+      envFilePath: ['.env', '.env.production', '.env.local'],
       load: [
         createAppConfig(3008, {
           internalApiSecret: process.env.INTERNAL_API_SECRET || '',
