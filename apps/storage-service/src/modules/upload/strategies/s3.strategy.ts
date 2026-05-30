@@ -21,20 +21,6 @@ import {
   UploadResult,
 } from '../interfaces/upload-strategy.interface';
 
-// TS6 tightened generic variance on SmithyClient.send() — conditional type maps
-// each command to its output so call sites remain fully typed without any generics.
-type S3CommandOutput<T> =
-  T extends GetObjectCommand ? GetObjectCommandOutput :
-  T extends HeadObjectCommand ? HeadObjectCommandOutput :
-  T extends ListObjectsV2Command ? ListObjectsV2CommandOutput :
-  void;
-
-interface IS3Client {
-  send<T extends PutObjectCommand | GetObjectCommand | DeleteObjectCommand | ListObjectsV2Command | HeadObjectCommand>(
-    command: T,
-  ): Promise<S3CommandOutput<T>>;
-}
-
 function safeExtension(originalName: string): string {
   const ext = path.extname(originalName || '').toLowerCase();
   return /^\.[a-z0-9]{1,10}$/.test(ext) ? ext : '';
@@ -42,7 +28,7 @@ function safeExtension(originalName: string): string {
 
 @Injectable()
 export class S3StorageStrategy implements IUploadStrategy {
-  private readonly s3Client: IS3Client;
+  private readonly s3Client: S3Client;
   private readonly bucket: string;
   private readonly baseUrl: string;
   private readonly forcePathStyle: boolean;
@@ -64,12 +50,25 @@ export class S3StorageStrategy implements IUploadStrategy {
         secretAccessKey: s3Config?.secretAccessKey,
       },
       forcePathStyle: this.forcePathStyle,
-    }) as unknown as IS3Client;
+    });
 
     // Dùng nguyên giá trị baseUrl từ config/env, chỉ bỏ trailing slash nếu có.
     // Người dùng tự cấu hình đúng URL mong muốn (ví dụ: https://minio1.webtui.vn:9000/bucket-s3monmon).
     const rawBaseUrl = s3Config?.baseUrl || '';
     this.baseUrl = rawBaseUrl.replace(/\/$/, '');
+  }
+
+  // TS6 tightened generic variance on SmithyClient.send(), breaking AWS SDK v3 types.
+  // Private overloads give each call site the correct return type; the implementation
+  // uses a cast that is safe because S3Client.send() exists at runtime.
+  private s3Send(command: PutObjectCommand): Promise<void>;
+  private s3Send(command: GetObjectCommand): Promise<GetObjectCommandOutput>;
+  private s3Send(command: DeleteObjectCommand): Promise<void>;
+  private s3Send(command: ListObjectsV2Command): Promise<ListObjectsV2CommandOutput>;
+  private s3Send(command: HeadObjectCommand): Promise<HeadObjectCommandOutput>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private s3Send(command: any): Promise<any> {
+    return (this.s3Client as any).send(command);
   }
 
   private buildUrl(filename: string): string {
@@ -110,7 +109,7 @@ export class S3StorageStrategy implements IUploadStrategy {
     });
 
     try {
-      await this.s3Client.send(command);
+      await this.s3Send(command);
     } catch (error: any) {
       // Bắt các lỗi cụ thể từ AWS SDK để trả về message dễ hiểu hơn
       if (
@@ -152,7 +151,7 @@ export class S3StorageStrategy implements IUploadStrategy {
 
     let result: GetObjectCommandOutput;
     try {
-      result = await this.s3Client.send(command);
+      result = await this.s3Send(command);
     } catch (error: any) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
         throw this.fileNotFound(filename);
@@ -183,7 +182,7 @@ export class S3StorageStrategy implements IUploadStrategy {
       Bucket: this.bucket,
       Key: filename,
     });
-    await this.s3Client.send(command);
+    await this.s3Send(command);
   }
 
   async list(prefix?: string, limit = 50): Promise<FileMetadata[]> {
@@ -193,7 +192,7 @@ export class S3StorageStrategy implements IUploadStrategy {
       MaxKeys: limit,
     });
 
-    const result = await this.s3Client.send(command);
+    const result = await this.s3Send(command);
     const contents = result.Contents ?? [];
 
     return contents.map((item) => ({
@@ -212,7 +211,7 @@ export class S3StorageStrategy implements IUploadStrategy {
       Key: filename,
     });
     try {
-      await this.s3Client.send(command);
+      await this.s3Send(command);
       return true;
     } catch (error: any) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
@@ -229,7 +228,7 @@ export class S3StorageStrategy implements IUploadStrategy {
     });
     let result: HeadObjectCommandOutput;
     try {
-      result = await this.s3Client.send(command);
+      result = await this.s3Send(command);
     } catch (error: any) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
         throw this.fileNotFound(filename);
