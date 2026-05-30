@@ -9,10 +9,12 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@nestjs/common": "^11.1.19",
     "@nestjs/core": "^11.1.19",
-    "@nestjs/platform-express": "^11.1.19",
+    "@nestjs/platform-express": "^11.1.19"
+  },
+  "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@package/common": "workspace:*",
     "@package/tracing": "workspace:*",
