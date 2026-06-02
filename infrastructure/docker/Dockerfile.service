@@ -7,7 +7,7 @@
 #   SERVICE_NAME — folder name under apps/ (e.g. "auth-service")
 #   SERVICE_PORT — port the service listens on (e.g. "3002")
 
-ARG NODE_VERSION=20-alpine
+ARG NODE_VERSION=22-alpine
 ARG PNPM_VERSION=11.4.0
 
 # ─────────────────────────────────────────────────────────────────────────────
