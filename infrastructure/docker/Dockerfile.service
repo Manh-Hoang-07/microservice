@@ -42,14 +42,17 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 FROM deps AS build
 ARG SERVICE_NAME
 
-# Build shared packages first (topological order is automatic with `-r`).
-RUN pnpm --filter "./packages/*" -r build
-RUN pnpm --filter ${SERVICE_NAME} build
+# Fail fast if SERVICE_NAME build arg was not passed.
+RUN test -n "${SERVICE_NAME}" || { echo "ERROR: SERVICE_NAME build arg is required (e.g. auth-service)" >&2; exit 1; }
+
+# Build shared packages first (topological order automatic via filter).
+RUN pnpm --filter "./packages/*" build
+RUN pnpm --filter "${SERVICE_NAME}" build
 
 # `pnpm deploy --prod` resolves workspace deps and copies them flattened into
 # the target's node_modules/. Replaces the old `cp -r node_modules` hack
 # which broke under pnpm's symlink layout.
-RUN pnpm --filter ${SERVICE_NAME} deploy --prod --legacy /deploy
+RUN pnpm --filter "${SERVICE_NAME}" deploy --prod --legacy /deploy
 
 # Replicate runtime-asset wiring that tsc doesn't handle:
 #  - src/ mirror of dist/: the codebase imports `from 'src/types'` (baseUrl-
