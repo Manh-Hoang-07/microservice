@@ -4,6 +4,7 @@ dist/
 /node_modules
 apps/*/dist/
 apps/*/node_modules/
+packages/*/node_modules/
 shared/*/dist/
 shared/*/node_modules/
 
@@ -54,6 +55,9 @@ infrastructure/pgbouncer/userlist.txt
 # Storage
 # /storage/uploads
 
+
+# Prisma
+prisma/migrations/*.sql.bak
 
 # Generated Prisma client (regenerate with `prisma generate` at build time)
 src/generated/

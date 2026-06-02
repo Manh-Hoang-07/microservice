@@ -17,7 +17,7 @@ import { UploadModule } from './modules/upload/upload.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.production', '.env.local'],
+      envFilePath: ['.env.local', '.env.production', '.env'],
       load: [storageConfig],
       validationSchema: envValidationSchema,
     }),

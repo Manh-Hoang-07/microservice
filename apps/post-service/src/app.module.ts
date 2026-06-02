@@ -38,7 +38,7 @@ const messagingModule = selectMessagingModule();
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.production', '.env.local'],
+      envFilePath: ['.env.local', '.env.production', '.env'],
       load: [createAppConfig(3008), createKafkaConfig(), createRedisConfig('redis://localhost:6384')],
       validationSchema: envValidationSchema,
     }),

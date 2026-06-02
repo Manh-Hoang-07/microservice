@@ -35,7 +35,7 @@ const messagingModule = selectMessagingModule();
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.production', '.env.local'],
+      envFilePath: ['.env.local', '.env.production', '.env'],
       load: [createAppConfig(3004, { internalApiSecret: process.env.INTERNAL_API_SECRET || '' }), createKafkaConfig('notification-service'), createRedisConfig('redis://localhost:6382')],
       validationSchema: envValidationSchema,
     }),
