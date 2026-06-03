@@ -28,6 +28,10 @@ jest.mock('../../../../../src/modules/stats/repositories/stats.repository', () =
   StatsRepository: jest.fn(),
 }));
 
+jest.mock('../../../../../src/modules/post/repositories/post.repository', () => ({
+  PostRepository: jest.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
@@ -54,22 +58,20 @@ function makeMockStatsRepo() {
   };
 }
 
-function makeMockPrisma(postOverride?: any) {
+function makeMockPostRepo(postOverride?: any) {
   return {
-    post: {
-      findUnique: jest.fn().mockResolvedValue(
-        postOverride !== undefined
-          ? postOverride
-          : { id: BigInt(1), name: 'Test Post', slug: 'test-post' },
-      ),
-    },
+    findById: jest.fn().mockResolvedValue(
+      postOverride !== undefined
+        ? postOverride
+        : { id: BigInt(1), name: 'Test Post', slug: 'test-post' },
+    ),
   };
 }
 
-function makeService(statsRepo?: any, prisma?: any) {
+function makeService(statsRepo?: any, postRepo?: any) {
   return new StatsAdminService(
     statsRepo ?? makeMockStatsRepo(),
-    prisma ?? makeMockPrisma(),
+    postRepo ?? makeMockPostRepo(),
     { translate: jest.fn() } as any,
   );
 }
@@ -98,7 +100,7 @@ describe('StatsAdminService', () => {
     });
 
     it('throws NotFoundException when post does not exist', async () => {
-      const service = makeService(undefined, makeMockPrisma(null));
+      const service = makeService(undefined, makeMockPostRepo(null));
       await expect(service.getPostDailyStats('1', {})).rejects.toThrow(NotFoundException);
     });
 

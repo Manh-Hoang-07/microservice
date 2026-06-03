@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { I18nService } from 'nestjs-i18n';
 import { t } from '@package/common';
 import { StatsRepository } from '../../repositories/stats.repository';
-import { PrismaService } from '../../../../core/database/prisma.service';
+import { PostRepository } from '../../../post/repositories/post.repository';
 import { DailyStatsQueryDto } from '../dtos/stats-query.dto';
 import { toPrimaryKey } from 'src/types';
 
@@ -13,7 +13,7 @@ const DEFAULT_DAYS = 29;
 export class StatsAdminService {
   constructor(
     private readonly statsRepo: StatsRepository,
-    private readonly prisma: PrismaService,
+    private readonly postRepo: PostRepository,
     private readonly i18n: I18nService,
   ) {}
 
@@ -38,10 +38,7 @@ export class StatsAdminService {
       throw new BadRequestException('Invalid post ID');
     }
 
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-      select: { id: true, name: true, slug: true },
-    });
+    const post = await this.postRepo.findById(postId);
     if (!post) throw new NotFoundException(t(this.i18n, 'post.POST_NOT_FOUND'));
 
     const end = query.endDate ? new Date(query.endDate) : new Date();
