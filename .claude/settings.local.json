@@ -225,7 +225,24 @@
       "Bash(findstr \"LISTENING\")",
       "Bash(curl -si -X OPTIONS \"http://localhost:3006/api/cms/admin/banners\" -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: GET\" -H \"Access-Control-Request-Headers: Authorization,Content-Type\")",
       "Bash(curl -si -X OPTIONS \"http://localhost/api/cms/admin/banners\" -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: GET\" -H \"Access-Control-Request-Headers: Authorization,Content-Type\")",
-      "Bash(curl -si http://127.0.0.1:3006/api/cms/admin/banners -H \"Authorization: Bearer test\")"
+      "Bash(curl -si http://127.0.0.1:3006/api/cms/admin/banners -H \"Authorization: Bearer test\")",
+      "Bash(pnpm --filter post-service build)",
+      "Bash(git -C \"d:/Sources/Project/microservice\" add apps/post-service/src/modules/stats/stats.module.ts)",
+      "Bash(git -C \"d:/Sources/Project/microservice\" commit -m \"feat\\(post-stats\\): register StatsAdminController and StatsAdminService in StatsModule\")",
+      "Bash(pnpm --filter post-service test --testPathPattern=\"stats/admin/services\" --no-coverage)",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(pnpm --filter post-service test -- --testPathPattern=\"stats/admin/services\" --no-coverage --verbose)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(npx --prefix apps/post-service jest --testPathPattern=\"stats/admin/services\" --no-coverage --verbose)",
+      "Bash(cat babel.config.js)",
+      "Bash(cat babel.config.json)",
+      "Bash(cat .babelrc)",
+      "Bash(cat jest.config.js)",
+      "Bash(cat jest.config.ts)",
+      "Bash(cat jest.config.json)",
+      "Bash(Get-ChildItem -Path . -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(read pkg *)"
     ]
   }
 }
