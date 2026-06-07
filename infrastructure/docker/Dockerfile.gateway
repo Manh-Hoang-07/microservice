@@ -1,4 +1,4 @@
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 COPY infrastructure/nginx/snippets/ /etc/nginx/snippets/
 COPY infrastructure/nginx/nginx.railway.conf /etc/nginx/conf.d/default.conf
