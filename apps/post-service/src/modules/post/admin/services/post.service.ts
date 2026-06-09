@@ -38,8 +38,7 @@ export class AdminPostService {
   async getSimpleList(query: any = {}) {
     const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
     const filter = this.buildFilter(query);
-    const data = await this.postRepo.findSimpleMany(filter, limit);
-    return { data };
+    return this.postRepo.findSimpleMany(filter, limit);
   }
 
   async getOne(id: PrimaryKey) {

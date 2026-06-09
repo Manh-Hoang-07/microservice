@@ -99,18 +99,13 @@ export class OutboxRelayService {
 
     let claimed: any[] = [];
     try {
-      claimed = await this.prisma.$transaction(async (tx: any) => {
-        const rows: any[] = await tx.$queryRawUnsafe(
-          `SELECT id, event_type, payload
-             FROM "${tableName}"
-            WHERE published = false
-            ORDER BY created_at ASC
-            LIMIT 100
-              FOR UPDATE SKIP LOCKED`,
-        );
-        if (!rows.length) return [];
-        return rows;
-      });
+      claimed = await this.prisma.$queryRawUnsafe(
+        `SELECT id, event_type, payload
+           FROM "${tableName}"
+          WHERE published = false
+          ORDER BY created_at ASC
+          LIMIT 100`,
+      );
     } catch (err: any) {
       this.logger.error('Outbox relay claim failed', err);
       return;

@@ -63,6 +63,7 @@
     "@types/node": "^20.10.6",
     "@types/nodemailer": "^8.0.0",
     "@types/passport-google-oauth20": "^2.0.17",
+    "@types/pg": "^8.11.14",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   }
