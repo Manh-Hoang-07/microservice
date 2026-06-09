@@ -40,6 +40,23 @@ export class IamClient implements OnModuleInit {
     }
   }
 
+  async getGroupMembership(
+    userId: string,
+    groupId: string,
+  ): Promise<{ isMember: boolean; isOwner: boolean }> {
+    const url = new URL(`${this.baseUrl}/internal/groups/membership`);
+    url.searchParams.set('userId', userId);
+    url.searchParams.set('groupId', groupId);
+
+    try {
+      const data = await this.breaker.execute(() => this.doGet(url.toString()));
+      return data ?? { isMember: false, isOwner: false };
+    } catch (err: any) {
+      this.logger.warn(`IamClient getGroupMembership failed: ${(err as Error).message}`);
+      return { isMember: false, isOwner: false };
+    }
+  }
+
   async getUserPermissions(userId: string): Promise<Set<string>> {
     const url = new URL(`${this.baseUrl}/internal/rbac/permissions`);
     url.searchParams.set('userId', userId);
