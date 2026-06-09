@@ -8,5 +8,6 @@
   "ROLE_NOT_IN_CONTEXT": "Role does not belong to this group's context.",
   "MEMBER_NOT_FOUND": "User is not a member of this group.",
   "ROLE_ASSIGNED": "Role assigned successfully.",
-  "ROLE_REVOKED": "Role revoked successfully."
+  "ROLE_REVOKED": "Role revoked successfully.",
+  "ROLES_SYNCED": "Member roles synced successfully."
 }
