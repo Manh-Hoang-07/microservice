@@ -78,6 +78,6 @@ export class UpdateMenuDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(50, { message: 'Group must not exceed 50 characters' })
-  group?: string;
+  @MaxLength(50, { message: 'Context must not exceed 50 characters' })
+  context?: string;
 }

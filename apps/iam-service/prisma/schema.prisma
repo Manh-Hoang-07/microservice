@@ -8,7 +8,7 @@ datasource db {
 }
 
 // ============================================
-// Group — organisational unit (data only, không liên quan phân quyền)
+// Group — organisational unit + group-scoped role assignments
 // ============================================
 
 model Group {
@@ -25,7 +25,8 @@ model Group {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
-  userGroups UserGroup[]
+  userGroups       UserGroup[]
+  groupMemberRoles GroupMemberRole[]
 
   @@unique([type, code], map: "groups_idx_groups_type_code")
   @@map("groups")
@@ -79,6 +80,7 @@ model Role {
   code          String   @db.VarChar(100)
   name          String?  @db.VarChar(150)
   status        String   @default("active") @db.VarChar(30)
+  roleType      String   @default("system") @map("role_type") @db.VarChar(20)
   parentId      BigInt?  @map("parent_id")
   createdUserId BigInt?  @map("created_user_id")
   updatedUserId BigInt?  @map("updated_user_id")
@@ -89,9 +91,26 @@ model Role {
   children            Role[]               @relation("RoleHierarchy")
   permissions         RoleHasPermission[]
   userRoleAssignments UserRoleAssignment[]
+  groupMemberRoles    GroupMemberRole[]
 
   @@unique([code], map: "roles_code_key")
+  @@index([roleType], map: "roles_idx_role_type")
   @@map("roles")
+}
+
+// user_id is an application-level reference to auth-service.users (no DB FK)
+model GroupMemberRole {
+  userId  BigInt @map("user_id")
+  groupId BigInt @map("group_id")
+  roleId  BigInt @map("role_id")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role  Role  @relation(fields: [roleId],  references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId, roleId])
+  @@index([userId, groupId], map: "group_member_roles_idx_user_group")
+  @@index([groupId],         map: "group_member_roles_idx_group")
+  @@map("group_member_roles")
 }
 
 model RoleHasPermission {

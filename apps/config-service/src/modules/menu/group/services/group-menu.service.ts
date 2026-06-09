@@ -13,19 +13,22 @@ export class GroupMenuService {
   ) {}
 
   async getGroupMenuTree(userId: string, groupId: string): Promise<MenuTreeItem[]> {
-    const membership = await this.iamClient.getGroupMembership(userId, groupId);
+    // Run membership check and permission fetch concurrently
+    const [membership, memberPermCodes] = await Promise.all([
+      this.iamClient.getGroupMembership(userId, groupId),
+      this.iamClient.getGroupMemberPermissions(userId, groupId),
+    ]);
 
     if (!membership.isMember) {
       throw new ForbiddenException('Bạn không phải thành viên của nhóm này.');
     }
 
-    // Build a synthetic permission set from membership status.
-    // Menu items use requiredPermissionCode = 'group.member' (all members)
-    // or 'group.owner' (owners only).
-    const permissions = new Set<string>(['group.member']);
+    // Synthetic set: group.member (all) + group.owner (if owner)
+    // + actual permission codes from GroupMemberRole (comic.view, post.view, ...)
+    const permissions = new Set<string>(['group.member', ...memberPermCodes]);
     if (membership.isOwner) permissions.add('group.owner');
 
-    const dbFilter: MenuFilter = { status: BasicStatus.active, group: 'group' };
+    const dbFilter: MenuFilter = { status: BasicStatus.active, context: 'group' };
     const allMenus = await this.menuRepo.findAllWithChildren(dbFilter);
     const visible = allMenus.filter((m: any) => m.showInMenu);
     const filtered = filterUserMenus(visible, permissions);

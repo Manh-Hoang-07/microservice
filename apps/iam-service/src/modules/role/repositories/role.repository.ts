@@ -7,6 +7,7 @@ import { BasicStatus } from '../../../common/enums/basic-status.enum';
 export interface RoleFilter {
   search?: string;
   status?: string;
+  roleType?: string;
   parentId?: any;
 }
 
@@ -14,6 +15,7 @@ const LIST_SELECT = {
   id: true,
   code: true,
   name: true,
+  roleType: true,
   status: true,
   parentId: true,
   parent: { select: { id: true, code: true, name: true } },
@@ -39,6 +41,10 @@ export class RoleRepository {
 
     if (filter.status) {
       andConditions.push({ status: filter.status });
+    }
+
+    if (filter.roleType) {
+      andConditions.push({ roleType: filter.roleType });
     }
 
     if (filter.parentId) {

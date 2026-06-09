@@ -19,7 +19,7 @@ interface MenuEntry {
   sort_order: number;
   is_public: boolean;
   show_in_menu: boolean;
-  group?: string;
+  context?: string;
   required_permission_code?: string | null;
 }
 
@@ -41,7 +41,7 @@ export async function seedMenus(prisma: PrismaClient) {
       sortOrder: menu.sort_order,
       isPublic: menu.is_public,
       showInMenu: menu.show_in_menu,
-      group: menu.group ?? 'admin',
+      context: menu.context ?? 'admin',
       requiredPermissionCode: menu.required_permission_code ?? null,
       parentId: null as bigint | null,
     };

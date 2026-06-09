@@ -30,6 +30,7 @@ export class RoleService {
     const filter: RoleFilter = {};
     if (query.status) filter.status = query.status;
     if (query.search) filter.search = query.search;
+    if (query.roleType) filter.roleType = query.roleType;
 
     const skipCount = query.skipCount === 'true';
     const [data, total] = await Promise.all([
@@ -52,9 +53,13 @@ export class RoleService {
     if (existing) {
       throw new ConflictException(t(this.i18n, 'role.CODE_EXISTS'));
     }
-    const data: any = { code: dto.code, name: dto.name, createdUserId: actorId };
+    const data: any = {
+      code: dto.code,
+      name: dto.name,
+      createdUserId: actorId,
+      roleType: dto.roleType ?? 'system',
+    };
     if (dto.parentId) {
-      // Check the parent exists; cycle check is N/A on create (no children yet).
       data.parent = { connect: { id: dto.parentId } };
     }
     return this.repo.create(data);

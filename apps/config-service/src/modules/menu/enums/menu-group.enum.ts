@@ -1,11 +1,11 @@
-export enum MenuGroup {
+export enum MenuContext {
   admin = 'admin',
   client = 'client',
   group = 'group',
 }
 
-export const MenuGroupOptions = [
-  { id: MenuGroup.admin, name: 'Admin - Quản trị' },
-  { id: MenuGroup.client, name: 'Client - Website' },
-  { id: MenuGroup.group, name: 'Group - Nhóm' },
+export const MenuContextOptions = [
+  { id: MenuContext.admin, name: 'Admin - Quản trị' },
+  { id: MenuContext.client, name: 'Client - Website' },
+  { id: MenuContext.group, name: 'Group - Nhóm' },
 ];

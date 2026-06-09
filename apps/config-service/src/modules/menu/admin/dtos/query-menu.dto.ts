@@ -24,5 +24,5 @@ export class QueryMenuDto extends BaseListQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
-  group?: string;
+  context?: string;
 }

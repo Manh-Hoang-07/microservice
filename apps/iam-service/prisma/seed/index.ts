@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 import {
   seedPermissions,
   seedRoles,
+  seedGroupRoles,
   seedGroups,
   seedUserAssignments,
 } from './seeders';
@@ -24,11 +25,15 @@ async function main() {
   const roleMap = await seedRoles(prisma, permMap);
   console.log();
 
-  console.log('3. Seeding groups...');
+  console.log('3. Seeding group roles (roleType=group)...');
+  await seedGroupRoles(prisma, permMap);
+  console.log();
+
+  console.log('4. Seeding groups...');
   const groupMap = await seedGroups(prisma);
   console.log();
 
-  console.log('4. Seeding user assignments...');
+  console.log('5. Seeding user assignments...');
   await seedUserAssignments(prisma, roleMap, groupMap);
   console.log();
 

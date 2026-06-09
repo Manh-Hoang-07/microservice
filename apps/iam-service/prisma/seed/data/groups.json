@@ -1,14 +1,26 @@
 [
   {
-    "type": "system",
-    "code": "system",
-    "name": "System Admin Group",
+    "type": "comic",
+    "code": "nhom_dich_truyen_1",
+    "name": "Nhóm dịch truyện 1",
     "status": "active"
   },
   {
-    "type": "group",
-    "code": "group_demo",
-    "name": "Group Demo Default",
+    "type": "comic",
+    "code": "nhom_dich_truyen_2",
+    "name": "Nhóm dịch truyện 2",
+    "status": "active"
+  },
+  {
+    "type": "post",
+    "code": "nhom_bai_dang_1",
+    "name": "Nhóm bài đăng 1",
+    "status": "active"
+  },
+  {
+    "type": "post",
+    "code": "nhom_bai_dang_2",
+    "name": "Nhóm bài đăng 2",
     "status": "active"
   }
 ]

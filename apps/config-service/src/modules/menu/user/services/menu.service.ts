@@ -14,7 +14,7 @@ export class UserMenuService {
 
   async getUserMenuTree(userId: string): Promise<MenuTreeItem[]> {
     const userPermissions = await this.iamClient.getUserPermissions(userId);
-    const dbFilter: MenuFilter = { status: BasicStatus.active, group: 'admin' };
+    const dbFilter: MenuFilter = { status: BasicStatus.active, context: 'admin' };
     const allMenus = await this.menuRepo.findAllWithChildren(dbFilter);
     const visible = allMenus.filter((m: any) => m.showInMenu);
     const filtered = filterUserMenus(visible, userPermissions);

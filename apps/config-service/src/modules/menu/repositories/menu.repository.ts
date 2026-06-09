@@ -8,7 +8,7 @@ export interface MenuFilter {
   status?: string;
   parentId?: any;
   type?: string;
-  group?: string;
+  context?: string;
 }
 
 const DEFAULT_SELECT = {
@@ -25,7 +25,7 @@ const DEFAULT_SELECT = {
   requiredPermissionCode: true,
   isPublic: true,
   showInMenu: true,
-  group: true,
+  context: true,
   createdAt: true,
   updatedAt: true,
   parent: { select: { id: true, name: true, code: true } },
@@ -49,7 +49,7 @@ export class MenuRepository {
     if (filter.parentId !== undefined) {
       where.parentId = filter.parentId === null ? null : toPrimaryKey(filter.parentId);
     }
-    if (filter.group) where.group = filter.group;
+    if (filter.context) where.context = filter.context;
     return where;
   }
 

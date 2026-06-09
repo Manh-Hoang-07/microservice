@@ -81,7 +81,7 @@ model Menu {
   sortOrder              Int      @default(0) @map("sort_order")
   isPublic               Boolean  @default(false) @map("is_public")
   showInMenu             Boolean  @default(true) @map("show_in_menu")
-  group                  String   @default("admin") @db.VarChar(50)
+  context                String   @default("admin") @map("context") @db.VarChar(50)
   requiredPermissionCode String?  @map("required_permission_code") @db.VarChar(120)
   createdUserId          BigInt?  @map("created_user_id")
   updatedUserId          BigInt?  @map("updated_user_id")
@@ -94,7 +94,7 @@ model Menu {
   @@index([code], map: "menus_idx_code")
   @@index([parentId], map: "menus_idx_parent_id")
   @@index([status, showInMenu], map: "menus_idx_status_show_in_menu")
-  @@index([group], map: "menus_idx_group")
+  @@index([context], map: "menus_idx_context")
   @@map("menus")
 }
 

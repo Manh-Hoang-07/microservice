@@ -1,4 +1,5 @@
-import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { RoleType } from '../../enums/role-type.enum';
 
 export class CreateRoleDto {
   @IsString()
@@ -13,6 +14,10 @@ export class CreateRoleDto {
   @IsString()
   @MaxLength(150)
   name?: string;
+
+  @IsOptional()
+  @IsEnum(RoleType)
+  roleType?: RoleType;
 
   @IsOptional()
   @IsString()

@@ -64,6 +64,10 @@
   { "code": "content_template.manage", "name": "Quản lý mẫu nội dung", "status": "active", "parent_code": null },
 
   { "code": "post.manage", "name": "Quản lý bài viết", "status": "active", "parent_code": null },
+  { "code": "post.view", "name": "Xem danh sách bài viết", "status": "active", "parent_code": "post.manage" },
+  { "code": "post.create", "name": "Tạo bài viết mới", "status": "active", "parent_code": "post.manage" },
+  { "code": "post.update", "name": "Sửa nội dung bài viết", "status": "active", "parent_code": "post.manage" },
+  { "code": "post.delete", "name": "Xóa bài viết", "status": "active", "parent_code": "post.manage" },
   { "code": "post_category.manage", "name": "Quản lý danh mục bài viết", "status": "active", "parent_code": "post.manage" },
   { "code": "post_tag.manage", "name": "Quản lý thẻ bài viết", "status": "active", "parent_code": "post.manage" },
 

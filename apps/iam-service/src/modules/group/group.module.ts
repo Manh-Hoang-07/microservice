@@ -5,12 +5,16 @@ import { GroupService } from './admin/services/group.service';
 import { GroupRepository } from './repositories/group.repository';
 import { UserGroupController } from './user/controllers/user-group.controller';
 import { UserGroupService } from './user/services/user-group.service';
+import { GroupOwnerModule } from './owner/group-owner.module';
 import * as GroupEnums from './enums';
 
 @Module({
-  imports: [EnumModule.register({ path: 'groups/enums', enums: GroupEnums })],
+  imports: [
+    EnumModule.register({ path: 'groups/enums', enums: GroupEnums }),
+    GroupOwnerModule,
+  ],
   controllers: [GroupController, UserGroupController],
   providers: [GroupService, GroupRepository, UserGroupService],
-  exports: [GroupRepository],
+  exports: [GroupRepository, GroupOwnerModule],
 })
 export class GroupModule {}

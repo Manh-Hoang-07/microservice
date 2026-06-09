@@ -32,7 +32,7 @@ export class MenuService {
     if (query.status) filter.status = query.status;
     if (query.type) filter.type = query.type;
     if (query.parentId !== undefined) filter.parentId = query.parentId;
-    if (query.group) filter.group = query.group;
+    if (query.context) filter.context = query.context;
 
     const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([
