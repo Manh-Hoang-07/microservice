@@ -29,6 +29,7 @@ import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
 import { GroupModule } from './modules/group/group.module';
 import { UserRoleModule } from './modules/user-role/user-role.module';
+import { UserWorkspaceModule } from './modules/user-workspace/user-workspace.module';
 import { KafkaModule } from './event/kafka/kafka.module';
 import { RabbitmqModule } from './event/rabbitmq/rabbitmq.module';
 import { RedisEventModule } from './event/redis/redis.module';
@@ -100,6 +101,7 @@ const messagingModule = selectMessagingModule();
     RoleModule,
     GroupModule,
     UserRoleModule,
+    UserWorkspaceModule,
   ],
   providers: [
     {
