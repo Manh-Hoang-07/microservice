@@ -59,4 +59,8 @@ export class CreateComicDto {
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
+
+  @IsOptional()
+  @IsString()
+  groupId?: string;
 }

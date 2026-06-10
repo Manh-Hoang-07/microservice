@@ -26,6 +26,7 @@ const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
   'seoTitle',
   'seoDescription',
   'seoKeywords',
+  'groupId',
   'createdUserId',
   'updatedUserId',
 ]);
@@ -49,6 +50,7 @@ export interface PostFilter {
   categoryId?: any;
   tagId?: any;
   slug?: string;
+  groupId?: any;
 }
 
 const WITH_RELATIONS = {
@@ -116,6 +118,7 @@ export class PostRepository {
       where.tagLinks = { some: { tagId: toPrimaryKey(filter.tagId) } };
     }
     if (filter.slug) where.slug = filter.slug;
+    if (filter.groupId !== undefined) where.groupId = toPrimaryKey(filter.groupId);
     return where;
   }
 
@@ -290,7 +293,7 @@ export class PostRepository {
     if (payload.publishedAt !== undefined) {
       payload.publishedAt = payload.publishedAt ? new Date(payload.publishedAt) : null;
     }
-    const bigIntFields = ['createdUserId', 'updatedUserId'];
+    const bigIntFields = ['groupId', 'createdUserId', 'updatedUserId'];
     for (const field of bigIntFields) {
       const value = payload[field];
       if (value === undefined) continue;

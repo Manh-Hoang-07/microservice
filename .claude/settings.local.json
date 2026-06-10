@@ -246,7 +246,8 @@
       "Bash(D:\\\\Sources\\\\Project\\\\Tools\\\\cloudflared.exe tunnel *)",
       "PowerShell(& \"D:\\\\Sources\\\\Project\\\\Tools\\\\cloudflared.exe\" tunnel login)",
       "Bash(pnpm --filter auth-service build)",
-      "Bash(grep -r \"@Controller.*users\" d:/Sources/Project/microservice/apps --include=\"*.ts\" ! -path \"*/dist/*\" ! -path \"*/node_modules/*\")"
+      "Bash(grep -r \"@Controller.*users\" d:/Sources/Project/microservice/apps --include=\"*.ts\" ! -path \"*/dist/*\" ! -path \"*/node_modules/*\")",
+      "Bash(npx ts-node *)"
     ]
   }
 }

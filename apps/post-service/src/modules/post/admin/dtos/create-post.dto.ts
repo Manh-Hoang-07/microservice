@@ -117,4 +117,8 @@ export class CreatePostDto {
   @Min(1, { each: true })
   @IsNumber({}, { each: true })
   tagIds?: number[];
+
+  @IsOptional()
+  @IsString()
+  groupId?: string;
 }

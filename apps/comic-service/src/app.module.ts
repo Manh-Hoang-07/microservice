@@ -21,6 +21,8 @@ import { RedisEventModule } from './event/redis/redis.module';
 
 import { ComicModule } from './modules/comic/comic.module';
 import { ChapterModule } from './modules/chapter/chapter.module';
+import { GroupComicModule } from './modules/comic/group/group-comic.module';
+import { GroupChapterModule } from './modules/chapter/group/group-chapter.module';
 import { CategoryModule } from './modules/category/category.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { ReviewModule } from './modules/review/review.module';
@@ -88,6 +90,8 @@ const messagingModule = selectMessagingModule();
     SessionModule,
     ComicModule,
     ChapterModule,
+    GroupComicModule,
+    GroupChapterModule,
     CategoryModule,
     CommentModule,
     ReviewModule,

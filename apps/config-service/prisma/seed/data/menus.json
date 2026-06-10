@@ -70,6 +70,20 @@
     "required_permission_code": "permission.manage"
   },
   {
+    "code": "groups",
+    "name": "Nhóm",
+    "path": "/admin/groups",
+    "api_path": "api/iam/admin/groups",
+    "icon": "🏘️",
+    "type": "route",
+    "status": "active",
+    "parent_code": "permission-management",
+    "sort_order": 30,
+    "is_public": false,
+    "show_in_menu": true,
+    "required_permission_code": "group.manage"
+  },
+  {
     "code": "config-management",
     "name": "Quản lý cấu hình",
     "path": "/admin/system-configs/general",

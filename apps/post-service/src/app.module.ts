@@ -21,6 +21,7 @@ import { RedisEventModule } from './event/redis/redis.module';
 
 import { PostModule } from './modules/post/post.module';
 import { CategoryModule } from './modules/category/category.module';
+import { GroupPostModule } from './modules/post/group/group-post.module';
 import { TagModule } from './modules/tag/tag.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { StatsModule } from './modules/stats/stats.module';
@@ -82,6 +83,7 @@ const messagingModule = selectMessagingModule();
     SessionModule,
     PostModule,
     CategoryModule,
+    GroupPostModule,
     TagModule,
     CommentModule,
     StatsModule,

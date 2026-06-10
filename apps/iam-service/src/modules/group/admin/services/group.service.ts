@@ -34,7 +34,14 @@ export class GroupService extends CrudService<GroupRepository> {
       createdUserId: actorId,
     };
     if (dto.ownerId) data.ownerId = dto.ownerId;
-    return this.repository.create(data);
+
+    return this.repository.withTransaction(async (tx) => {
+      const group = await this.repository.create(data, tx);
+      if (dto.ownerId) {
+        await this.repository.addMember(group.id, dto.ownerId, tx);
+      }
+      return group;
+    });
   }
 
   async update(id: PrimaryKey, dto: UpdateGroupDto) {
@@ -45,7 +52,14 @@ export class GroupService extends CrudService<GroupRepository> {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.status !== undefined) data.status = dto.status;
     if ('ownerId' in dto) data.ownerId = dto.ownerId ? dto.ownerId : null;
-    return this.repository.update(id, data);
+
+    return this.repository.withTransaction(async (tx) => {
+      const group = await this.repository.update(id, data, tx);
+      if (dto.ownerId) {
+        await this.repository.addMember(id, dto.ownerId, tx);
+      }
+      return group;
+    });
   }
 
   async delete(id: PrimaryKey) {

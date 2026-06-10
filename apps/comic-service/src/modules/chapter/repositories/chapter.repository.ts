@@ -9,6 +9,7 @@ type Tx = Prisma.TransactionClient | PrismaService;
 const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
   'comicId',
   'teamId',
+  'groupId',
   'title',
   'chapterIndex',
   'chapterLabel',
@@ -21,6 +22,7 @@ export interface ChapterFilter {
   comicId?: any;
   status?: string;
   teamId?: any;
+  groupId?: any;
 }
 
 const WITH_PAGES = {
@@ -44,6 +46,7 @@ export class ChapterRepository {
     if (filter.comicId !== undefined) where.comicId = toPrimaryKey(filter.comicId);
     if (filter.teamId !== undefined) where.teamId = toPrimaryKey(filter.teamId);
     if (filter.status) where.status = filter.status;
+    if (filter.groupId !== undefined) where.groupId = toPrimaryKey(filter.groupId);
     return where;
   }
 
@@ -225,7 +228,7 @@ export class ChapterRepository {
     for (const key of Object.keys(data)) {
       if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
     }
-    const bigIntFields = ['comicId', 'teamId', 'createdUserId', 'updatedUserId'];
+    const bigIntFields = ['comicId', 'teamId', 'groupId', 'createdUserId', 'updatedUserId'];
     for (const field of bigIntFields) {
       const value = payload[field];
       if (value === undefined) continue;

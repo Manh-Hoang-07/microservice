@@ -78,6 +78,7 @@ model Post {
   seoTitle       String?   @map("seo_title") @db.VarChar(255)
   seoDescription String?   @map("seo_description") @db.Text
   seoKeywords    String?   @map("seo_keywords") @db.VarChar(500)
+  groupId        BigInt?   @map("group_id")
   createdUserId  BigInt?   @map("created_user_id")
   updatedUserId  BigInt?   @map("updated_user_id")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
@@ -89,6 +90,7 @@ model Post {
   tagLinks      PostTag[]
   comments      Comment[]
 
+  @@index([groupId], map: "posts_idx_group_id")
   @@index([slug], map: "posts_idx_slug")
   @@index([status], map: "posts_idx_status")
   @@index([postType], map: "posts_idx_post_type")

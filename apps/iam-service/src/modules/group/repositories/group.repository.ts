@@ -113,12 +113,12 @@ export class GroupRepository {
     return this.prisma.group.findFirst({ where: { code } });
   }
 
-  create(data: any) {
-    return this.prisma.group.create({ data });
+  create(data: any, tx: Tx = this.prisma) {
+    return tx.group.create({ data });
   }
 
-  update(id: string | bigint, data: any) {
-    return this.prisma.group.update({ where: { id: toPrimaryKey(id) }, data });
+  update(id: string | bigint, data: any, tx: Tx = this.prisma) {
+    return tx.group.update({ where: { id: toPrimaryKey(id) }, data });
   }
 
   delete(id: string | bigint, tx: Tx = this.prisma) {

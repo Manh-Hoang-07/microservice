@@ -15,6 +15,7 @@ const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
   'author',
   'status',
   'isFeatured',
+  'groupId',
   'createdUserId',
   'updatedUserId',
 ]);
@@ -41,6 +42,7 @@ export interface ComicFilter {
   categoryId?: any;
   author?: string;
   slug?: string;
+  groupId?: any;
 }
 
 const WITH_RELATIONS = {
@@ -111,6 +113,7 @@ export class ComicRepository {
     if (filter.categoryId !== undefined) {
       where.categoryLinks = { some: { categoryId: toPrimaryKey(filter.categoryId) } };
     }
+    if (filter.groupId !== undefined) where.groupId = toPrimaryKey(filter.groupId);
     return where;
   }
 
@@ -296,7 +299,7 @@ export class ComicRepository {
     for (const key of Object.keys(data)) {
       if (ALLOWED_FIELDS.has(key)) payload[key] = data[key];
     }
-    const bigIntFields = ['createdUserId', 'updatedUserId'];
+    const bigIntFields = ['groupId', 'createdUserId', 'updatedUserId'];
     for (const field of bigIntFields) {
       const value = payload[field];
       if (value === undefined) continue;

@@ -8,20 +8,20 @@
   {
     "user_id": 2,
     "username": "moderator",
-    "group_code": "group_demo",
+    "group_code": "nhom_dich_truyen_1",
     "role_code": "group_owner"
   },
   {
     "user_id": 3,
     "username": "tranthimai",
-    "group_code": "group_demo",
-    "role_code": "group_editor"
+    "group_code": "nhom_dich_truyen_1",
+    "role_code": ""
   },
   {
     "user_id": 4,
     "username": "levanhoang",
-    "group_code": "group_demo",
-    "role_code": "group_uploader"
+    "group_code": "nhom_dich_truyen_1",
+    "role_code": ""
   },
   {
     "user_id": 5,

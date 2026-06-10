@@ -55,6 +55,10 @@ export class CreateChapterDto {
   status?: ChapterStatus;
 
   @IsOptional()
+  @IsString()
+  groupId?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateChapterPageDto)
