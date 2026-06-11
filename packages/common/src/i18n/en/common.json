@@ -15,6 +15,7 @@
   "PERMISSION_SERVICE_NOT_CONFIGURED": "Permission service not configured",
   "PERMISSION_CHECK_UNAVAILABLE": "Permission check unavailable",
   "PERMISSION_DENIED": "Permission denied",
+  "GROUP_ID_REQUIRED": "Missing group id",
   "RESOURCE_NOT_FOUND_ID": "Resource with ID {id} not found",
   "PARAM_MUST_BE_POSITIVE_INT": "{field} must be a positive integer",
   "PARAM_MUST_BE_GT_ZERO": "{field} must be greater than 0",

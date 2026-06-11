@@ -15,6 +15,7 @@
   "PERMISSION_SERVICE_NOT_CONFIGURED": "Dịch vụ phân quyền chưa được cấu hình",
   "PERMISSION_CHECK_UNAVAILABLE": "Không thể kiểm tra quyền",
   "PERMISSION_DENIED": "Không có quyền truy cập",
+  "GROUP_ID_REQUIRED": "Thiếu mã nhóm",
   "RESOURCE_NOT_FOUND_ID": "Không tìm thấy dữ liệu với ID {id}",
   "PARAM_MUST_BE_POSITIVE_INT": "{field} phải là số nguyên dương",
   "PARAM_MUST_BE_GT_ZERO": "{field} phải lớn hơn 0",

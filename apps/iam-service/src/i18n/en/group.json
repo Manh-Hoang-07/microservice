@@ -6,6 +6,7 @@
   "MEMBER_REMOVED": "Member removed successfully.",
   "NOT_OWNER": "You are not the owner of this group.",
   "ROLE_NOT_IN_CONTEXT": "Role does not belong to this group's context.",
+  "ROLE_NOT_ALLOWED_FOR_TYPE": "Role is not valid for this group type.",
   "MEMBER_NOT_FOUND": "User is not a member of this group.",
   "ROLE_ASSIGNED": "Role assigned successfully.",
   "ROLE_REVOKED": "Role revoked successfully.",
