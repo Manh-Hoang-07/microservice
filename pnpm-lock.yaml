@@ -620,6 +620,27 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  apps/monolith:
+    dependencies:
+      '@package/bootstrap':
+        specifier: workspace:*
+        version: link:../../packages/bootstrap
+      '@swc/core':
+        specifier: ^1.15.40
+        version: 1.15.40
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
+      nodemon:
+        specifier: ^3.1.14
+        version: 3.1.14
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@swc/core@1.15.40)(@types/node@20.19.41)(typescript@6.0.3)
+
   apps/notification-service:
     dependencies:
       '@golevelup/nestjs-rabbitmq':

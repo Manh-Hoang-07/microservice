@@ -12,9 +12,9 @@ export class UserWorkspaceService {
     private readonly rbacService: RbacService,
   ) {}
 
-  async getWorkspaces(): Promise<{ data: any[] }> {
+  async getWorkspaces(): Promise<any[]> {
     const userId = getSessionUserId();
-    if (!userId) return { data: [] };
+    if (!userId) return [];
 
     const [permissions, memberRows] = await Promise.all([
       this.rbacService.getPermissions(userId),
@@ -44,6 +44,6 @@ export class UserWorkspaceService {
       });
     }
 
-    return { data: workspaces };
+    return workspaces;
   }
 }

@@ -44,6 +44,7 @@
     "dev:notification": "pnpm --filter notification-service start:dev",
     "dev:post": "pnpm --filter post-service start:dev",
     "dev:storage": "pnpm --filter storage-service start:dev",
+    "dev:monolith": "pnpm --filter monolith start:dev",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=300 concurrently --prefix-colors blue,magenta,cyan,red,white,gray,blueBright,magentaBright -n auth,comic,config,cms,notification,post,storage,iam \"pnpm run dev:auth\" \"pnpm run dev:comic\" \"pnpm run dev:config\" \"pnpm run dev:cms\" \"pnpm run dev:notification\" \"pnpm run dev:post\" \"pnpm run dev:storage\" \"pnpm run dev:iam\"",
     "prisma:generate:auth": "pnpm --filter auth-service prisma:generate",
     "prisma:generate:comic": "pnpm --filter comic-service prisma:generate",

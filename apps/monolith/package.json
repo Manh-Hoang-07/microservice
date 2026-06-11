@@ -1,0 +1,16 @@
+{
+  "name": "monolith",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start:dev": "cross-env NODE_OPTIONS=--max-old-space-size=2048 EVENT_DRIVER=redis TS_NODE_PROJECT=../../tsconfig.json nodemon --watch src --watch ../../apps --watch ../../packages --ext ts,json --ignore \"**/dist/**\" --ignore \"**/generated/**\" --ignore \"**/tests/**\" --exec \"ts-node --swc src/main.ts\""
+  },
+  "dependencies": {
+    "@package/bootstrap": "workspace:*",
+    "@swc/core": "^1.15.40",
+    "cross-env": "^10.1.0",
+    "dotenv": "^16.4.0",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2"
+  }
+}
