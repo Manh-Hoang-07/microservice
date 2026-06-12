@@ -1,6 +1,6 @@
 ---
 description: Quy tac lam viec trong monorepo
-globs: "**/*.ts,**/package.json"
+globs: ["**/*.ts", "**/package.json"]
 ---
 
 # Monorepo Workflow

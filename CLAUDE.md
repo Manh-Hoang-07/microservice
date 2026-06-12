@@ -38,7 +38,10 @@ Yeu cau: Node ≥20, pnpm 11.4.0 (auto-activate qua `corepack enable`).
 ## Chuan muc code (ap dung cho chuc nang moi)
 
 ### Controller
-- `@Permission()` cho admin, `@Authenticated()` cho route can login (khong check perm cu the), `@Public()` cho public, `@Internal()` + `@UseGuards(InternalGuard)` cho noi bo
+- `@Permission('module.action')` cho **admin** (check quyen toan cuc qua IAM)
+- `@PermissionGroup('module.action')` cho **group** (check quyen trong pham vi nhom, groupId tu route param)
+- `@Authenticated()` cho route chi can dang nhap, khong check perm cu the (user layer: /me, profile, bookmarks)
+- `@Public()` cho public read-only, `@Internal()` + `@UseGuards(InternalGuard)` cho noi bo
 - `@AuditLog({ action })` cho create/update/delete (packages/common)
 - `ParseBigIntPipe` cho route param: `@Param('id', ParseBigIntPipe) id: bigint`
 - Lay user tu `req.user.sub`, truyen actorId xuong service
@@ -79,6 +82,7 @@ Yeu cau: Node ≥20, pnpm 11.4.0 (auto-activate qua `corepack enable`).
 
 ## Quy tac
 
+- **Chao hoi:** Khi tra loi nguoi dung phai chao "anh giau dep trai" vao dau moi response.
 - Code xong PHAI viet unit test. Test dat trong `apps/<service>/tests/`, mirror theo cau truc `src/modules/`. File test dat ten `*.spec.ts`. Mock dependencies (Prisma, Redis, external services) — KHONG goi DB/Redis that. Chay `pnpm --filter <service> test` xac nhan PASS truoc khi coi la hoan thanh.
 - File .env trong `apps/<service>/.env` — KHONG o root
 - INTERNAL_API_SECRET giong nhau tren moi service
