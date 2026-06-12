@@ -1,6 +1,7 @@
 import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { toCamelKeys } from './_camel';
 
 const galleryData = JSON.parse(
   readFileSync(join(__dirname, '../data/galleries.json'), 'utf-8'),
@@ -17,10 +18,10 @@ export async function seedGalleries(prisma: PrismaClient) {
     }
 
     await prisma.gallery.create({
-      data: {
+      data: toCamelKeys({
         ...item,
         images: item.images ?? [],
-      },
+      }),
     });
     console.log(`  ✔ Gallery: ${item.title}`);
   }

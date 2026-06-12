@@ -1,5 +1,6 @@
 // Decorators
 export { Permission, Public, Internal, Authenticated, PERMS_KEY } from './decorators/permission.decorator';
+export { PermissionGroup, PERM_GROUP_KEY, type PermissionGroupMeta } from './decorators/permission-group.decorator';
 
 // Filters
 export { GlobalExceptionFilter } from './filters/global-exception.filter';
@@ -8,6 +9,7 @@ export { GlobalExceptionFilter } from './filters/global-exception.filter';
 export { JwtGuard } from './guards/jwt.guard';
 export { InternalGuard } from './guards/internal.guard';
 export { RbacGuard } from './guards/rbac.guard';
+export { GroupPermissionGuard } from './guards/group-permission.guard';
 
 // RBAC utilities
 export { RbacVersionTracker } from './rbac/rbac-version-tracker';

@@ -66,25 +66,9 @@ export async function seedRoles(
     console.log(`  ✔ super_admin → ${allPermIds.length} permissions linked`);
   }
 
-  // Assign permissions to group_owner (Quản lý nhóm)
-  const groupOwnerId = codeToId.get('group_owner');
-  if (groupOwnerId) {
-    const ownerPermCodes = [
-      'group.owner', 'group.comic', 'group.post',
-      'group.member.manage', 'group.member.add', 'group.member.remove',
-    ];
-    await prisma.roleHasPermission.deleteMany({ where: { roleId: groupOwnerId } });
-    const ownerPermIds = ownerPermCodes
-      .map((c) => permMap.get(c))
-      .filter((id): id is bigint => id !== undefined);
-    if (ownerPermIds.length > 0) {
-      await prisma.roleHasPermission.createMany({
-        data: ownerPermIds.map((pid) => ({ roleId: groupOwnerId, permissionId: pid })),
-        skipDuplicates: true,
-      });
-    }
-    console.log(`  ✔ group_owner → ${ownerPermIds.length} permissions linked`);
-  }
+  // Group owner KHONG con la role toan cuc. Trong mo hinh moi, chu nhom duoc
+  // xac dinh boi Group.ownerId + tu dong gan role nhom (group_*_manager) qua
+  // GroupMemberRole — xem group-owner-role.seeder.ts.
 
   console.log(`  ✔ Total roles: ${codeToId.size}`);
   return codeToId;

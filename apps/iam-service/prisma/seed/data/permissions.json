@@ -29,8 +29,6 @@
   { "code": "profile.update", "name": "Sửa hồ sơ cá nhân", "status": "active", "parent_code": "user.manage" },
 
   { "code": "group.owner", "name": "Chủ nhóm (Group Owner)", "status": "active", "parent_code": null },
-  { "code": "group.comic", "name": "Quản lý truyện tranh trong nhóm", "status": "active", "parent_code": "group.owner" },
-  { "code": "group.post", "name": "Quản lý bài viết trong nhóm", "status": "active", "parent_code": "group.owner" },
 
   { "code": "group.manage", "name": "Quản lý nhóm & context", "status": "active", "parent_code": null },
   { "code": "group.member.manage", "name": "Quản lý thành viên nhóm", "status": "active", "parent_code": "group.manage" },

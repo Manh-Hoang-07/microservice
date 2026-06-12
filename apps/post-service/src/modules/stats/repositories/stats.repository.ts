@@ -22,7 +22,7 @@ export class StatsRepository {
     });
   }
 
-  async getOverview() {
+  async getOverview(groupId?: PrimaryKey) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const last7 = new Date(today);
@@ -30,12 +30,16 @@ export class StatsRepository {
     const last30 = new Date(today);
     last30.setDate(today.getDate() - 29);
 
+    // Khi co groupId: chi tinh bai viet + view cua nhom (loc qua quan he post).
+    const postWhere = groupId !== undefined ? { groupId } : undefined;
+    const viewWhere = groupId !== undefined ? { post: { groupId } } : undefined;
+
     const [postGroups, totalAgg, todayAgg, last7Agg, last30Agg] = await Promise.all([
-      this.prisma.post.groupBy({ by: ['status'], _count: { _all: true } }),
-      this.prisma.stats.aggregate({ _sum: { viewCount: true } }),
-      this.prisma.dailyStats.aggregate({ _sum: { viewCount: true }, where: { statDate: { gte: today } } }),
-      this.prisma.dailyStats.aggregate({ _sum: { viewCount: true }, where: { statDate: { gte: last7 } } }),
-      this.prisma.dailyStats.aggregate({ _sum: { viewCount: true }, where: { statDate: { gte: last30 } } }),
+      this.prisma.post.groupBy({ by: ['status'], _count: { _all: true }, where: postWhere }),
+      this.prisma.stats.aggregate({ _sum: { viewCount: true }, where: viewWhere }),
+      this.prisma.dailyStats.aggregate({ _sum: { viewCount: true }, where: { statDate: { gte: today }, ...(viewWhere ?? {}) } }),
+      this.prisma.dailyStats.aggregate({ _sum: { viewCount: true }, where: { statDate: { gte: last7 }, ...(viewWhere ?? {}) } }),
+      this.prisma.dailyStats.aggregate({ _sum: { viewCount: true }, where: { statDate: { gte: last30 }, ...(viewWhere ?? {}) } }),
     ]);
 
     const postCounts: Record<string, number> = { total: 0 };

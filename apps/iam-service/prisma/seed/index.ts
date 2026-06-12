@@ -7,6 +7,7 @@ import {
   seedGroupRoles,
   seedGroups,
   seedUserAssignments,
+  seedGroupOwnerRoles,
 } from './seeders';
 
 dotenv.config();
@@ -35,6 +36,10 @@ async function main() {
 
   console.log('5. Seeding user assignments...');
   await seedUserAssignments(prisma, roleMap, groupMap);
+  console.log();
+
+  console.log('6. Backfilling group owner roles...');
+  await seedGroupOwnerRoles(prisma);
   console.log();
 
   console.log('=== IAM Seeding complete ===');

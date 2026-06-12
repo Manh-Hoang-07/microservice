@@ -5,11 +5,20 @@ globs: apps/*/src/modules/**/*.ts
 
 # Kien truc Module
 
-Moi domain module trong `src/modules/<domain>/` gom 3 lop:
+Moi domain module trong `src/modules/<domain>/` chia theo **lop audience**. Co dung 4 ten lop (chi dung tap con can thiet — khong ep tao du 4), moi lop ung voi 1 decorator xac thuc:
 
-- **admin/** — CRUD cho quan tri vien, bao ve boi `@Permission()`. Controller chi nhan input va goi service, KHONG chua business logic.
-- **public/** — API cong khai (read-only), dung `@Public()`. Co Redis cache cho du lieu it thay doi.
-- **repositories/** — Data access, ke thua `PrismaRepository` tu `@package/common`. Override `buildWhere()` de custom filter.
+| Lop | Decorator | Doi tuong / pham vi |
+|-----|-----------|---------------------|
+| **admin/** | `@Permission()` | Super admin, quan ly moi ban ghi |
+| **user/** | `@Authenticated()` | User dang nhap, du lieu CUA CHINH HO (my groups, profile, bookmarks) |
+| **group/** | `@PermissionGroup()` | Thanh vien/chu nhom, thao tac TRONG MOT nhom (groupId tu route param) |
+| **public/** | `@Public()` | An danh, read-only. Redis cache cho du lieu it thay doi |
+
+- Controller chi nhan input + goi service, KHONG chua business logic.
+- Lop `group/` thuong la **delegator** mong: tai dung service cua `admin/` + tiem scope `groupId` (loc theo nhom, kiem tra ban ghi thuoc nhom). KHONG viet lai CRUD.
+- **repositories/** — Data access dung chung cho ca 4 lop, ke thua `PrismaRepository` tu `@package/common`. Override `buildWhere()` de custom filter. (Khong phai lop audience.)
+
+> Luu y: rieng module `group`, lop group-scoped la `group/group/` (lap chu la cosmetic). Giu class name mo ta (vd `GroupOwnerService`) de khong trung voi `admin/`.
 
 Service ke thua `BaseService` tu `@package/common`, override lifecycle hooks thay vi viet lai method:
 - `prepareFilters` — filter/search

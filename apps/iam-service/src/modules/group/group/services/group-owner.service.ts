@@ -20,12 +20,19 @@ export class GroupOwnerService {
     if (!group.ownerId || String(group.ownerId) !== userId) {
       throw new ForbiddenException(t(this.i18n, 'group.NOT_OWNER'));
     }
+    return group;
   }
 
   private async assertMember(groupId: string, userId: string) {
     const members = await this.groupRepo.findMemberIds(BigInt(groupId));
     const isMember = members.some((id) => String(id) === userId);
     if (!isMember) throw new NotFoundException(t(this.i18n, 'group.MEMBER_NOT_FOUND'));
+  }
+
+  /** Danh sach vai tro nhom co the gan cho thanh vien (phang, khong loc theo loai nhom). */
+  async getAssignableRoles(groupId: string, callerId: string) {
+    await this.assertOwner(groupId, callerId);
+    return this.memberRoleRepo.findAllGroupRoles();
   }
 
   async getMemberRoles(groupId: string, memberId: string, callerId: string) {

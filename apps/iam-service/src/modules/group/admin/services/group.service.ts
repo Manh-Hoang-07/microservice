@@ -3,6 +3,8 @@ import { I18nService } from 'nestjs-i18n';
 import { CrudService, t, getSessionUserId, parseQueryOptions, createPaginationMeta } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { GroupRepository } from '../../repositories/group.repository';
+import { GroupMemberRoleRepository } from '../../repositories/group-member-role.repository';
+import { GROUP_OWNER_ROLE } from '../../constants/group-role.constant';
 import { CreateGroupDto } from '../dtos/create-group.dto';
 import { UpdateGroupDto } from '../dtos/update-group.dto';
 import { AddMemberDto } from '../dtos/add-member.dto';
@@ -11,9 +13,19 @@ import { AddMemberDto } from '../dtos/add-member.dto';
 export class GroupService extends CrudService<GroupRepository> {
   constructor(
     groupRepo: GroupRepository,
+    private readonly memberRoleRepo: GroupMemberRoleRepository,
     private readonly i18n: I18nService,
   ) {
     super(groupRepo);
+  }
+
+  /**
+   * Owner phai la member + duoc gan vai tro `group_manager` (day du quyen noi
+   * dung nhom) → owner thay/lam moi thu trong nhom. Khong phu thuoc loai nhom.
+   */
+  private async setupOwner(groupId: PrimaryKey, ownerId: string | bigint, tx: any) {
+    await this.repository.addMember(groupId, ownerId, tx);
+    await this.memberRoleRepo.assignByRoleCode(ownerId, groupId, GROUP_OWNER_ROLE, tx);
   }
 
   async getOne(id: any) {
@@ -38,7 +50,7 @@ export class GroupService extends CrudService<GroupRepository> {
     return this.repository.withTransaction(async (tx) => {
       const group = await this.repository.create(data, tx);
       if (dto.ownerId) {
-        await this.repository.addMember(group.id, dto.ownerId, tx);
+        await this.setupOwner(group.id, dto.ownerId, tx);
       }
       return group;
     });
@@ -56,7 +68,7 @@ export class GroupService extends CrudService<GroupRepository> {
     return this.repository.withTransaction(async (tx) => {
       const group = await this.repository.update(id, data, tx);
       if (dto.ownerId) {
-        await this.repository.addMember(id, dto.ownerId, tx);
+        await this.setupOwner(id, dto.ownerId, tx);
       }
       return group;
     });

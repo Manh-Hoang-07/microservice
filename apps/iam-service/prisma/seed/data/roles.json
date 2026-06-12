@@ -1,4 +1,3 @@
 [
-  { "code": "super_admin", "name": "Siêu quản trị (Super Admin)", "status": "active", "parent_code": null },
-  { "code": "group_owner", "name": "Quản lý nhóm (Group Manager)", "status": "active", "parent_code": null }
+  { "code": "super_admin", "name": "Siêu quản trị (Super Admin)", "status": "active", "parent_code": null }
 ]

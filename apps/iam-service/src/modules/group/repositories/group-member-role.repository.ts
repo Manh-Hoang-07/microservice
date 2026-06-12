@@ -38,6 +38,31 @@ export class GroupMemberRoleRepository {
     });
   }
 
+  /** Tat ca vai tro nhom (active, roleType='group') — danh sach phang cho FE chon. */
+  findAllGroupRoles() {
+    return this.prisma.role.findMany({
+      where: { roleType: 'group', status: 'active' },
+      select: { id: true, code: true, name: true },
+      orderBy: { id: 'asc' },
+    });
+  }
+
+  /**
+   * Resolve role by code then assign within the same tx. Returns null (no-op)
+   * if the role code doesn't exist — so a missing seeded role degrades
+   * gracefully instead of breaking group creation.
+   */
+  async assignByRoleCode(
+    userId: string | bigint,
+    groupId: string | bigint,
+    roleCode: string,
+    tx: Tx = this.prisma,
+  ) {
+    const role = await tx.role.findFirst({ where: { code: roleCode }, select: { id: true } });
+    if (!role) return null;
+    return this.assign(userId, groupId, role.id, tx);
+  }
+
   assign(userId: string | bigint, groupId: string | bigint, roleId: string | bigint, tx: Tx = this.prisma) {
     const uid = toPrimaryKey(userId);
     const gid = toPrimaryKey(groupId);

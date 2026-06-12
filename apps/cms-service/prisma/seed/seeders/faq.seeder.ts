@@ -1,6 +1,7 @@
 import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { toCamelKeys } from './_camel';
 
 const faqData = JSON.parse(
   readFileSync(join(__dirname, '../data/faqs.json'), 'utf-8'),
@@ -16,7 +17,7 @@ export async function seedFaqs(prisma: PrismaClient) {
       continue;
     }
 
-    await prisma.faq.create({ data: item });
+    await prisma.faq.create({ data: toCamelKeys(item) });
     console.log(`  ✔ FAQ: ${item.question.substring(0, 30)}...`);
   }
 }

@@ -20,6 +20,7 @@ export class AdminCommentService {
     if (query.postId) filter.postId = query.postId;
     if (query.status) filter.status = query.status;
     if (query.userId) filter.userId = query.userId;
+    if (query.groupId) filter.groupId = query.groupId;
 
     const skipCount = query.skipCount === true || query.skipCount === 'true';
     const [data, total] = await Promise.all([

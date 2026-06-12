@@ -66,14 +66,23 @@ function makeMockRepo() {
     countMembers: jest.fn(),
     addMember: jest.fn(),
     removeMember: jest.fn(),
+    // Run the callback with a fake tx so create/update flows execute.
+    withTransaction: jest.fn((fn) => fn({})),
+  };
+}
+
+function makeMockMemberRoleRepo() {
+  return {
+    assignByRoleCode: jest.fn(),
   };
 }
 
 function createService() {
   const repo = makeMockRepo();
+  const memberRoleRepo = makeMockMemberRoleRepo();
   const i18n = {} as any;
-  const service = new GroupService(repo as any, i18n);
-  return { service, repo };
+  const service = new GroupService(repo as any, memberRoleRepo as any, i18n);
+  return { service, repo, memberRoleRepo };
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +116,10 @@ describe('GroupService', () => {
 
       const result = await service.create({ type: 'team', code: 'team-b', name: 'Team B' } as any);
       expect(result).toEqual(created);
-      expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ createdUserId: BigInt(100) }));
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ createdUserId: BigInt(100) }),
+        expect.anything(),
+      );
     });
 
     it('throws ConflictException when code exists', async () => {
@@ -122,7 +134,33 @@ describe('GroupService', () => {
       repo.create.mockResolvedValue({ id: BigInt(1) });
 
       await service.create({ type: 'team', code: 'x', name: 'X', ownerId: '50' } as any);
-      expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ ownerId: '50' }));
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerId: '50' }),
+        expect.anything(),
+      );
+      // Owner is always added as a member.
+      expect(repo.addMember).toHaveBeenCalledWith(BigInt(1), '50', expect.anything());
+    });
+
+    it('assigns the group_manager role to the owner (khong phu thuoc loai nhom)', async () => {
+      const { service, repo, memberRoleRepo } = createService();
+      repo.findByCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue({ id: BigInt(7) });
+
+      await service.create({ type: 'post', code: 'p', name: 'P', ownerId: '50' } as any);
+      expect(memberRoleRepo.assignByRoleCode).toHaveBeenCalledWith(
+        '50', BigInt(7), 'group_manager', expect.anything(),
+      );
+    });
+
+    it('does not touch owner setup when no ownerId', async () => {
+      const { service, repo, memberRoleRepo } = createService();
+      repo.findByCode.mockResolvedValue(null);
+      repo.create.mockResolvedValue({ id: BigInt(1) });
+
+      await service.create({ type: 'post', code: 'x', name: 'X' } as any);
+      expect(repo.addMember).not.toHaveBeenCalled();
+      expect(memberRoleRepo.assignByRoleCode).not.toHaveBeenCalled();
     });
   });
 
@@ -134,7 +172,11 @@ describe('GroupService', () => {
 
       const result = await service.update(BigInt(1), { name: 'Updated' } as any);
       expect(result.name).toBe('Updated');
-      expect(repo.update).toHaveBeenCalledWith(BigInt(1), expect.objectContaining({ updatedUserId: BigInt(100) }));
+      expect(repo.update).toHaveBeenCalledWith(
+        BigInt(1),
+        expect.objectContaining({ updatedUserId: BigInt(100) }),
+        expect.anything(),
+      );
     });
 
     it('nullifies ownerId when explicitly set to falsy', async () => {
@@ -143,7 +185,23 @@ describe('GroupService', () => {
       repo.update.mockResolvedValue({ id: BigInt(1) });
 
       await service.update(BigInt(1), { ownerId: null } as any);
-      expect(repo.update).toHaveBeenCalledWith(BigInt(1), expect.objectContaining({ ownerId: null }));
+      expect(repo.update).toHaveBeenCalledWith(
+        BigInt(1),
+        expect.objectContaining({ ownerId: null }),
+        expect.anything(),
+      );
+    });
+
+    it('assigns group_manager to the owner when owner is set', async () => {
+      const { service, repo, memberRoleRepo } = createService();
+      repo.findById.mockResolvedValue({ id: BigInt(1), type: 'comic' });
+      repo.update.mockResolvedValue({ id: BigInt(1) });
+
+      await service.update(BigInt(1), { ownerId: '99' } as any);
+      expect(repo.addMember).toHaveBeenCalledWith(BigInt(1), '99', expect.anything());
+      expect(memberRoleRepo.assignByRoleCode).toHaveBeenCalledWith(
+        '99', BigInt(1), 'group_manager', expect.anything(),
+      );
     });
   });
 

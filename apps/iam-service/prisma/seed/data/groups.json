@@ -3,24 +3,28 @@
     "type": "comic",
     "code": "nhom_dich_truyen_1",
     "name": "Nhóm dịch truyện 1",
-    "status": "active"
+    "status": "active",
+    "owner_user_id": 2
   },
   {
     "type": "comic",
     "code": "nhom_dich_truyen_2",
     "name": "Nhóm dịch truyện 2",
-    "status": "active"
+    "status": "active",
+    "owner_user_id": 8
   },
   {
     "type": "post",
     "code": "nhom_bai_dang_1",
     "name": "Nhóm bài đăng 1",
-    "status": "active"
+    "status": "active",
+    "owner_user_id": 5
   },
   {
     "type": "post",
     "code": "nhom_bai_dang_2",
     "name": "Nhóm bài đăng 2",
-    "status": "active"
+    "status": "active",
+    "owner_user_id": 6
   }
 ]

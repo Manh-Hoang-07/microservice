@@ -5,7 +5,7 @@ import { GroupService } from './admin/services/group.service';
 import { GroupRepository } from './repositories/group.repository';
 import { UserGroupController } from './user/controllers/user-group.controller';
 import { UserGroupService } from './user/services/user-group.service';
-import { GroupOwnerModule } from './owner/group-owner.module';
+import { GroupOwnerModule } from './group/group-owner.module';
 import * as GroupEnums from './enums';
 
 @Module({

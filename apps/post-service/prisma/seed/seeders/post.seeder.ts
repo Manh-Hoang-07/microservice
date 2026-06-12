@@ -17,6 +17,7 @@ interface PostEntry {
   is_featured: boolean;
   is_pinned: boolean;
   published_at?: string | null;
+  group_id?: number | string | null;
   categories: string[];
   tags: string[];
 }
@@ -43,19 +44,23 @@ export async function seedPosts(
         content: post.content ?? null,
         image: post.image ?? null,
         status: post.status,
-        post_type: post.post_type,
-        is_featured: post.is_featured,
-        is_pinned: post.is_pinned,
-        published_at: post.published_at ? new Date(post.published_at) : null,
+        postType: post.post_type,
+        isFeatured: post.is_featured,
+        isPinned: post.is_pinned,
+        publishedAt: post.published_at ? new Date(post.published_at) : null,
+        groupId: post.group_id != null ? BigInt(post.group_id) : null,
       },
     });
+
+    // Stats row (cho thong ke luot xem)
+    await prisma.stats.create({ data: { postId: record.id } });
 
     // Create PostCategory relationships
     for (const catSlug of post.categories) {
       const categoryId = categorySlugToId.get(catSlug);
       if (categoryId) {
         await prisma.postCategory.create({
-          data: { post_id: record.id, category_id: categoryId },
+          data: { postId: record.id, categoryId: categoryId },
         });
       }
     }
@@ -65,7 +70,7 @@ export async function seedPosts(
       const tagId = tagSlugToId.get(tagSlug);
       if (tagId) {
         await prisma.postTag.create({
-          data: { post_id: record.id, tag_id: tagId },
+          data: { postId: record.id, tagId: tagId },
         });
       }
     }

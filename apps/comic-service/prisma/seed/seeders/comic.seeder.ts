@@ -2,6 +2,15 @@ import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+// Data file dung snake_case; Prisma model dung camelCase. Doi key cap 1.
+function toCamelKeys(obj: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())] = v;
+  }
+  return out;
+}
+
 export async function seedComics(
   prisma: PrismaClient,
   categoryIdMap: Map<string, bigint>,
@@ -21,7 +30,7 @@ export async function seedComics(
     const { categories, ...comicData } = item;
 
     const created = await prisma.comic.create({
-      data: comicData,
+      data: toCamelKeys(comicData) as any,
     });
     idMap.set(item.slug, created.id);
     console.log(`  ✔ Comic: ${item.slug}`);
@@ -33,8 +42,8 @@ export async function seedComics(
         if (categoryId) {
           await prisma.comicCategory.create({
             data: {
-              comic_id: created.id,
-              category_id: categoryId,
+              comicId: created.id,
+              categoryId: categoryId,
             },
           });
           console.log(`    ✔ Linked category: ${catSlug}`);

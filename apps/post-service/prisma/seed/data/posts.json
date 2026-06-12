@@ -40,5 +40,51 @@
     "published_at": "2024-03-01T00:00:00.000Z",
     "categories": ["danh-gia"],
     "tags": ["manga", "review"]
+  },
+
+  {
+    "name": "[Nhóm 1] Bài viết nội bộ của nhóm bài đăng 1",
+    "slug": "nhom-bai-dang-1-bai-viet-noi-bo",
+    "excerpt": "Bài viết thuộc nhóm bài đăng 1 (group_id=4)",
+    "content": "<p>Đây là bài viết nằm trong nhóm bài đăng 1 — chỉ thành viên nhóm xem/quản lý.</p>",
+    "image": "https://placehold.co/800x400",
+    "status": "published",
+    "post_type": "text",
+    "is_featured": false,
+    "is_pinned": false,
+    "published_at": "2024-04-01T00:00:00.000Z",
+    "group_id": 4,
+    "categories": ["tin-tuc"],
+    "tags": ["manga"]
+  },
+  {
+    "name": "[Nhóm 1] Hướng dẫn cộng tác trong nhóm bài đăng 1",
+    "slug": "nhom-bai-dang-1-huong-dan-cong-tac",
+    "excerpt": "Bài hướng dẫn của nhóm bài đăng 1 (group_id=4)",
+    "content": "<p>Quy trình cộng tác viết bài trong nhóm bài đăng 1.</p>",
+    "image": "https://placehold.co/800x400",
+    "status": "draft",
+    "post_type": "text",
+    "is_featured": false,
+    "is_pinned": false,
+    "published_at": null,
+    "group_id": 4,
+    "categories": ["huong-dan"],
+    "tags": ["manga"]
+  },
+  {
+    "name": "[Nhóm 2] Bài viết nội bộ của nhóm bài đăng 2",
+    "slug": "nhom-bai-dang-2-bai-viet-noi-bo",
+    "excerpt": "Bài viết thuộc nhóm bài đăng 2 (group_id=5)",
+    "content": "<p>Đây là bài viết nằm trong nhóm bài đăng 2.</p>",
+    "image": "https://placehold.co/800x400",
+    "status": "published",
+    "post_type": "text",
+    "is_featured": false,
+    "is_pinned": false,
+    "published_at": "2024-04-05T00:00:00.000Z",
+    "group_id": 5,
+    "categories": ["tin-tuc"],
+    "tags": ["manga"]
   }
 ]

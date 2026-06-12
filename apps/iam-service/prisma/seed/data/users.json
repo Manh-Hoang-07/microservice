@@ -9,7 +9,7 @@
     "user_id": 2,
     "username": "moderator",
     "group_code": "nhom_dich_truyen_1",
-    "role_code": "group_owner"
+    "role_code": ""
   },
   {
     "user_id": 3,
@@ -26,25 +26,25 @@
   {
     "user_id": 5,
     "username": "phamthilan",
-    "group_code": "",
+    "group_code": "nhom_bai_dang_1",
     "role_code": ""
   },
   {
     "user_id": 6,
     "username": "nguyenvanduc",
-    "group_code": "",
+    "group_code": "nhom_bai_dang_2",
     "role_code": ""
   },
   {
     "user_id": 7,
     "username": "vothihuong",
-    "group_code": "",
+    "group_code": "nhom_bai_dang_1",
     "role_code": ""
   },
   {
     "user_id": 8,
     "username": "dangquocbao",
-    "group_code": "",
+    "group_code": "nhom_dich_truyen_2",
     "role_code": ""
   },
   {

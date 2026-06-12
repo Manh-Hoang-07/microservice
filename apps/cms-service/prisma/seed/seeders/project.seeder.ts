@@ -1,6 +1,7 @@
 import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { toCamelKeys } from './_camel';
 
 const projectData = JSON.parse(
   readFileSync(join(__dirname, '../data/projects.json'), 'utf-8'),
@@ -16,7 +17,7 @@ export async function seedProjects(prisma: PrismaClient) {
       continue;
     }
 
-    await prisma.project.create({ data: item });
+    await prisma.project.create({ data: toCamelKeys(item) });
     console.log(`  ✔ Project: ${item.name}`);
   }
 }

@@ -48,8 +48,8 @@ export async function seedUsers(prisma: PrismaClient) {
         name: u.name,
         status: u.status,
         image: u.image,
-        email_verified_at: u.status === 'active' ? now : null,
-        last_login_at: u.status === 'active' ? now : null,
+        emailVerifiedAt: u.status === 'active' ? now : null,
+        lastLoginAt: u.status === 'active' ? now : null,
         profile: {
           create: {
             birthday: new Date(u.profile.birthday),

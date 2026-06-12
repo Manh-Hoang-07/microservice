@@ -1,6 +1,7 @@
 import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { toCamelKeys } from './_camel';
 
 const aboutSectionData = JSON.parse(
   readFileSync(join(__dirname, '../data/about-sections.json'), 'utf-8'),
@@ -16,7 +17,7 @@ export async function seedAboutSections(prisma: PrismaClient) {
       continue;
     }
 
-    await prisma.aboutSection.create({ data: item });
+    await prisma.aboutSection.create({ data: toCamelKeys(item) });
     console.log(`  ✔ AboutSection: ${item.slug}`);
   }
 }

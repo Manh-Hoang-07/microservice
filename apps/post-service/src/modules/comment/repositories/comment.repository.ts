@@ -11,6 +11,8 @@ export interface CommentFilter {
   parentId?: any;
   status?: string;
   userId?: any;
+  // Loc binh luan theo nhom (qua bai viet): comment cua cac post thuoc group.
+  groupId?: any;
 }
 
 const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
@@ -31,7 +33,18 @@ export class CommentRepository {
     if (filter.parentId !== undefined) {
       where.parentId = filter.parentId === null ? null : toPrimaryKey(filter.parentId);
     }
+    if (filter.groupId !== undefined) {
+      where.post = { groupId: toPrimaryKey(filter.groupId) };
+    }
     return where;
+  }
+
+  /** Lay groupId cua bai viet chua comment — de xac minh comment thuoc nhom. */
+  findPostGroupId(id: any) {
+    return this.prisma.comment.findUnique({
+      where: { id: toPrimaryKey(id) },
+      select: { id: true, post: { select: { groupId: true } } },
+    });
   }
 
   findMany(filter: CommentFilter, options: { skip: number; take: number }) {

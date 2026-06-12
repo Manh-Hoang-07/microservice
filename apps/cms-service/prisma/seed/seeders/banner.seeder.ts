@@ -1,10 +1,17 @@
-import { PrismaClient, BannerLinkTarget } from '../../../src/generated/prisma';
+import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const bannerData = JSON.parse(
   readFileSync(join(__dirname, '../data/banners.json'), 'utf-8'),
 );
+
+// Data dung snake_case; Prisma model camelCase. Doi key cap 1.
+function toCamel(obj: Record<string, any>): any {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) out[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())] = v;
+  return out;
+}
 
 interface BannerEntry {
   title: string;
@@ -38,7 +45,7 @@ export async function seedBanners(
     }
 
     const existing = await prisma.banner.findFirst({
-      where: { title: banner.title, location_id: locationId },
+      where: { title: banner.title, locationId: locationId },
     });
 
     if (existing) {
@@ -47,13 +54,13 @@ export async function seedBanners(
     }
 
     await prisma.banner.create({
-      data: {
+      data: toCamel({
         title: banner.title,
         subtitle: banner.subtitle ?? null,
         image: banner.image ?? null,
         mobile_image: banner.mobile_image ?? null,
         link: banner.link ?? null,
-        link_target: (banner.link_target as BannerLinkTarget) ?? BannerLinkTarget.SELF,
+        link_target: banner.link_target ?? '_self',
         description: banner.description ?? null,
         button_text: banner.button_text ?? null,
         button_color: banner.button_color ?? null,
@@ -63,7 +70,7 @@ export async function seedBanners(
         status: banner.status,
         start_date: banner.start_date ? new Date(banner.start_date) : null,
         end_date: banner.end_date ? new Date(banner.end_date) : null,
-      },
+      }),
     });
 
     console.log(`  ✔ Banner: ${banner.title}`);

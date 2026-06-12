@@ -21,16 +21,22 @@ jest.mock('src/types', () => ({ toPrimaryKey: (v) => BigInt(v) }), { virtual: tr
 // Imports
 // ---------------------------------------------------------------------------
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { GroupOwnerService } from '../../../../../src/modules/group/owner/services/group-owner.service';
+import { GroupOwnerService } from '../../../../../src/modules/group/group/services/group-owner.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeGroup(id, ownerId) {
-  return { id: BigInt(id), ownerId: ownerId ? BigInt(ownerId) : null };
+function makeGroup(id, ownerId, type = 'post') {
+  return { id: BigInt(id), ownerId: ownerId ? BigInt(ownerId) : null, type };
 }
 
-function makeService({ group = undefined, memberIds = [] as bigint[], roles = [], assignResult = {} } = {}) {
+function makeService({
+  group = undefined,
+  memberIds = [] as bigint[],
+  roles = [],
+  assignResult = {},
+  allGroupRoles = [] as any[],
+} = {}) {
   const groupRepo = {
     findById: jest.fn().mockResolvedValue(group),
     findMemberIds: jest.fn().mockResolvedValue(memberIds),
@@ -40,6 +46,7 @@ function makeService({ group = undefined, memberIds = [] as bigint[], roles = []
     assign: jest.fn().mockResolvedValue(assignResult),
     remove: jest.fn().mockResolvedValue({ count: 1 }),
     syncRoles: jest.fn().mockResolvedValue(undefined),
+    findAllGroupRoles: jest.fn().mockResolvedValue(allGroupRoles),
   };
   const i18n = {} as any;
   const service = new GroupOwnerService(groupRepo as any, memberRoleRepo as any, i18n);
@@ -135,6 +142,7 @@ describe('GroupOwnerService.syncRoles', () => {
     const { service, memberRoleRepo } = makeService({
       group: makeGroup('10', '99'),
       memberIds: [BigInt('5')],
+      roleCodes: ['group_post_writer', 'group_post_editor'],
     });
 
     const result = await service.syncRoles('10', '5', { roleIds: ['1', '2'] }, '99');
@@ -150,5 +158,53 @@ describe('GroupOwnerService.syncRoles', () => {
     });
 
     await expect(service.syncRoles('10', '5', { roleIds: ['1'] }, '99')).rejects.toThrow(NotFoundException);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — gan vai tro KHONG con loc theo loai nhom (danh sach phang)
+// ---------------------------------------------------------------------------
+describe('GroupOwnerService — gan vai tro nhom (phang)', () => {
+  it('assignRole gan duoc bat ky group role (khong guardrail theo loai)', async () => {
+    const { service, memberRoleRepo } = makeService({
+      group: makeGroup('10', '99', 'post'),
+      memberIds: [BigInt('5')],
+    });
+
+    await service.assignRole('10', '5', { roleId: '1' }, '99');
+    expect(memberRoleRepo.assign).toHaveBeenCalledWith('5', '10', '1');
+  });
+
+  it('syncRoles thay toan bo vai tro, khong guardrail', async () => {
+    const { service, memberRoleRepo } = makeService({
+      group: makeGroup('10', '99', 'post'),
+      memberIds: [BigInt('5')],
+    });
+
+    await service.syncRoles('10', '5', { roleIds: ['1', '2'] }, '99');
+    expect(memberRoleRepo.syncRoles).toHaveBeenCalledWith('5', '10', ['1', '2']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — getAssignableRoles (tra ve TAT CA group role)
+// ---------------------------------------------------------------------------
+describe('GroupOwnerService.getAssignableRoles', () => {
+  it('tra ve tat ca group role khi caller la owner', async () => {
+    const all = [
+      { id: BigInt(1), code: 'group_manager', name: 'Quản lý nhóm' },
+      { id: BigInt(2), code: 'group_post_editor', name: 'Biên tập' },
+    ];
+    const { service, memberRoleRepo } = makeService({ group: makeGroup('10', '99'), allGroupRoles: all });
+
+    const result = await service.getAssignableRoles('10', '99');
+
+    expect(result).toEqual(all);
+    expect(memberRoleRepo.findAllGroupRoles).toHaveBeenCalled();
+  });
+
+  it('throw ForbiddenException khi caller khong phai owner', async () => {
+    const { service } = makeService({ group: makeGroup('10', '999') });
+    await expect(service.getAssignableRoles('10', '1')).rejects.toThrow(ForbiddenException);
   });
 });

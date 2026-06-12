@@ -86,7 +86,7 @@ export class RbacRepository {
         SELECT r.id, r.parent_id
         FROM roles r
         INNER JOIN user_role_assignments ura ON ura.role_id = r.id
-        WHERE ura.user_id = ${uid} AND r.status = 'active'
+        WHERE ura.user_id = ${uid} AND r.status = 'active' AND r.role_type = 'system'
         UNION
         SELECT p.id, p.parent_id
         FROM roles p

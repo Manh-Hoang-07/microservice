@@ -12,7 +12,7 @@ import { envValidationSchema } from './core/config/env.validation';
 import { CoreModule } from './core/core.module';
 import { RedisModule, RedisService } from '@package/redis';
 import { KafkaProducerService } from '@package/kafka-client';
-import { JwtGuard, RbacGuard, GlobalExceptionFilter, HealthModule, CommonEventModule, AuditModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
+import { JwtGuard, RbacGuard, GroupPermissionGuard, GlobalExceptionFilter, HealthModule, CommonEventModule, AuditModule, BigIntSerializationInterceptor, SessionModule, SessionContextMiddleware } from '@package/common';
 import { PrismaService } from './core/database/prisma.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { KafkaModule } from './event/kafka/kafka.module';
@@ -107,6 +107,14 @@ const messagingModule = selectMessagingModule();
       provide: APP_GUARD,
       useFactory: (reflector: Reflector, config: ConfigService, redis: RedisService) =>
         new RbacGuard(reflector, config, redis),
+      inject: [Reflector, ConfigService, RedisService],
+    },
+    // GroupPermissionGuard sau RbacGuard — xu ly cac route @PermissionGroup
+    // (thuoc nhom + co quyen). Route khong dung decorator nay duoc bo qua.
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector, config: ConfigService, redis: RedisService) =>
+        new GroupPermissionGuard(reflector, config, redis),
       inject: [Reflector, ConfigService, RedisService],
     },
     {

@@ -161,6 +161,7 @@ export class AdminPostService {
     }
     if (query.categoryId) filter.categoryId = query.categoryId;
     if (query.tagId) filter.tagId = query.tagId;
+    if (query.groupId) filter.groupId = query.groupId;
     return filter;
   }
 

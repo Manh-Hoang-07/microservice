@@ -1,6 +1,7 @@
 import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { toCamelKeys } from './_camel';
 
 const testimonialData = JSON.parse(
   readFileSync(join(__dirname, '../data/testimonials.json'), 'utf-8'),
@@ -10,8 +11,8 @@ export async function seedTestimonials(prisma: PrismaClient) {
   for (const item of testimonialData) {
     const existing = await prisma.testimonial.findFirst({
       where: {
-        client_name: item.client_name,
-        client_company: item.client_company,
+        clientName: item.client_name,
+        clientCompany: item.client_company,
       },
     });
     if (existing) {
@@ -19,7 +20,7 @@ export async function seedTestimonials(prisma: PrismaClient) {
       continue;
     }
 
-    await prisma.testimonial.create({ data: item });
+    await prisma.testimonial.create({ data: toCamelKeys(item) });
     console.log(`  ✔ Testimonial: ${item.client_name}`);
   }
 }

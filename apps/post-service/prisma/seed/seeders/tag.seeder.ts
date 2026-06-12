@@ -29,7 +29,7 @@ export async function seedTags(prisma: PrismaClient) {
       data: {
         name: tag.name,
         slug: tag.slug,
-        is_active: tag.is_active,
+        status: tag.is_active ? 'active' : 'inactive',
       },
     });
     slugToId.set(tag.slug, record.id);

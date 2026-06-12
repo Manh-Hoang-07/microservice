@@ -26,9 +26,9 @@ export async function seedCategories(prisma: PrismaClient) {
       name: category.name,
       slug: category.slug,
       description: category.description ?? null,
-      is_active: category.is_active,
-      sort_order: category.sort_order,
-      parent_id: null as bigint | null,
+      status: category.is_active ? 'active' : 'inactive',
+      sortOrder: category.sort_order,
+      parentId: null as bigint | null,
     };
 
     const existing = await prisma.category.findUnique({ where: { slug: category.slug } });
@@ -50,7 +50,7 @@ export async function seedCategories(prisma: PrismaClient) {
       if (parentId) {
         await prisma.category.update({
           where: { slug: category.slug },
-          data: { parent_id: parentId },
+          data: { parentId: parentId },
         });
       }
     }

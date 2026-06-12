@@ -1,12 +1,22 @@
 import { PrismaClient } from '../../../src/generated/prisma';
 
-// Group roles: admin tạo sẵn, roleType='group'.
-// Chủ nhóm chọn từ danh sách này để gán cho thành viên.
+// Group roles: admin tạo sẵn, roleType='group'. Danh sách PHẲNG — không scope
+// theo loại nhóm. Chủ nhóm chọn bất kỳ vai trò nào để gán cho thành viên.
 const GROUP_ROLES: Array<{
   code: string;
   name: string;
   permissions: string[];
 }> = [
+  // ── Owner role: đầy đủ quyền nội dung nhóm (tự động gán cho chủ nhóm) ──────
+  {
+    code: 'group_manager',
+    name: 'Quản lý nhóm (đầy đủ)',
+    permissions: [
+      'post.view', 'post.create', 'post.update', 'post.delete',
+      'comic.view', 'comic.create', 'comic.update', 'comic.delete',
+      'chapter.view', 'chapter.create', 'chapter.update', 'chapter.delete',
+    ],
+  },
   // ── Comic groups ──────────────────────────────────────────────────────────
   {
     code: 'group_comic_manager',

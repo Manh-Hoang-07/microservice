@@ -17,8 +17,8 @@ export class StatsAdminService {
     private readonly i18n: I18nService,
   ) {}
 
-  async getOverview() {
-    const data = await this.statsRepo.getOverview();
+  async getOverview(groupId?: string) {
+    const data = await this.statsRepo.getOverview(groupId !== undefined ? toPrimaryKey(groupId) : undefined);
     return {
       posts: data.postCounts,
       views: {
@@ -30,7 +30,7 @@ export class StatsAdminService {
     };
   }
 
-  async getPostDailyStats(id: string, query: DailyStatsQueryDto) {
+  async getPostDailyStats(id: string, query: DailyStatsQueryDto, groupId?: string) {
     let postId: bigint;
     try {
       postId = toPrimaryKey(id);
@@ -40,6 +40,10 @@ export class StatsAdminService {
 
     const post = await this.postRepo.findById(postId);
     if (!post) throw new NotFoundException(t(this.i18n, 'post.POST_NOT_FOUND'));
+    // Pham vi nhom: chi xem thong ke bai viet thuoc nhom minh.
+    if (groupId !== undefined && String((post as any).groupId ?? '') !== groupId) {
+      throw new NotFoundException(t(this.i18n, 'post.POST_NOT_FOUND'));
+    }
 
     const end = query.endDate ? new Date(query.endDate) : new Date();
     end.setHours(23, 59, 59, 999);

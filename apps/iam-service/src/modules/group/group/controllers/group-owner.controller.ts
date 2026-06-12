@@ -5,6 +5,19 @@ import { AssignMemberRoleDto } from '../dtos/assign-member-role.dto';
 import { SyncMemberRolesDto } from '../dtos/sync-member-roles.dto';
 
 @Authenticated()
+@Controller('groups/:id/assignable-roles')
+export class GroupAssignableRolesController {
+  constructor(private readonly service: GroupOwnerService) {}
+
+  // Danh sach role chu nhom duoc phep gan cho thanh vien (theo loai nhom).
+  @Get()
+  getAssignableRoles(@Param('id', ParseBigIntPipe) id: bigint) {
+    const callerId = session()!.userId ?? '';
+    return this.service.getAssignableRoles(String(id), callerId);
+  }
+}
+
+@Authenticated()
 @Controller('groups/:id/members/:userId/roles')
 export class GroupOwnerController {
   constructor(private readonly service: GroupOwnerService) {}

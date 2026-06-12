@@ -1,6 +1,7 @@
 import { PrismaClient } from '../../../src/generated/prisma';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { toCamelKeys } from './_camel';
 
 const staffData = JSON.parse(
   readFileSync(join(__dirname, '../data/staffs.json'), 'utf-8'),
@@ -17,11 +18,11 @@ export async function seedStaffs(prisma: PrismaClient) {
     }
 
     await prisma.staff.create({
-      data: {
+      data: toCamelKeys({
         ...item,
         experience: item.experience != null ? String(item.experience) : null,
         social_links: item.social_links ?? {},
-      },
+      }),
     });
     console.log(`  ✔ Staff: ${item.name}`);
   }
