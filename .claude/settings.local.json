@@ -247,7 +247,9 @@
       "PowerShell(& \"D:\\\\Sources\\\\Project\\\\Tools\\\\cloudflared.exe\" tunnel login)",
       "Bash(pnpm --filter auth-service build)",
       "Bash(grep -r \"@Controller.*users\" d:/Sources/Project/microservice/apps --include=\"*.ts\" ! -path \"*/dist/*\" ! -path \"*/node_modules/*\")",
-      "Bash(npx ts-node *)"
+      "Bash(npx ts-node *)",
+      "Bash(cd /d D:\\\\Projects\\\\Tools\\\\nginx)",
+      "Bash(dir /s /b)"
     ]
   }
 }

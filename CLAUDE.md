@@ -76,7 +76,6 @@ Yeu cau: Node ≥20, pnpm 11.4.0 (auto-activate qua `corepack enable`).
 | `@package/shared-types` | Event interfaces (ChapterPublished, UserRegistered, MailSend...) |
 | `@package/circuit-breaker` | createCircuitBreaker() |
 | `@package/tracing` | initTracing() — OpenTelemetry |
-| `@package/auth-client` | JwtLocalGuard cho microservice |
 
 ## Quy tac
 

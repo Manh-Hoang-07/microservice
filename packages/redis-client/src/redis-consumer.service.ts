@@ -31,7 +31,12 @@ export abstract class RedisConsumerService implements OnModuleInit, OnApplicatio
 
   async onModuleInit(): Promise<void> {
     this.client.on('error', (err) => this.logger.error('Redis consumer error', err));
-    await this.client.connect();
+    try {
+      await this.client.connect();
+    } catch (err: any) {
+      this.logger.error('Redis consumer connect failed — consuming disabled', err as Error);
+      return;
+    }
     for (const stream of this.getStreams()) {
       await this.createGroup(stream);
     }

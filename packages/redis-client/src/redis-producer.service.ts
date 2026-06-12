@@ -28,8 +28,12 @@ export class RedisProducerService implements OnModuleInit, OnModuleDestroy {
     if (!this.enabled) return;
     this.client.on('error', (err) => this.logger.error('Redis producer error', err));
     this.client.on('connect', () => this.logger.log('Redis producer connected'));
-    await this.client.connect();
-    this.connected = true;
+    try {
+      await this.client.connect();
+      this.connected = true;
+    } catch (err: any) {
+      this.logger.error('Redis producer connect failed — events disabled', err as Error);
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
