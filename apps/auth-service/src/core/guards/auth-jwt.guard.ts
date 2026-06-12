@@ -119,8 +119,9 @@ export class AuthJwtGuard implements CanActivate {
 
   private extractToken(request: any): string | null {
     const auth = request.headers?.authorization as string | undefined;
-    if (!auth?.startsWith('Bearer ')) return null;
-    return auth.slice(7);
+    if (auth?.startsWith('Bearer ')) return auth.slice(7);
+    const cookie = request.cookies?.auth_token as string | undefined;
+    return cookie ?? null;
   }
 
   // Validates the shared inter-service secret in a timing-safe way. Without
