@@ -22,8 +22,6 @@ const AUTH_ONLY_PERMS = new Set(['user', 'authenticated']);
 
 @Injectable()
 export class AuthJwtGuard implements CanActivate {
-  private readonly isProd: boolean;
-
   constructor(
     private readonly reflector: Reflector,
     private readonly config: ConfigService,
@@ -31,9 +29,7 @@ export class AuthJwtGuard implements CanActivate {
     private readonly i18n: I18nService,
     private readonly tokenBlacklistService: TokenBlacklistService,
     private readonly iamClient: IamClient,
-  ) {
-    this.isProd = (config.get<string>('app.nodeEnv') ?? process.env.NODE_ENV) === 'production';
-  }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const permissions = this.reflector.getAllAndOverride<string[]>(PERMS_KEY, [
@@ -88,8 +84,7 @@ export class AuthJwtGuard implements CanActivate {
 
     // RBAC check via IAM
     if (!this.iamClient.isConfigured()) {
-      if (this.isProd) throw new ForbiddenException(t(this.i18n, 'auth.PERMISSION_DENIED'));
-      return true;
+      throw new ForbiddenException(t(this.i18n, 'auth.PERMISSION_DENIED'));
     }
 
     try {

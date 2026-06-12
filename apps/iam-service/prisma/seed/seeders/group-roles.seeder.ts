@@ -12,6 +12,7 @@ const GROUP_ROLES: Array<{
     code: 'group_manager',
     name: 'Quản lý nhóm (đầy đủ)',
     permissions: [
+      'group.member.manage', 'group.member.add', 'group.member.remove',
       'post.view', 'post.create', 'post.update', 'post.delete',
       'comic.view', 'comic.create', 'comic.update', 'comic.delete',
       'chapter.view', 'chapter.create', 'chapter.update', 'chapter.delete',

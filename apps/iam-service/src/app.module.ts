@@ -10,6 +10,7 @@ import { join } from 'path';
 import { createAppConfig, createKafkaConfig, createRedisConfig } from '@package/config';
 import {
   JwtGuard,
+  RbacGuard,
   GlobalExceptionFilter,
   HealthModule,
   CommonEventModule,
@@ -117,6 +118,10 @@ const messagingModule = selectMessagingModule();
       useFactory: (reflector: Reflector, config: ConfigService) =>
         new JwtGuard(reflector, config),
       inject: [Reflector, ConfigService],
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RbacGuard,
     },
     {
       provide: APP_INTERCEPTOR,
