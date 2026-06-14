@@ -67,7 +67,7 @@
     "production:ready": "./scripts/make-production-ready.sh"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.33",
+    "@swc/core": "^1.15.41",
     "@swc/jest": "^0.2.39",
     "@types/compression": "^1.8.1",
     "@types/jest": "^30.0.0",
@@ -76,6 +76,6 @@
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "ts-jest": "^29.4.9",
-    "tsx": "^4.21.0"
+    "tsx": "^4.22.4"
   }
 }
