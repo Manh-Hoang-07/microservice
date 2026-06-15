@@ -46,7 +46,7 @@ export class AdminContentTemplateService {
   async create(dto: CreateContentTemplateDto) {
     const existing = await this.templateRepo.findByCode(dto.code);
     if (existing) throw new BadRequestException(t(this.i18n, 'content-template.CODE_EXISTS'));
-    return this.templateRepo.create({
+    const created = await this.templateRepo.create({
       code: dto.code,
       name: dto.name,
       category: dto.category,
@@ -57,15 +57,17 @@ export class AdminContentTemplateService {
       variables: dto.variables,
       status: dto.status,
     } as any);
+    await this.mailService.invalidateTemplate(dto.code);
+    return created;
   }
 
   async update(id: PrimaryKey, dto: UpdateContentTemplateDto) {
-    await this.getOne(id);
+    const current = await this.getOne(id);
     if (dto.code) {
       const existing = await this.templateRepo.findFirst({ code: dto.code, id: { not: id } });
       if (existing) throw new BadRequestException(t(this.i18n, 'content-template.CODE_EXISTS'));
     }
-    return this.templateRepo.update(id, {
+    const updated = await this.templateRepo.update(id, {
       code: dto.code,
       name: dto.name,
       category: dto.category,
@@ -76,11 +78,18 @@ export class AdminContentTemplateService {
       variables: dto.variables,
       status: dto.status,
     } as any);
+    // Invalidate both old and (possibly renamed) new code so neither serves stale content.
+    await this.mailService.invalidateTemplate((current as any).code);
+    if (dto.code && dto.code !== (current as any).code) {
+      await this.mailService.invalidateTemplate(dto.code);
+    }
+    return updated;
   }
 
   async delete(id: PrimaryKey) {
-    await this.getOne(id);
+    const current = await this.getOne(id);
     await this.templateRepo.delete(id);
+    await this.mailService.invalidateTemplate((current as any).code);
     return true;
   }
 

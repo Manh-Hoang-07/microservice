@@ -1,11 +1,13 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { RedisService } from '@package/redis';
-import { CachedService } from '../../../../../core/cache/cached.service';
+import { CachedService, RedisService } from '@package/redis';
 import { WardService } from '../../admin/services/ward.service';
 import { BasicStatus } from '../../../../../common/enums/basic-status.enum';
 
 @Injectable()
 export class PublicWardService extends CachedService {
+  protected readonly cacheEntity = 'wards';
+  protected readonly cacheNamespace = 'config:public';
+
   constructor(
     private readonly wardService: WardService,
     @Optional() redis?: RedisService,
@@ -14,18 +16,16 @@ export class PublicWardService extends CachedService {
   }
 
   async getList(query: any = {}) {
-    return this.getOrSet('config:public:wards:all', 86400, async () => {
-      return this.wardService.getList({ ...query, status: BasicStatus.active });
-    });
+    const filter = { ...query, status: BasicStatus.active };
+    return this.cachedList(filter, {}, 86400, async () =>
+      this.wardService.getList(filter),
+    );
   }
 
   async getByProvince(provinceId: string, query: any = {}) {
-    return this.getOrSet(`config:public:wards:${provinceId}`, 86400, async () => {
-      return this.wardService.getList({
-        ...query,
-        provinceId,
-        status: BasicStatus.active,
-      });
-    });
+    const filter = { ...query, provinceId, status: BasicStatus.active };
+    return this.cachedList(filter, {}, 86400, async () =>
+      this.wardService.getList(filter),
+    );
   }
 }

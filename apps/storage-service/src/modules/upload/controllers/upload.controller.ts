@@ -16,12 +16,49 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { diskStorage } from 'multer';
+import { randomUUID } from 'crypto';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { UploadService } from '../services/upload.service';
 import { FileValidationService } from '../services/file-validation.service';
 import { Public } from '@package/common';
 import { UploadResponseDto } from '../dtos/upload.dto';
 import { FileMetadata } from '../interfaces/upload-strategy.interface';
 import { Throttle } from '@nestjs/throttler/dist/throttler.decorator';
+
+// Thư mục ghi file tạm cho multer diskStorage. Ưu tiên STORAGE_TEMP_DIR,
+// fallback về tmpdir của OS. Tạo sẵn (đồng bộ, 1 lần lúc load module) để
+// multer luôn có nơi ghi. KHÔNG dùng memoryStorage để tránh nạp trọn file
+// vào RAM (gốc của vấn đề OOM).
+const TEMP_UPLOAD_DIR =
+  process.env.STORAGE_TEMP_DIR || path.join(os.tmpdir(), 'storage-uploads');
+try {
+  fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
+} catch {
+  // Sẽ thử lại trong destination callback nếu thư mục chưa sẵn sàng.
+}
+
+const diskStorageEngine = diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdir(TEMP_UPLOAD_DIR, { recursive: true }, (err) =>
+      cb(err, TEMP_UPLOAD_DIR),
+    );
+  },
+  // Tên file tạm ngẫu nhiên, không tin originalname (tránh path traversal).
+  filename: (_req, _file, cb) => cb(null, `${Date.now()}-${randomUUID()}.tmp`),
+});
+
+// Xóa file tạm an toàn (không throw nếu file không tồn tại). Dùng trong
+// finally để LUÔN dọn dẹp dù thành công hay lỗi.
+async function cleanupTempFiles(files: any[]): Promise<void> {
+  await Promise.allSettled(
+    files
+      .filter((f) => f && typeof f.path === 'string')
+      .map((f) => fs.promises.unlink(f.path).catch(() => undefined)),
+  );
+}
 
 // Strategy filenames are `<timestamp>-<rand><ext>`. Restrict :filename param
 // to that alphabet so `..`, `/`, `\`, NUL, control chars, and quotes can't
@@ -59,6 +96,7 @@ export class UploadController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseInterceptors(
     FileInterceptor('file', {
+      storage: diskStorageEngine,
       limits: {
         fileSize: 10_485_760,
         files: 1,
@@ -73,21 +111,26 @@ export class UploadController {
       const lang = I18nContext.current()?.lang ?? 'en';
       throw new BadRequestException(this.i18n.t('upload.FILE_REQUIRED', { lang }));
     }
-    if (file.truncated) {
-      const lang = I18nContext.current()?.lang ?? 'en';
-      throw new BadRequestException(
-        this.i18n.t('upload.FILE_TOO_LARGE', {
-          lang,
-          args: { maxSizeMB: (this.maxFileSize / 1024 / 1024).toFixed(2) },
-        }),
-      );
+    // LUÔN dọn file tạm dù validate/upload thành công hay lỗi.
+    try {
+      if (file.truncated) {
+        const lang = I18nContext.current()?.lang ?? 'en';
+        throw new BadRequestException(
+          this.i18n.t('upload.FILE_TOO_LARGE', {
+            lang,
+            args: { maxSizeMB: (this.maxFileSize / 1024 / 1024).toFixed(2) },
+          }),
+        );
+      }
+
+      const { sanitizedOriginalName } =
+        await this.fileValidationService.validateFile(file);
+      file.originalname = sanitizedOriginalName;
+
+      return await this.uploadService.uploadFile(file);
+    } finally {
+      await cleanupTempFiles([file]);
     }
-
-    const { sanitizedOriginalName } =
-      this.fileValidationService.validateFile(file);
-    file.originalname = sanitizedOriginalName;
-
-    return this.uploadService.uploadFile(file);
   }
 
   @Public()
@@ -95,6 +138,7 @@ export class UploadController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseInterceptors(
     FilesInterceptor('files', MAX_UPLOAD_FILES, {
+      storage: diskStorageEngine,
       limits: {
         fileSize: 10_485_760,
         files: MAX_UPLOAD_FILES,
@@ -112,22 +156,27 @@ export class UploadController {
       throw new BadRequestException(this.i18n.t('upload.FILES_REQUIRED', { lang }));
     }
 
-    for (const file of files) {
-      if (file.truncated) {
-        const lang = I18nContext.current()?.lang ?? 'en';
-        throw new BadRequestException(
-          this.i18n.t('upload.FILE_TOO_LARGE', {
-            lang,
-            args: { maxSizeMB: (this.maxFileSize / 1024 / 1024).toFixed(2) },
-          }),
-        );
+    // LUÔN dọn toàn bộ file tạm của batch (kể cả file lỗi giữa chừng).
+    try {
+      for (const file of files) {
+        if (file.truncated) {
+          const lang = I18nContext.current()?.lang ?? 'en';
+          throw new BadRequestException(
+            this.i18n.t('upload.FILE_TOO_LARGE', {
+              lang,
+              args: { maxSizeMB: (this.maxFileSize / 1024 / 1024).toFixed(2) },
+            }),
+          );
+        }
+        const { sanitizedOriginalName } =
+          await this.fileValidationService.validateFile(file);
+        file.originalname = sanitizedOriginalName;
       }
-      const { sanitizedOriginalName } =
-        this.fileValidationService.validateFile(file);
-      file.originalname = sanitizedOriginalName;
-    }
 
-    return this.uploadService.uploadFiles(files);
+      return await this.uploadService.uploadFiles(files);
+    } finally {
+      await cleanupTempFiles(files);
+    }
   }
 
   @Get()

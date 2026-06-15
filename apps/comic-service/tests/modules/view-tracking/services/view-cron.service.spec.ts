@@ -44,7 +44,8 @@ function makeMockViewRepo() {
 function makeMockRedis() {
   return {
     isEnabled: jest.fn().mockReturnValue(true),
-    setnx: jest.fn().mockResolvedValue(true),
+    acquireLock: jest.fn().mockResolvedValue(true),
+    releaseLock: jest.fn().mockResolvedValue(true),
     rename: jest.fn().mockResolvedValue('OK'),
     hgetall: jest.fn().mockResolvedValue({}),
     del: jest.fn().mockResolvedValue(1),
@@ -79,12 +80,12 @@ describe('ViewCronService', () => {
 
       await service.flushViewBuffer();
 
-      expect(redis.setnx).not.toHaveBeenCalled();
+      expect(redis.acquireLock).not.toHaveBeenCalled();
     });
 
     it('does nothing when lock cannot be acquired', async () => {
       const { service, redis } = buildService();
-      redis.setnx.mockResolvedValue(false);
+      redis.acquireLock.mockResolvedValue(false);
 
       await service.flushViewBuffer();
 
@@ -98,7 +99,7 @@ describe('ViewCronService', () => {
       await service.flushViewBuffer();
 
       expect(viewRepo.upsertStats).not.toHaveBeenCalled();
-      expect(redis.del).toHaveBeenCalledWith('comic:views:buffer:lock');
+      expect(redis.releaseLock).toHaveBeenCalledWith('comic:views:buffer:lock', expect.any(String));
     });
 
     it('returns early and cleans snapshot when buffer is empty', async () => {
@@ -108,8 +109,9 @@ describe('ViewCronService', () => {
       await service.flushViewBuffer();
 
       expect(viewRepo.upsertStats).not.toHaveBeenCalled();
-      // snapshot key deleted
-      expect(redis.del).toHaveBeenCalledTimes(2); // snapshot + lock
+      // snapshot key deleted via del; lock released via releaseLock (CAS)
+      expect(redis.del).toHaveBeenCalledTimes(1);
+      expect(redis.releaseLock).toHaveBeenCalledTimes(1);
     });
 
     it('flushes valid entries to DB in batches', async () => {
@@ -144,6 +146,61 @@ describe('ViewCronService', () => {
       expect(viewRepo.upsertStats).toHaveBeenCalledWith(3n, 5);
     });
 
+    it('runs upsertStats and upsertDailyStats concurrently (not sequentially)', async () => {
+      const { service, redis, viewRepo } = buildService();
+      redis.hgetall.mockResolvedValue({ '1': '5' });
+
+      // Track ordering: dailyStats starts BEFORE stats resolves → proves the
+      // two upserts are issued together via Promise.all rather than awaited
+      // one after the other.
+      const events: string[] = [];
+      let resolveStats!: () => void;
+      viewRepo.upsertStats.mockImplementation(() => {
+        events.push('stats:start');
+        return new Promise<void>((resolve) => {
+          resolveStats = () => {
+            events.push('stats:resolve');
+            resolve(undefined);
+          };
+        });
+      });
+      viewRepo.upsertDailyStats.mockImplementation(() => {
+        events.push('daily:start');
+        return Promise.resolve(undefined);
+      });
+
+      const flushed = service.flushViewBuffer();
+      // Drain microtasks until both upserts have been issued (the flush awaits
+      // setnx/rename/hgetall first, so a fixed number of ticks is unreliable).
+      for (let i = 0; i < 50 && !events.includes('daily:start'); i++) {
+        await Promise.resolve();
+      }
+
+      // Both upserts were issued while upsertStats is still pending —
+      // i.e. daily did NOT wait for stats to resolve → they run concurrently.
+      expect(events).toContain('stats:start');
+      expect(events).toContain('daily:start');
+      expect(events).not.toContain('stats:resolve'); // stats still pending
+
+      resolveStats();
+      await flushed;
+
+      expect(viewRepo.upsertStats).toHaveBeenCalledWith(1n, 5);
+      expect(viewRepo.upsertDailyStats).toHaveBeenCalledWith(1n, expect.any(Date), 5);
+    });
+
+    it('restores counts to live buffer when either upsert fails', async () => {
+      const { service, redis, viewRepo } = buildService();
+      redis.hgetall.mockResolvedValue({ '1': '5' });
+      // Daily upsert fails while stats succeeds — full count must still be
+      // restored so the next tick retries (idempotent increment upserts).
+      viewRepo.upsertDailyStats.mockRejectedValue(new Error('daily DB down'));
+
+      await service.flushViewBuffer();
+
+      expect(redis.hincrby).toHaveBeenCalledWith('comic:views:buffer', '1', 5);
+    });
+
     it('restores counts to live buffer on DB failure', async () => {
       const { service, redis, viewRepo } = buildService();
       redis.hgetall.mockResolvedValue({ '1': '5' });
@@ -161,7 +218,7 @@ describe('ViewCronService', () => {
 
       await service.flushViewBuffer();
 
-      expect(redis.del).toHaveBeenCalledWith('comic:views:buffer:lock');
+      expect(redis.releaseLock).toHaveBeenCalledWith('comic:views:buffer:lock', expect.any(String));
     });
   });
 });

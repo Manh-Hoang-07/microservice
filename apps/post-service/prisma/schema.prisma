@@ -103,6 +103,13 @@ model Post {
   @@index([status, publishedAt(sort: Desc)], map: "posts_idx_status_published_at")
   @@index([status, isFeatured], map: "posts_idx_status_featured")
   @@index([status, isPinned], map: "posts_idx_status_pinned")
+  // Admin list orders by `updated_at DESC` (PostRepository.findMany). Without a
+  // descending index Postgres must full-sort the matching rows.
+  @@index([updatedAt(sort: Desc)], map: "posts_idx_updated_at")
+  // Group list adds `WHERE group_id = ?` then `ORDER BY updated_at DESC`
+  // (GroupPostService delegates to findMany with a groupId filter). The
+  // composite lets Postgres satisfy both filter and sort from one index.
+  @@index([groupId, updatedAt(sort: Desc)], map: "posts_idx_group_updated_at")
   @@index([createdAt], map: "posts_idx_created_at")
   @@index([createdUserId], map: "posts_idx_created_user_id")
   @@index([updatedUserId], map: "posts_idx_updated_user_id")

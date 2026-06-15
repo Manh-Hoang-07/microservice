@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { RedisService } from '@package/redis';
+import { RedisService, CacheVersionService } from '@package/redis';
 import { t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PUBLIC_POST_STATUSES } from '../../enums/post-status.enum';
 import { PostFilter, PostRepository } from '../../repositories/post.repository';
@@ -14,11 +14,12 @@ export class PublicPostService {
   constructor(
     private readonly postRepo: PostRepository,
     private readonly i18n: I18nService,
+    private readonly cacheVersion: CacheVersionService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
   async getList(query: any = {}) {
-    const version = await this.getVersion('post:public:list:v');
+    const version = await this.cacheVersion.getVersion('post:public:list');
     const cacheKey = `post:public:list:${version}:${this.hashQuery(query, LIST_KEYS)}`;
 
     return this.getOrSet(cacheKey, 60, async () => {
@@ -88,15 +89,6 @@ export class PublicPostService {
       delete item.tagLinks;
     }
     return item;
-  }
-
-  private async getVersion(key: string): Promise<string> {
-    try {
-      if (this.redis?.isEnabled()) {
-        return (await this.redis.get(key)) || '0';
-      }
-    } catch {}
-    return '0';
   }
 
   private hashQuery(query: any, allowedKeys?: string[]): string {

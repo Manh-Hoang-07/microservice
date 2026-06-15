@@ -105,24 +105,66 @@ export class LogSession {
       record.exceptions = this.exceptions;
     }
 
-    try {
-      const dir = path.dirname(this.filePath);
-      fs.mkdirSync(dir, { recursive: true });
-      const json = JSON.stringify(record, (_key, value) =>
-        typeof value === 'bigint' ? String(value) : value,
-      );
-      fs.appendFileSync(this.filePath, json + '\n');
-    } catch (e) {
-      try {
-        const errDir = path.dirname(this.filePath);
-        fs.appendFileSync(
-          path.join(errDir, '_file-logger-errors.log'),
-          `${new Date().toISOString()} | ${this.filePath} | ${(e as Error).message}\n`,
-        );
-      } catch { /* truly give up */ }
-    }
+    const json = JSON.stringify(record, (_key, value) =>
+      typeof value === 'bigint' ? String(value) : value,
+    );
+    fileLogWriter.write(this.filePath, json + '\n');
   }
 }
+
+/**
+ * Shared async file writer — caches one append-mode WriteStream per file path
+ * so the logging hot path never blocks the event loop on disk I/O.
+ *
+ * The previous implementation called fs.mkdirSync + fs.appendFileSync on EVERY
+ * save(), which blocks the event loop on each log line — a measurable throughput
+ * hit on auth hot paths (login/register/password). WriteStreams buffer writes in
+ * memory and flush asynchronously; directories are created once per directory
+ * (cached) rather than on every write. Mirrors JsonLogger's stream approach.
+ */
+class AsyncFileWriter {
+  private readonly streams = new Map<string, fs.WriteStream>();
+  private readonly knownDirs = new Set<string>();
+
+  write(filePath: string, line: string): void {
+    try {
+      this.getStream(filePath).write(line);
+    } catch (e) {
+      this.reportError(filePath, e as Error);
+    }
+  }
+
+  private getStream(filePath: string): fs.WriteStream {
+    const cached = this.streams.get(filePath);
+    if (cached) return cached;
+
+    const dir = path.dirname(filePath);
+    if (!this.knownDirs.has(dir)) {
+      fs.mkdirSync(dir, { recursive: true }); // once per dir, not per write
+      this.knownDirs.add(dir);
+    }
+    const stream = fs.createWriteStream(filePath, { flags: 'a' });
+    // A stream error (e.g. disk full) must not crash the process or wedge the
+    // cache — drop the broken stream so the next write re-creates it.
+    stream.on('error', (err) => {
+      this.streams.delete(filePath);
+      this.reportError(filePath, err);
+    });
+    this.streams.set(filePath, stream);
+    return stream;
+  }
+
+  private reportError(filePath: string, err: Error): void {
+    // Last-resort, non-blocking error trail. Never throws.
+    fs.appendFile(
+      path.join(path.dirname(filePath), '_file-logger-errors.log'),
+      `${new Date().toISOString()} | ${filePath} | ${err.message}\n`,
+      () => undefined,
+    );
+  }
+}
+
+const fileLogWriter = new AsyncFileWriter();
 
 /**
  * Factory service — inject once, create log sessions per operation.

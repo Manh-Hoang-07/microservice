@@ -30,12 +30,32 @@ export interface IPaginationOptions {
   maxLimit?: number;
 }
 
-function parseSort(sortStr: string): Record<string, 'asc' | 'desc'>[] {
+/** Hard cap on sort terms — blocks `?sort=a:asc,b:asc,...×1000` blowups. */
+const MAX_SORT_FIELDS = 3;
+/** Only plain identifiers (optionally dotted for relations) may be sorted on. */
+const SAFE_SORT_FIELD = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
+
+/**
+ * Parse a `field:dir,field2:dir` sort string into Prisma orderBy objects.
+ *
+ * Hardened against DoS / runtime 500s from client-supplied sort:
+ *  - caps the number of terms,
+ *  - drops any field that isn't a safe identifier,
+ *  - when `allow` is provided, drops any field not in the allowlist (so an
+ *    unknown column can't reach Prisma and throw a 500 on a public endpoint).
+ * Returns [] when nothing valid remains — callers fall back to defaultSort.
+ */
+function parseSort(
+  sortStr: string,
+  allow?: ReadonlySet<string>,
+): Record<string, 'asc' | 'desc'>[] {
   if (!sortStr) return [];
-  return sortStr.split(',').map((s) => {
-    const [field, dir] = s.trim().split(':');
-    return { [field]: dir?.toLowerCase() === 'asc' ? 'asc' : 'desc' } as any;
-  });
+  return sortStr
+    .split(',')
+    .slice(0, MAX_SORT_FIELDS)
+    .map((s) => s.trim().split(':'))
+    .filter(([field]) => !!field && SAFE_SORT_FIELD.test(field) && (!allow || allow.has(field)))
+    .map(([field, dir]) => ({ [field]: dir?.toLowerCase() === 'asc' ? 'asc' : 'desc' } as any));
 }
 
 function resolveQuerySelection(
@@ -91,6 +111,13 @@ export abstract class PrismaRepository<
 > {
   protected isSoftDelete = false;
   protected skipCountByDefault = false;
+  /**
+   * Optional allowlist of columns clients may sort on. When set, any sort
+   * field outside it is dropped (falling back to defaultSort) — strongly
+   * recommended so a public list endpoint can't be made to sort on an
+   * unindexed/unknown column. Leave undefined for identifier-only validation.
+   */
+  protected sortableFields?: ReadonlySet<string>;
   protected defaultSelect: any = undefined;
   protected defaultInclude: any = undefined;
   protected defaultDetailSelect: any = undefined;
@@ -110,7 +137,9 @@ export abstract class PrismaRepository<
     const sort = options.sort || this.defaultSort;
 
     const where: any = this.buildWhere(filter);
-    const orderBy = parseSort(sort) as unknown as OrderByInput[];
+    let parsedSort = parseSort(sort, this.sortableFields);
+    if (!parsedSort.length) parsedSort = parseSort(this.defaultSort);
+    const orderBy = parsedSort as unknown as OrderByInput[];
 
     const selectionFlat = resolveQuerySelection(options, {
       select: this.defaultSelect,
@@ -166,7 +195,7 @@ export abstract class PrismaRepository<
     });
     const result = await this.delegate.findMany({
       where: this.buildWhere(filter),
-      orderBy: options.sort ? parseSort(options.sort) : undefined,
+      orderBy: options.sort ? parseSort(options.sort, this.sortableFields) : undefined,
       take: options.limit ? Number(options.limit) : undefined,
       skip: options.page && options.limit ? (Number(options.page) - 1) * Number(options.limit) : undefined,
       ...selectionFlat,
@@ -236,6 +265,6 @@ export abstract class PrismaRepository<
   }
 
   protected parseSort(sortStr: string): OrderByInput[] {
-    return parseSort(sortStr) as unknown as OrderByInput[];
+    return parseSort(sortStr, this.sortableFields) as unknown as OrderByInput[];
   }
 }

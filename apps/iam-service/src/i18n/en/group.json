@@ -10,5 +10,7 @@
   "MEMBER_NOT_FOUND": "User is not a member of this group.",
   "ROLE_ASSIGNED": "Role assigned successfully.",
   "ROLE_REVOKED": "Role revoked successfully.",
-  "ROLES_SYNCED": "Member roles synced successfully."
+  "ROLES_SYNCED": "Member roles synced successfully.",
+  "USER_NOT_FOUND": "No user found with that email or username.",
+  "ALREADY_MEMBER": "User is already a member of this group."
 }

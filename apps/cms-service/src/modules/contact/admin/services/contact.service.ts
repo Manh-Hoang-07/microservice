@@ -1,19 +1,11 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
-import { RedisService } from '@package/redis';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { ContactFilter, ContactRepository } from '../../repositories/contact.repository';
 
 @Injectable()
 export class AdminContactService {
-  constructor(
-    private readonly contactRepo: ContactRepository,
-    @Optional() private readonly redis?: RedisService,
-  ) {}
-
-  private async clearCache(): Promise<void> {
-    await this.redis?.del('cms:admin:contacts:list').catch(() => {});
-  }
+  constructor(private readonly contactRepo: ContactRepository) {}
 
   async getList(query: any = {}) {
     const options = parseQueryOptions(query);
@@ -46,21 +38,16 @@ export class AdminContactService {
       repliedAt: new Date(),
       repliedBy: actorId,
     });
-    await this.clearCache();
     return updated;
   }
 
   async markAsRead(id: PrimaryKey) {
     await this.getOne(id);
-    const updated = await this.contactRepo.update(id, { status: 'Read' });
-    await this.clearCache();
-    return updated;
+    return this.contactRepo.update(id, { status: 'Read' });
   }
 
   async closeContact(id: PrimaryKey) {
     await this.getOne(id);
-    const updated = await this.contactRepo.update(id, { status: 'Closed' });
-    await this.clearCache();
-    return updated;
+    return this.contactRepo.update(id, { status: 'Closed' });
   }
 }

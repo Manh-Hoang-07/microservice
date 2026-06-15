@@ -46,7 +46,8 @@ function makeMockStatsRepo() {
 function makeMockRedis() {
   return {
     isEnabled: jest.fn().mockReturnValue(true),
-    setnx: jest.fn().mockResolvedValue(true),
+    acquireLock: jest.fn().mockResolvedValue(true),
+    releaseLock: jest.fn().mockResolvedValue(true),
     rename: jest.fn().mockResolvedValue(undefined),
     hgetall: jest.fn().mockResolvedValue({}),
     del: jest.fn().mockResolvedValue(undefined),
@@ -71,11 +72,11 @@ describe('ViewCronService', () => {
   it('should skip when redis is disabled', async () => {
     redis.isEnabled.mockReturnValue(false);
     await service.flushViewBuffer();
-    expect(redis.setnx).not.toHaveBeenCalled();
+    expect(redis.acquireLock).not.toHaveBeenCalled();
   });
 
   it('should skip when lock is not acquired', async () => {
-    redis.setnx.mockResolvedValue(false);
+    redis.acquireLock.mockResolvedValue(false);
     await service.flushViewBuffer();
     expect(redis.rename).not.toHaveBeenCalled();
   });
@@ -85,7 +86,7 @@ describe('ViewCronService', () => {
     await service.flushViewBuffer();
 
     expect(redis.hgetall).not.toHaveBeenCalled();
-    expect(redis.del).toHaveBeenCalledWith('post:views:buffer:lock');
+    expect(redis.releaseLock).toHaveBeenCalledWith('post:views:buffer:lock', expect.any(String));
   });
 
   it('should return early when buffer is empty', async () => {
@@ -138,6 +139,43 @@ describe('ViewCronService', () => {
     expect(statsRepo.upsertStats).toHaveBeenCalledWith(4n, 7);
   });
 
+  it('should run the two upserts concurrently (not sequentially)', async () => {
+    redis.hgetall.mockResolvedValue({ '1': '10' });
+
+    // upsertStats hangs until we resolve it. If the two calls were sequential,
+    // upsertDailyStats would NOT have been called while upsertStats is pending.
+    let resolveStats!: () => void;
+    statsRepo.upsertStats.mockImplementation(
+      () => new Promise<void>((res) => { resolveStats = () => res(); }),
+    );
+
+    const flushPromise = service.flushViewBuffer();
+    // Let all pending microtasks (lock, rename, hgetall, validation, the
+    // Promise.all dispatch) settle so both upserts get a chance to run.
+    await new Promise((res) => setImmediate(res));
+
+    // Daily upsert was dispatched concurrently, before stats resolved.
+    expect(statsRepo.upsertDailyStats).toHaveBeenCalledTimes(1);
+    expect(statsRepo.upsertDailyStats).toHaveBeenCalledWith(1n, expect.any(Date), 10);
+
+    resolveStats();
+    await flushPromise;
+
+    expect(statsRepo.upsertStats).toHaveBeenCalledWith(1n, 10);
+    expect(redis.hincrby).not.toHaveBeenCalled();
+  });
+
+  it('should restore the count once if the daily upsert fails', async () => {
+    redis.hgetall.mockResolvedValue({ '1': '10' });
+    statsRepo.upsertStats.mockResolvedValue(undefined);
+    statsRepo.upsertDailyStats.mockRejectedValue(new Error('daily DB down'));
+
+    await service.flushViewBuffer();
+
+    expect(redis.hincrby).toHaveBeenCalledTimes(1);
+    expect(redis.hincrby).toHaveBeenCalledWith('post:views:buffer', '1', 10);
+  });
+
   it('should restore counts to live buffer on DB failure', async () => {
     redis.hgetall.mockResolvedValue({ '1': '10' });
     statsRepo.upsertStats.mockRejectedValue(new Error('DB down'));
@@ -153,7 +191,7 @@ describe('ViewCronService', () => {
 
     await service.flushViewBuffer();
 
-    expect(redis.del).toHaveBeenCalledWith('post:views:buffer:lock');
+    expect(redis.releaseLock).toHaveBeenCalledWith('post:views:buffer:lock', expect.any(String));
   });
 
   it('should delete snapshot key after successful flush', async () => {
@@ -162,7 +200,7 @@ describe('ViewCronService', () => {
     await service.flushViewBuffer();
 
     expect(redis.del).toHaveBeenCalledWith(expect.stringContaining('post:views:buffer:flush:'));
-    expect(redis.del).toHaveBeenCalledWith('post:views:buffer:lock');
+    expect(redis.releaseLock).toHaveBeenCalledWith('post:views:buffer:lock', expect.any(String));
   });
 
   it('should batch entries in groups of 20', async () => {

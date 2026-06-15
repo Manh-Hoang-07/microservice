@@ -1,11 +1,6 @@
 // ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
-jest.mock('@package/common', () => ({
-  createPaginationMeta: jest.fn((opts: any, total: number) => ({ page: 1, total })),
-  parseQueryOptions: jest.fn((q: any) => ({ skip: 0, take: q.limit ?? 20 })),
-}));
-
 jest.mock('@package/bootstrap', () => ({ FileLogger: jest.fn() }));
 
 jest.mock('nestjs-i18n', () => ({
@@ -13,7 +8,10 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 
@@ -55,11 +53,23 @@ function makeMockWardService() {
   };
 }
 
-function makeMockRedis(enabled = true) {
+function makeFakeRedis() {
+  const store = new Map<string, string>();
+  const setCalls: Array<{ key: string; value: string }> = [];
   return {
-    isEnabled: jest.fn().mockReturnValue(enabled),
-    get: jest.fn().mockResolvedValue(null),
-    set: jest.fn().mockResolvedValue('OK'),
+    store,
+    setCalls,
+    isEnabled: jest.fn().mockReturnValue(true),
+    get: jest.fn(async (k: string) => (store.has(k) ? store.get(k)! : null)),
+    set: jest.fn(async (k: string, v: string) => {
+      store.set(k, v);
+      setCalls.push({ key: k, value: v });
+    }),
+    incr: jest.fn(async (k: string) => {
+      const n = Number(store.get(k) ?? '0') + 1;
+      store.set(k, String(n));
+      return n;
+    }),
   };
 }
 
@@ -70,8 +80,8 @@ describe('PublicProvinceService', () => {
   afterEach(() => jest.restoreAllMocks());
 
   describe('getList', () => {
-    it('should fetch active provinces on cache miss', async () => {
-      const redis = makeMockRedis();
+    it('should fetch active provinces on cache miss with versioned provinces key', async () => {
+      const redis = makeFakeRedis();
       const provinceService = makeMockProvinceService();
       provinceService.getList.mockResolvedValue({ data: [{ id: '1' }] });
 
@@ -86,12 +96,11 @@ describe('PublicProvinceService', () => {
       expect(provinceService.getList).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'active' }),
       );
+      expect(redis.setCalls[0].key).toMatch(/^config:public:provinces:list:v0:/);
     });
 
-    it('should return cached value', async () => {
-      const redis = makeMockRedis();
-      redis.get.mockResolvedValue(JSON.stringify({ data: [{ id: '1' }] }));
-
+    it('uses distinct keys for different query variants', async () => {
+      const redis = makeFakeRedis();
       const provinceService = makeMockProvinceService();
       const service = new PublicProvinceService(
         provinceService as any,
@@ -99,15 +108,35 @@ describe('PublicProvinceService', () => {
         redis as any,
       );
 
-      const result = await service.getList();
-      expect(result).toEqual({ data: [{ id: '1' }] });
-      expect(provinceService.getList).not.toHaveBeenCalled();
+      await service.getList({ page: 1 });
+      await service.getList({ page: 2 });
+      await service.getList({ page: 1, search: 'x' });
+
+      expect(new Set(redis.setCalls.map((c) => c.key)).size).toBe(3);
+      expect(provinceService.getList).toHaveBeenCalledTimes(3);
+    });
+
+    it('serves identical query from cache (loader runs once)', async () => {
+      const redis = makeFakeRedis();
+      const provinceService = makeMockProvinceService();
+      provinceService.getList.mockResolvedValue({ data: [{ id: '1' }] });
+
+      const service = new PublicProvinceService(
+        provinceService as any,
+        makeMockWardService() as any,
+        redis as any,
+      );
+
+      await service.getList();
+      const second = await service.getList();
+      expect(second).toEqual({ data: [{ id: '1' }] });
+      expect(provinceService.getList).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('getByCountry', () => {
     it('should fetch provinces by country id', async () => {
-      const redis = makeMockRedis();
+      const redis = makeFakeRedis();
       const provinceService = makeMockProvinceService();
 
       const service = new PublicProvinceService(
@@ -121,11 +150,25 @@ describe('PublicProvinceService', () => {
         expect.objectContaining({ countryId: '5', status: 'active' }),
       );
     });
+
+    it('uses distinct keys per country', async () => {
+      const redis = makeFakeRedis();
+      const provinceService = makeMockProvinceService();
+      const service = new PublicProvinceService(
+        provinceService as any,
+        makeMockWardService() as any,
+        redis as any,
+      );
+
+      await service.getByCountry('5');
+      await service.getByCountry('6');
+      expect(new Set(redis.setCalls.map((c) => c.key)).size).toBe(2);
+    });
   });
 
   describe('getWards', () => {
-    it('should fetch wards by province id', async () => {
-      const redis = makeMockRedis();
+    it('should fetch wards by province id under the wards entity key', async () => {
+      const redis = makeFakeRedis();
       const wardService = makeMockWardService();
 
       const service = new PublicProvinceService(
@@ -138,22 +181,7 @@ describe('PublicProvinceService', () => {
       expect(wardService.getList).toHaveBeenCalledWith(
         expect.objectContaining({ provinceId: '10', status: 'active' }),
       );
-    });
-
-    it('should return cached wards', async () => {
-      const redis = makeMockRedis();
-      redis.get.mockResolvedValue(JSON.stringify({ data: [{ id: '100' }] }));
-
-      const wardService = makeMockWardService();
-      const service = new PublicProvinceService(
-        makeMockProvinceService() as any,
-        wardService as any,
-        redis as any,
-      );
-
-      const result = await service.getWards('10');
-      expect(result).toEqual({ data: [{ id: '100' }] });
-      expect(wardService.getList).not.toHaveBeenCalled();
+      expect(redis.setCalls[0].key).toMatch(/^config:public:wards:list:v0:/);
     });
   });
 });

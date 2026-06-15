@@ -18,6 +18,7 @@ function toAssignedSet(codes: Iterable<string>): Set<string> {
 @Injectable()
 export class RbacService {
   private readonly refreshInFlight = new Map<string, Promise<Set<string>>>();
+  private readonly effectiveInFlight = new Map<string, Promise<Set<string>>>();
 
   constructor(
     private readonly rbacCache: RbacCacheService,
@@ -46,9 +47,31 @@ export class RbacService {
    * round-trip per distinct permission tuple.
    */
   async getEffectivePermissions(userId: RbacId): Promise<Set<string>> {
-    await this.permissionIndexService.prepare();
-    const direct = await this.getPermissions(userId);
-    return this.permissionIndexService.expandAssigned(direct);
+    // Hot path: every guard in every service calls /internal/rbac/effective on
+    // a cache miss. Serve the fully-expanded set from Redis (version-keyed, so
+    // any RBAC change rotates the key) instead of re-walking the hierarchy each
+    // call; single-flight coalesces concurrent recomputes for the same user.
+    const cached = await this.rbacCache.getEffective(userId);
+    if (cached.cached) return toAssignedSet(cached.codes);
+
+    const key = String(userId);
+    const pending = this.effectiveInFlight.get(key);
+    if (pending) return pending;
+
+    const compute = (async () => {
+      await this.permissionIndexService.prepare();
+      const direct = await this.getPermissions(userId);
+      const expanded = this.permissionIndexService.expandAssigned(direct);
+      await this.rbacCache.setEffective(userId, Array.from(expanded));
+      return expanded;
+    })();
+
+    this.effectiveInFlight.set(key, compute);
+    try {
+      return await compute;
+    } finally {
+      this.effectiveInFlight.delete(key);
+    }
   }
 
   async refreshPermissions(userId: RbacId): Promise<Set<string>> {

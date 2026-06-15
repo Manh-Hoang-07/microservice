@@ -105,6 +105,45 @@ export class RbacCacheService implements OnModuleInit, OnModuleDestroy {
     ]);
   }
 
+  private async buildEffectiveKey(userId: RbacId): Promise<string> {
+    const v = await this.ensureVersion();
+    return `rbac:v${v}:u:${userId}:eff`;
+  }
+
+  /**
+   * Read the cached EXPANDED (hierarchy-resolved) permission set served by
+   * /internal/rbac/effective. Version-keyed like the assigned-set cache, so
+   * any permission/role/assignment change (all of which bump the version)
+   * rotates the key and forces a recompute — no manual invalidation needed.
+   */
+  async getEffective(userId: RbacId): Promise<{ codes: string[]; cached: boolean }> {
+    if (!this.redis.isEnabled()) return { codes: [], cached: false };
+    const key = await this.buildEffectiveKey(userId);
+    const raw = await this.redis.get(key);
+    if (raw) {
+      if (typeof raw === 'string' && raw.startsWith(LEGACY_ASSIGNED_BITMAP_PREFIX)) {
+        await this.redis.del(key);
+        return { codes: [], cached: false };
+      }
+      const decoded = decodeAssignedCodes(raw);
+      if (decoded) return { codes: decoded, cached: true };
+      await this.redis.del(key);
+    }
+    return { codes: [], cached: false };
+  }
+
+  async setEffective(userId: RbacId, codes: string[]) {
+    if (!this.redis.isEnabled()) return;
+    const v = await this.ensureVersion();
+    const key = `rbac:v${v}:u:${userId}:eff`;
+    // Tracked alongside the assigned-set key so clearAllUserCaches evicts both.
+    await this.redis.multi([
+      ['SET', key, encodeAssignedCodes(codes), 'EX', this.ttlSeconds],
+      ['SADD', this.trackedKeysSet(userId, v), key],
+      ['EXPIRE', this.trackedKeysSet(userId, v), this.ttlSeconds],
+    ]);
+  }
+
   async clearUserCache(userId: RbacId) {
     if (!this.redis.isEnabled()) return;
     const key = await this.buildCacheKey(userId);

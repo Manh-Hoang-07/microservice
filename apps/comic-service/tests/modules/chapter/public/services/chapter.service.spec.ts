@@ -52,18 +52,27 @@ function makeMockI18n() {
   return { t: jest.fn((key: string) => key) };
 }
 
+function makeMockCacheVersion() {
+  return {
+    bump: jest.fn().mockResolvedValue(undefined),
+    getVersion: jest.fn().mockResolvedValue(0),
+  };
+}
+
 function buildService() {
   const chapterRepo = makeMockChapterRepo();
   const i18n = makeMockI18n();
   const redis = makeMockRedis();
+  const cacheVersion = makeMockCacheVersion();
 
   const service = new PublicChapterService(
     chapterRepo as any,
     i18n as any,
+    cacheVersion as any,
     redis as any,
   );
 
-  return { service, chapterRepo, i18n, redis };
+  return { service, chapterRepo, i18n, redis, cacheVersion };
 }
 
 const sampleChapter = {

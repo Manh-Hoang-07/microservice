@@ -17,6 +17,7 @@ import { createCircuitBreaker } from '@package/circuit-breaker';
 import { RedisService } from '@package/redis';
 import { PERM_GROUP_KEY, PermissionGroupMeta } from '../decorators/permission-group.decorator';
 import { RbacVersionTracker } from '../rbac/rbac-version-tracker';
+import { jitterTtl } from '../helpers/jitter.helper';
 import { commonMsg } from '../i18n/common-messages';
 
 const TIMEOUT_MS = 5_000;
@@ -113,7 +114,8 @@ export class GroupPermissionGuard implements CanActivate {
       });
 
       if (this.redis?.isEnabled()) {
-        codes = await this.redis.getOrSet<string[]>(cacheKey, fetchCodes, CACHE_TTL_S);
+        // Cross-pod single-flight + jittered TTL — see RbacGuard for rationale.
+        codes = await this.redis.getOrSetWithLock<string[]>(cacheKey, fetchCodes, jitterTtl(CACHE_TTL_S));
       } else {
         codes = await fetchCodes();
       }

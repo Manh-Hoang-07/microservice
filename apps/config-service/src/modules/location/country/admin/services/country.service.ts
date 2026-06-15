@@ -1,15 +1,15 @@
-import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { RedisService } from '@package/redis';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { CountryRepository, CountryFilter } from '../../repositories/country.repository';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class CountryService {
   constructor(
     private readonly countryRepo: CountryRepository,
     private readonly i18n: I18nService,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
   async getList(query: any = {}) {
@@ -74,6 +74,7 @@ export class CountryService {
   }
 
   private async clearCountryCaches(): Promise<void> {
-    await this.redis?.del('config:public:countries');
+    // Version bump invalidates every cached country query variant in one incr.
+    await this.cacheVersion.bump('config:public:countries');
   }
 }

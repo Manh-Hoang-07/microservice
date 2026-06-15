@@ -8,7 +8,10 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 

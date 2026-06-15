@@ -72,6 +72,13 @@ function makeMockRedis() {
   };
 }
 
+function makeMockCacheVersion() {
+  return {
+    bump: jest.fn().mockResolvedValue(undefined),
+    getVersion: jest.fn().mockResolvedValue(0),
+  };
+}
+
 function makeMockI18n() {
   return { t: jest.fn((key: string) => key) };
 }
@@ -80,14 +87,16 @@ function buildService() {
   const comicRepo = makeMockComicRepo();
   const i18n = makeMockI18n();
   const redis = makeMockRedis();
+  const cacheVersion = makeMockCacheVersion();
 
   const service = new AdminComicService(
     comicRepo as any,
     i18n as any,
+    cacheVersion as any,
     redis as any,
   );
 
-  return { service, comicRepo, i18n, redis };
+  return { service, comicRepo, i18n, redis, cacheVersion };
 }
 
 const sampleComic = {
@@ -207,7 +216,7 @@ describe('AdminComicService', () => {
     const dto = { title: 'New Comic', categoryIds: [10n] } as any;
 
     it('creates comic with generated slug and clears cache', async () => {
-      const { service, comicRepo, redis } = buildService();
+      const { service, comicRepo, redis, cacheVersion } = buildService();
       const created = { ...sampleComic, slug: 'New Comic-slug' };
       comicRepo.createWithRelations.mockResolvedValue(created);
 
@@ -219,7 +228,7 @@ describe('AdminComicService', () => {
         dto.categoryIds,
       );
       expect(redis.del).toHaveBeenCalledWith('comic:public:detail:New Comic-slug');
-      expect(redis.incr).toHaveBeenCalledWith('comic:public:list:v');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('comic:public:list');
       expect(result).toBeDefined();
     });
 
@@ -283,14 +292,14 @@ describe('AdminComicService', () => {
     });
 
     it('clears caches after update', async () => {
-      const { service, comicRepo, redis } = buildService();
+      const { service, comicRepo, redis, cacheVersion } = buildService();
       comicRepo.findById.mockResolvedValue(sampleComic);
       comicRepo.updateWithRelations.mockResolvedValue({ ...sampleComic, slug: 'new-slug' });
 
       await service.update(1n, { title: 'X' } as any);
 
       expect(redis.del).toHaveBeenCalled();
-      expect(redis.incr).toHaveBeenCalledWith('comic:public:list:v');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('comic:public:list');
     });
   });
 

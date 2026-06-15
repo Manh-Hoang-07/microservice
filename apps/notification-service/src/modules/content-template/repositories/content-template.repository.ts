@@ -5,6 +5,7 @@ import { PrimaryKey } from 'src/types';
 import { TemplateStatus } from '../enums/template-status.enum';
 import { TemplateCategory } from '../enums/template-category.enum';
 import { TemplateType } from '../enums/template-type.enum';
+import { capSearch } from '@package/common';
 
 export interface ContentTemplateFilter {
   search?: string;
@@ -21,9 +22,10 @@ export class ContentTemplateRepository {
   private buildWhere(filter: ContentTemplateFilter): Prisma.ContentTemplateWhereInput {
     const where: Prisma.ContentTemplateWhereInput = {};
     if (filter.search) {
+      const search = capSearch(filter.search);
       where.OR = [
-        { name: { contains: filter.search, mode: 'insensitive' } },
-        { code: { contains: filter.search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.type) where.type = filter.type;

@@ -1,11 +1,6 @@
 // ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
-jest.mock('@package/common', () => ({
-  createPaginationMeta: jest.fn((opts: any, total: number) => ({ page: 1, total })),
-  parseQueryOptions: jest.fn((q: any) => ({ skip: 0, take: q.limit ?? 20 })),
-}));
-
 jest.mock('@package/bootstrap', () => ({ FileLogger: jest.fn() }));
 
 jest.mock('nestjs-i18n', () => ({
@@ -13,7 +8,10 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 
@@ -41,11 +39,23 @@ function makeMockWardService() {
   };
 }
 
-function makeMockRedis(enabled = true) {
+function makeFakeRedis() {
+  const store = new Map<string, string>();
+  const setCalls: Array<{ key: string; value: string }> = [];
   return {
-    isEnabled: jest.fn().mockReturnValue(enabled),
-    get: jest.fn().mockResolvedValue(null),
-    set: jest.fn().mockResolvedValue('OK'),
+    store,
+    setCalls,
+    isEnabled: jest.fn().mockReturnValue(true),
+    get: jest.fn(async (k: string) => (store.has(k) ? store.get(k)! : null)),
+    set: jest.fn(async (k: string, v: string) => {
+      store.set(k, v);
+      setCalls.push({ key: k, value: v });
+    }),
+    incr: jest.fn(async (k: string) => {
+      const n = Number(store.get(k) ?? '0') + 1;
+      store.set(k, String(n));
+      return n;
+    }),
   };
 }
 
@@ -56,8 +66,8 @@ describe('PublicWardService', () => {
   afterEach(() => jest.restoreAllMocks());
 
   describe('getList', () => {
-    it('should fetch active wards on cache miss', async () => {
-      const redis = makeMockRedis();
+    it('should fetch active wards on cache miss with a versioned wards key', async () => {
+      const redis = makeFakeRedis();
       const wardService = makeMockWardService();
       wardService.getList.mockResolvedValue({ data: [{ id: '1' }] });
 
@@ -68,18 +78,20 @@ describe('PublicWardService', () => {
       expect(wardService.getList).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'active' }),
       );
+      expect(redis.setCalls[0].key).toMatch(/^config:public:wards:list:v0:/);
     });
 
-    it('should return cached value', async () => {
-      const redis = makeMockRedis();
-      redis.get.mockResolvedValue(JSON.stringify({ data: [{ id: '1' }] }));
-
+    it('serves identical query from cache (loader runs once)', async () => {
+      const redis = makeFakeRedis();
       const wardService = makeMockWardService();
+      wardService.getList.mockResolvedValue({ data: [{ id: '1' }] });
+
       const service = new PublicWardService(wardService as any, redis as any);
 
-      const result = await service.getList();
-      expect(result).toEqual({ data: [{ id: '1' }] });
-      expect(wardService.getList).not.toHaveBeenCalled();
+      await service.getList();
+      const second = await service.getList();
+      expect(second).toEqual({ data: [{ id: '1' }] });
+      expect(wardService.getList).toHaveBeenCalledTimes(1);
     });
 
     it('should work without Redis', async () => {
@@ -92,7 +104,7 @@ describe('PublicWardService', () => {
 
   describe('getByProvince', () => {
     it('should fetch wards by province id', async () => {
-      const redis = makeMockRedis();
+      const redis = makeFakeRedis();
       const wardService = makeMockWardService();
 
       const service = new PublicWardService(wardService as any, redis as any);
@@ -103,16 +115,16 @@ describe('PublicWardService', () => {
       );
     });
 
-    it('should return cached wards by province', async () => {
-      const redis = makeMockRedis();
-      redis.get.mockResolvedValue(JSON.stringify({ data: [{ id: '100' }] }));
-
+    it('uses distinct keys per province (no stale cross-province data)', async () => {
+      const redis = makeFakeRedis();
       const wardService = makeMockWardService();
       const service = new PublicWardService(wardService as any, redis as any);
 
-      const result = await service.getByProvince('10');
-      expect(result).toEqual({ data: [{ id: '100' }] });
-      expect(wardService.getList).not.toHaveBeenCalled();
+      await service.getByProvince('10');
+      await service.getByProvince('20');
+
+      expect(new Set(redis.setCalls.map((c) => c.key)).size).toBe(2);
+      expect(wardService.getList).toHaveBeenCalledTimes(2);
     });
   });
 });

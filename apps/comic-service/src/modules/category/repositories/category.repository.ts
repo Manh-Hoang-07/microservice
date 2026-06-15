@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
+import { capSearch } from '@package/common';
 import { PrismaService } from '../../../core/database/prisma.service';
 
 const ALLOWED_FIELDS: ReadonlySet<string> = new Set([
@@ -22,9 +23,10 @@ export class CategoryRepository {
   private buildWhere(filter: CategoryFilter): Prisma.CategoryWhereInput {
     const where: Prisma.CategoryWhereInput = {};
     if (filter.search) {
+      const search = capSearch(filter.search);
       where.OR = [
-        { name: { contains: filter.search } },
-        { slug: { contains: filter.search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
       ];
     }
     return where;

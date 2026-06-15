@@ -134,11 +134,18 @@ export class PostRepository {
     return { [field]: dir } as Prisma.PostOrderByWithRelationInput;
   }
 
-  findMany(filter: PostFilter, options: { skip: number; take: number }) {
+  findMany(filter: PostFilter, options: { skip: number; take: number; sortBy?: string; order?: 'asc' | 'desc' }) {
+    // Honour the requested sort (allowlisted in buildOrderBy) instead of always
+    // ordering by updatedAt. Falls back to updatedAt:desc — the admin default —
+    // when no sortable field is supplied.
+    const orderBy =
+      options.sortBy && SORTABLE_FIELDS.has(options.sortBy)
+        ? this.buildOrderBy(`${options.sortBy}:${options.order ?? 'desc'}`)
+        : { updatedAt: 'desc' as const };
     return this.prisma.post.findMany({
       where: this.buildWhere(filter),
       include: WITH_RELATIONS,
-      orderBy: { updatedAt: 'desc' },
+      orderBy,
       skip: options.skip,
       take: options.take,
     });

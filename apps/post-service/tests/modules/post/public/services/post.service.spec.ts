@@ -16,6 +16,7 @@ jest.mock('nestjs-i18n', () => ({
 
 jest.mock('@package/redis', () => ({
   RedisService: jest.fn(),
+  CacheVersionService: class {},
 }));
 
 jest.mock('src/generated/prisma', () => ({
@@ -74,6 +75,13 @@ function makeMockRedis() {
   };
 }
 
+function makeMockCacheVersion() {
+  return {
+    bump: jest.fn().mockResolvedValue(undefined),
+    getVersion: jest.fn().mockResolvedValue(0),
+  };
+}
+
 function makePost(overrides: Record<string, any> = {}) {
   return {
     id: 1n,
@@ -93,11 +101,13 @@ describe('PublicPostService', () => {
   let service: PublicPostService;
   let postRepo: ReturnType<typeof makeMockPostRepo>;
   let redis: ReturnType<typeof makeMockRedis>;
+  let cacheVersion: ReturnType<typeof makeMockCacheVersion>;
 
   beforeEach(() => {
     postRepo = makeMockPostRepo();
     redis = makeMockRedis();
-    service = new PublicPostService(postRepo as any, makeMockI18n(), redis as any);
+    cacheVersion = makeMockCacheVersion();
+    service = new PublicPostService(postRepo as any, makeMockI18n(), cacheVersion as any, redis as any);
   });
 
   // ---- getList ----
@@ -118,7 +128,7 @@ describe('PublicPostService', () => {
 
     it('should return cached data on cache hit', async () => {
       const cached = { data: [{ id: 1 }], meta: { total: 1 } };
-      redis.get.mockResolvedValueOnce('0').mockResolvedValueOnce(JSON.stringify(cached));
+      redis.get.mockResolvedValue(JSON.stringify(cached));
 
       const result = await service.getList({});
 
@@ -127,7 +137,7 @@ describe('PublicPostService', () => {
     });
 
     it('should work without redis', async () => {
-      const serviceNoRedis = new PublicPostService(postRepo as any, makeMockI18n(), undefined);
+      const serviceNoRedis = new PublicPostService(postRepo as any, makeMockI18n(), makeMockCacheVersion() as any, undefined);
       postRepo.findManyPublic.mockResolvedValue([]);
       postRepo.count.mockResolvedValue(0);
 

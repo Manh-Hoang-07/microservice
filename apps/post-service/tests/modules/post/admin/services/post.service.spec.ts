@@ -19,6 +19,7 @@ jest.mock('nestjs-i18n', () => ({
 
 jest.mock('@package/redis', () => ({
   RedisService: jest.fn(),
+  CacheVersionService: class {},
 }));
 
 // Mock the generated Prisma client used by PrismaService
@@ -86,6 +87,13 @@ function makeMockRedis() {
   };
 }
 
+function makeMockCacheVersion() {
+  return {
+    bump: jest.fn().mockResolvedValue(undefined),
+    getVersion: jest.fn().mockResolvedValue(0),
+  };
+}
+
 function makePost(overrides: Record<string, any> = {}) {
   return {
     id: 1n,
@@ -105,11 +113,13 @@ describe('AdminPostService', () => {
   let service: AdminPostService;
   let postRepo: ReturnType<typeof makeMockPostRepo>;
   let redis: ReturnType<typeof makeMockRedis>;
+  let cacheVersion: ReturnType<typeof makeMockCacheVersion>;
 
   beforeEach(() => {
     postRepo = makeMockPostRepo();
     redis = makeMockRedis();
-    service = new AdminPostService(postRepo as any, makeMockI18n(), redis as any);
+    cacheVersion = makeMockCacheVersion();
+    service = new AdminPostService(postRepo as any, makeMockI18n(), cacheVersion as any, redis as any);
   });
 
   // ---- getList ----
@@ -188,7 +198,7 @@ describe('AdminPostService', () => {
       expect(SlugHelper.uniqueSlug).toHaveBeenCalledWith('Test', expect.any(Object));
       expect(postRepo.createWithRelations).toHaveBeenCalled();
       expect(redis.del).toHaveBeenCalledWith('post:public:detail:generated-slug');
-      expect(redis.incr).toHaveBeenCalledWith('post:public:list:v');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('post:public:list');
       expect(result).toHaveProperty('categories');
     });
 
@@ -240,7 +250,7 @@ describe('AdminPostService', () => {
 
       expect(SlugHelper.uniqueSlug).toHaveBeenCalledWith('New Name', expect.any(Object), 1n);
       expect(postRepo.updateWithRelations).toHaveBeenCalled();
-      expect(redis.incr).toHaveBeenCalledWith('post:public:list:v');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('post:public:list');
     });
 
     it('should not regenerate slug when name is unchanged', async () => {
@@ -266,7 +276,7 @@ describe('AdminPostService', () => {
       // Should clear new slug detail cache
       expect(redis.del).toHaveBeenCalledWith('post:public:detail:generated-slug');
       // Should invalidate list cache
-      expect(redis.incr).toHaveBeenCalledWith('post:public:list:v');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('post:public:list');
     });
 
     it('should only clear new slug cache when slug does not change', async () => {
@@ -309,7 +319,7 @@ describe('AdminPostService', () => {
 
       expect(postRepo.delete).toHaveBeenCalledWith(1n);
       expect(redis.del).toHaveBeenCalledWith('post:public:detail:my-slug');
-      expect(redis.incr).toHaveBeenCalledWith('post:public:list:v');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('post:public:list');
       expect(result).toEqual({ success: true });
     });
 

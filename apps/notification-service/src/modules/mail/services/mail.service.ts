@@ -10,6 +10,21 @@ const VAR_PATTERN = /\{\{\s*([\w.]{1,80})\s*\}\}/g;
 const MAX_VAR_VALUE_LEN = 5000;
 const RECIPIENT_RATE_LIMIT_PER_HOUR = 10;
 const RECIPIENT_RATE_LIMIT_TTL_S = 3600;
+/** Active render templates are near-static; cache them to avoid a DB hit per mail job. */
+const TEMPLATE_CACHE_TTL_S = 300;
+const TEMPLATE_CACHE_PREFIX = 'mail:tpl:';
+
+/** Minimal shape persisted in the template cache (only what sendTemplate needs). */
+interface CachedTemplate {
+  name: string;
+  content: string;
+  metadata: any;
+}
+
+/** BigInt-safe JSON replacer for caching template payloads. */
+function bigintReplacer(_key: string, value: unknown): unknown {
+  return typeof value === 'bigint' ? String(value) : value;
+}
 
 /** Hard-bounce / permanent SMTP errors — retrying these wastes attempts. */
 export class PermanentMailError extends Error {
@@ -126,7 +141,7 @@ export class MailService implements OnModuleInit {
     const to = Array.isArray(options.to) ? options.to.join(',') : options.to;
     const log = this.fileLogger.create('mail/send_template', { templateCode, to });
 
-    const template = await this.contentTemplateRepo.findActiveByCode(templateCode);
+    const template = await this.resolveTemplate(templateCode);
     if (!template?.content) {
       log.addDebug('template_not_found');
       log.save();
@@ -135,7 +150,7 @@ export class MailService implements OnModuleInit {
 
     log.addDebug('template_resolved', { templateName: template.name });
     const rendered = this.render(template.content, options.variables ?? {});
-    const metadata = template.metadata as any;
+    const metadata = template.metadata;
     const subject = options.subject ?? metadata?.subject ?? template.name;
 
     try {
@@ -147,6 +162,53 @@ export class MailService implements OnModuleInit {
       throw err;
     } finally {
       log.save();
+    }
+  }
+
+  /**
+   * Resolve an active render template by code, backed by a short-lived Redis cache.
+   * Only valid templates are cached — inactive/missing codes always re-query so a
+   * transient "not found" never gets cached as a negative result.
+   */
+  private async resolveTemplate(templateCode: string): Promise<CachedTemplate | null> {
+    const cacheKey = `${TEMPLATE_CACHE_PREFIX}${templateCode}`;
+
+    if (this.redis?.isEnabled?.()) {
+      try {
+        const raw = await this.redis.get(cacheKey);
+        if (raw) return JSON.parse(raw) as CachedTemplate;
+      } catch {
+        // cache read failure → fall through to DB
+      }
+    }
+
+    const template = await this.contentTemplateRepo.findActiveByCode(templateCode);
+    if (!template?.content) return null;
+
+    const cached: CachedTemplate = {
+      name: template.name,
+      content: template.content,
+      metadata: template.metadata,
+    };
+
+    if (this.redis?.isEnabled?.()) {
+      try {
+        await this.redis.set(cacheKey, JSON.stringify(cached, bigintReplacer), TEMPLATE_CACHE_TTL_S);
+      } catch {
+        // cache write failure is non-fatal
+      }
+    }
+
+    return cached;
+  }
+
+  /** Drop a cached template (called when admin create/update/delete a template). */
+  async invalidateTemplate(code: string): Promise<void> {
+    if (!code || !this.redis?.isEnabled?.()) return;
+    try {
+      await this.redis.del(`${TEMPLATE_CACHE_PREFIX}${code}`);
+    } catch {
+      // best-effort invalidation
     }
   }
 

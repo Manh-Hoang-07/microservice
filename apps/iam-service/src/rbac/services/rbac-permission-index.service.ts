@@ -8,6 +8,11 @@ type PermissionNode = { code: string; parentCode: string | null };
 @Injectable()
 export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy {
   private permissionByCode = new Map<string, PermissionNode>();
+  // Precomputed: code → tap moi hau due (con chau) cua no. Build 1 lan cung
+  // permissionByCode. Ngu nghia khop `grants()`: neu C nam tren ancestor-chain
+  // cua D thi C grant D → D thuoc descendantsByCode.get(C). Dung trong
+  // expandAssigned de tranh O(N×depth) walk moi lan goi.
+  private descendantsByCode = new Map<string, Set<string>>();
   private lastPermFetchMs = 0;
   private readonly permIndexTtlMs = 24 * 60 * 60 * 1000;
   private readonly prewarmIntervalMs = 6 * 60 * 60 * 1000;
@@ -94,14 +99,42 @@ export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy
     if (assignedCodes.has(PERM.SYSTEM.MANAGE)) {
       return new Set(this.permissionByCode.keys());
     }
+    // O(so code user giu): moi assigned code → union truoc tap hau due da precompute.
     const expanded = new Set(assignedCodes);
-    for (const code of this.permissionByCode.keys()) {
-      if (expanded.has(code)) continue;
-      if (this.grants(code, (c) => assignedCodes.has(c))) {
-        expanded.add(code);
+    for (const code of assignedCodes) {
+      const descendants = this.descendantsByCode.get(code);
+      if (descendants) {
+        for (const d of descendants) expanded.add(d);
       }
     }
     return expanded;
+  }
+
+  /**
+   * Build descendantsByCode tu permissionByCode. Voi moi node, di NGUOC len
+   * theo parentCode (giong vong lap trong `grants()`, ke ca cycle-guard) va
+   * ghi node do vao descendant-set cua tung ancestor. Ket qua: ancestor → tap
+   * tat ca con chau — khop dung ngu nghia "ancestor grants descendant".
+   */
+  private buildDescendants(byCode: Map<string, PermissionNode>): Map<string, Set<string>> {
+    const descendants = new Map<string, Set<string>>();
+    for (const node of byCode.values()) {
+      const visited = new Set<string>();
+      for (let cur = node; cur?.parentCode; ) {
+        if (visited.has(cur.parentCode)) break;
+        visited.add(cur.parentCode);
+        const parent = byCode.get(cur.parentCode);
+        if (!parent) break;
+        let set = descendants.get(parent.code);
+        if (!set) {
+          set = new Set<string>();
+          descendants.set(parent.code, set);
+        }
+        set.add(node.code);
+        cur = parent;
+      }
+    }
+    return descendants;
   }
 
   private async ensurePermissionIndexes(force = false): Promise<void> {
@@ -131,7 +164,10 @@ export class RbacPermissionIndexService implements OnModuleInit, OnModuleDestroy
         const parent = n.parentId != null ? byId.get(String(n.parentId)) : null;
         if (n.code) byCode.set(n.code, { code: n.code, parentCode: parent?.code ?? null });
       }
+      // Rebuild descendants atomically cung permissionByCode (cung diem reset).
+      const descendants = this.buildDescendants(byCode);
       this.permissionByCode = byCode;
+      this.descendantsByCode = descendants;
       this.lastPermFetchMs = Date.now();
     })();
 

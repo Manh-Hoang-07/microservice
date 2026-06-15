@@ -1,23 +1,20 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
 import { PartnerFilter, PartnerRepository } from '../../repositories/partner.repository';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class AdminPartnerService {
   constructor(
     private readonly partnerRepo: PartnerRepository,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
-  private async clearCache(id?: any) {
-    await this.redis?.del('introduction:public:partner:list').catch(() => {});
-    if (id !== undefined) {
-      await this.redis?.del(`introduction:public:partner:detail:${id}`).catch(() => {});
-    }
+  private async clearCache() {
+    await this.cacheVersion.bump('cms:public:partner');
   }
 
   async getList(query: any = {}) {
@@ -68,14 +65,14 @@ export class AdminPartnerService {
       status: dto.status,
       sortOrder: dto.sortOrder,
     });
-    await this.clearCache(id);
+    await this.clearCache();
     return result;
   }
 
   async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.partnerRepo.delete(id);
-    await this.clearCache(id);
+    await this.clearCache();
     return { success: true };
   }
 }

@@ -26,6 +26,14 @@ function buildRedis(overrides: Partial<any> = {}): any {
       await stub.set(key, JSON.stringify(fresh), ttl);
       return fresh;
     }),
+    // The guard now uses getOrSetWithLock; mirror getOrSet semantics here.
+    getOrSetWithLock: jest.fn().mockImplementation(async (key: string, factory: any, ttl: number) => {
+      const cached = await stub.get(key);
+      if (cached !== null && cached !== undefined) return JSON.parse(cached);
+      const fresh = await factory();
+      await stub.set(key, JSON.stringify(fresh), ttl);
+      return fresh;
+    }),
     ...overrides,
   };
   return stub;

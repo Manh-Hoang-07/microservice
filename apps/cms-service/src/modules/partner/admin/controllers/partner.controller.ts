@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
+import { Permission, AuditLog, ParseBigIntPipe } from '@package/common';
 import { AdminPartnerService } from '../services/partner.service';
 import { CreatePartnerDto } from '../dtos/create-partner.dto';
 import { UpdatePartnerDto } from '../dtos/update-partner.dto';
@@ -18,25 +17,28 @@ export class AdminPartnerController {
 
   @Permission('cms.partner.manage')
   @Get(':id')
-  async getOne(@Param('id') id: string) {
-    return this.partnerService.getOne(toPrimaryKey(id));
+  async getOne(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.partnerService.getOne(id);
   }
 
   @Permission('cms.partner.manage')
+  @AuditLog({ action: 'cms.partner.create', resource: 'partner' })
   @Post()
   async create(@Body() dto: CreatePartnerDto) {
     return this.partnerService.create(dto);
   }
 
   @Permission('cms.partner.manage')
+  @AuditLog({ action: 'cms.partner.update', resource: 'partner' })
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdatePartnerDto) {
-    return this.partnerService.update(toPrimaryKey(id), dto);
+  async update(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: UpdatePartnerDto) {
+    return this.partnerService.update(id, dto);
   }
 
   @Permission('cms.partner.manage')
+  @AuditLog({ action: 'cms.partner.delete', resource: 'partner' })
   @Delete(':id')
-  async delete(@Param('id') id: string) {
-    return this.partnerService.delete(toPrimaryKey(id));
+  async delete(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.partnerService.delete(id);
   }
 }

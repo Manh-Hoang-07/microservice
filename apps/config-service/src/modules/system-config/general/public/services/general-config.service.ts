@@ -1,10 +1,12 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { RedisService } from '@package/redis';
-import { CachedService } from '../../../../../core/cache/cached.service';
+import { CachedService, RedisService } from '@package/redis';
 import { GeneralConfigService } from '../../admin/services/general-config.service';
 
 @Injectable()
 export class PublicGeneralConfigService extends CachedService {
+  protected readonly cacheEntity = 'general';
+  protected readonly cacheNamespace = 'config:public';
+
   constructor(
     private readonly generalConfigService: GeneralConfigService,
     @Optional() redis?: RedisService,

@@ -16,6 +16,7 @@ import {
   RbacGuard,
   GlobalExceptionFilter,
   HealthModule,
+  AuditModule,
   CommonEventModule,
   BigIntSerializationInterceptor,
   SessionModule,
@@ -85,6 +86,7 @@ const messagingModule = selectMessagingModule();
     }),
     MetricsModule,
     SessionModule,
+    AuditModule,
     // Introduction modules
     AboutModule,
     StaffModule,

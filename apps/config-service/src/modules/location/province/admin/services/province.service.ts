@@ -1,15 +1,15 @@
-import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { RedisService } from '@package/redis';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { ProvinceRepository, ProvinceFilter } from '../../repositories/province.repository';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class ProvinceService {
   constructor(
     private readonly provinceRepo: ProvinceRepository,
     private readonly i18n: I18nService,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
   async getList(query: any = {}) {
@@ -73,7 +73,8 @@ export class ProvinceService {
   }
 
   private async clearProvinceCaches(): Promise<void> {
-    const keys = await this.redis?.keys('config:public:provinces:*');
-    if (keys?.length) await this.redis?.deleteMany(keys);
+    // Bump the version counter — invalidates every cached province query variant
+    // (keyed by filter+options) in one incr, instead of scanning keys.
+    await this.cacheVersion.bump('config:public:provinces');
   }
 }

@@ -16,6 +16,7 @@ import { ContentTemplateRepository } from '../../../../../src/modules/content-te
 describe('AdminContentTemplateService', () => {
   let service: AdminContentTemplateService;
   let templateRepo: jest.Mocked<Partial<ContentTemplateRepository>>;
+  let mailService: { invalidateTemplate: jest.Mock; send: jest.Mock };
   let i18n: any;
 
   const mockTemplate = {
@@ -42,10 +43,15 @@ describe('AdminContentTemplateService', () => {
     };
 
     i18n = {};
+    mailService = {
+      invalidateTemplate: jest.fn().mockResolvedValue(undefined),
+      send: jest.fn().mockResolvedValue(undefined),
+    };
 
     service = new AdminContentTemplateService(
       templateRepo as any,
       i18n,
+      mailService as any,
     );
   });
 
@@ -118,6 +124,7 @@ describe('AdminContentTemplateService', () => {
 
       expect(templateRepo.findByCode).toHaveBeenCalledWith('new_template');
       expect(templateRepo.create).toHaveBeenCalledWith(dto);
+      expect(mailService.invalidateTemplate).toHaveBeenCalledWith('new_template');
       expect(result).toEqual(mockTemplate);
     });
 
@@ -140,6 +147,9 @@ describe('AdminContentTemplateService', () => {
 
       expect(templateRepo.findFirst).toHaveBeenCalledWith({ code: 'updated_code', id: { not: 1n } });
       expect(templateRepo.update).toHaveBeenCalledWith(1n, dto);
+      // Renamed template → invalidate both old and new code.
+      expect(mailService.invalidateTemplate).toHaveBeenCalledWith('welcome_email');
+      expect(mailService.invalidateTemplate).toHaveBeenCalledWith('updated_code');
       expect(result).toEqual(mockTemplate);
     });
 
@@ -177,6 +187,7 @@ describe('AdminContentTemplateService', () => {
 
       expect(templateRepo.findById).toHaveBeenCalledWith(1n);
       expect(templateRepo.delete).toHaveBeenCalledWith(1n);
+      expect(mailService.invalidateTemplate).toHaveBeenCalledWith('welcome_email');
       expect(result).toBe(true);
     });
 

@@ -1,34 +1,20 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
+import { CachedService, RedisService } from '@package/redis';
 import { TestimonialFilter, TestimonialRepository } from '../../repositories/testimonial.repository';
 import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
-export class PublicTestimonialService {
-  private readonly inflight = new Map<string, Promise<any>>();
+export class PublicTestimonialService extends CachedService {
+  protected readonly cacheEntity = 'testimonial';
+  protected readonly cacheNamespace = 'cms:public';
 
   constructor(
     private readonly testimonialRepo: TestimonialRepository,
-    @Optional() private readonly redis?: RedisService,
-  ) {}
-
-  private async getOrSet<T>(key: string, ttl: number, loader: () => Promise<T>): Promise<T> {
-    const cached = await this.redis?.get(key).catch(() => null);
-    if (cached) return JSON.parse(cached);
-    const existing = this.inflight.get(key);
-    if (existing) return existing;
-    const promise = loader().then(async (result) => {
-      this.inflight.delete(key);
-      await this.redis?.set(key, JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)), ttl).catch(() => {});
-      return result;
-    }).catch((err) => {
-      this.inflight.delete(key);
-      throw err;
-    });
-    this.inflight.set(key, promise);
-    return promise;
+    @Optional() redis?: RedisService,
+  ) {
+    super(redis);
   }
 
   async getList(query: any = {}) {
@@ -40,7 +26,7 @@ export class PublicTestimonialService {
     }
     if (query.projectId) filter.projectId = query.projectId;
 
-    return this.getOrSet('introduction:public:testimonial:list', 300, async () => {
+    return this.cachedList(filter, options, 300, async () => {
       const [data, total] = await Promise.all([
         this.testimonialRepo.findMany(filter, options),
         this.testimonialRepo.count(filter),
@@ -50,7 +36,7 @@ export class PublicTestimonialService {
   }
 
   async getOne(id: PrimaryKey) {
-    return this.getOrSet(`introduction:public:testimonial:detail:${id}`, 600, async () => {
+    return this.cachedDetail(id.toString(), 600, async () => {
       const item = await this.testimonialRepo.findActiveById(id);
       if (!item) throw new NotFoundException('Testimonial not found');
       return item;

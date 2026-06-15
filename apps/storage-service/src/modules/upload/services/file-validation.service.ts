@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import * as fs from 'fs';
 
 /**
  * File type definitions with MIME types and magic bytes
@@ -256,6 +257,41 @@ export class FileValidationService {
     return false;
   }
 
+  // Số byte header đọc từ đĩa để kiểm tra magic-byte. Chữ ký dài nhất hiện
+  // là 8 byte; đọc dư ra cho an toàn nhưng vẫn rất nhỏ (không nạp cả file).
+  private static readonly MAGIC_HEADER_BYTES = 16;
+
+  /**
+   * Đọc N byte đầu của file để validate magic-byte.
+   * - Nếu file có `path` (multer diskStorage): đọc trực tiếp từ đĩa, KHÔNG
+   *   nạp toàn bộ file vào RAM.
+   * - Nếu chỉ có `buffer` (vd. test, hoặc memoryStorage cũ): dùng buffer.
+   */
+  private async readMagicHeader(file: any): Promise<Buffer> {
+    if (file && typeof file.path === 'string' && file.path.length > 0) {
+      const fh = await fs.promises.open(file.path, 'r');
+      try {
+        const buf = Buffer.alloc(FileValidationService.MAGIC_HEADER_BYTES);
+        const { bytesRead } = await fh.read(
+          buf,
+          0,
+          FileValidationService.MAGIC_HEADER_BYTES,
+          0,
+        );
+        return buf.subarray(0, bytesRead);
+      } finally {
+        await fh.close();
+      }
+    }
+    if (file && Buffer.isBuffer(file.buffer)) {
+      return file.buffer.subarray(
+        0,
+        FileValidationService.MAGIC_HEADER_BYTES,
+      );
+    }
+    return Buffer.alloc(0);
+  }
+
   /**
    * Sanitize filename to prevent path traversal and other attacks
    */
@@ -299,7 +335,7 @@ export class FileValidationService {
   /**
    * Main validation method
    */
-  validateFile(file: any): { sanitizedOriginalName: string } {
+  async validateFile(file: any): Promise<{ sanitizedOriginalName: string }> {
     const lang = I18nContext.current()?.lang ?? 'en';
 
     if (!file) {
@@ -331,10 +367,12 @@ export class FileValidationService {
       this.validateMimeType(file.mimetype, fileTypeConfig.mimeTypes);
     }
 
-    // 6. Validate magic bytes (content validation)
+    // 6. Validate magic bytes (content validation). Đọc header từ ĐĨA
+    // (file.path) thay vì file.buffer để không nạp toàn bộ file vào RAM.
     if (fileTypeConfig.magicBytes && fileTypeConfig.magicBytes.length > 0) {
+      const header = await this.readMagicHeader(file);
       const isValidContent = this.validateMagicBytes(
-        file.buffer,
+        header,
         fileTypeConfig.magicBytes,
       );
       if (!isValidContent) {

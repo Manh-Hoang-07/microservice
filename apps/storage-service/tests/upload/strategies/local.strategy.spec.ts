@@ -21,53 +21,54 @@ function makeStrategy(destination: string) {
 
 describe('LocalStorageStrategy', () => {
   let tmpDir: string;
+  let srcDir: string;
+  const srcFiles: string[] = [];
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'storage-test-'));
+    srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'storage-src-'));
   });
 
   afterEach(() => {
-    // Clean up test files
-    try {
-      const files = fs.readdirSync(tmpDir);
-      for (const f of files) {
-        fs.unlinkSync(path.join(tmpDir, f));
+    // Clean up destination + temp source files
+    for (const dir of [tmpDir, srcDir]) {
+      try {
+        const files = fs.readdirSync(dir);
+        for (const f of files) fs.unlinkSync(path.join(dir, f));
+        fs.rmdirSync(dir);
+      } catch {
+        // ignore cleanup errors
       }
-      fs.rmdirSync(tmpDir);
-    } catch {
-      // ignore cleanup errors
     }
+    srcFiles.splice(0);
   });
 
-  describe('upload — uses stream pipeline', () => {
-    it('writes file content correctly using pipeline', async () => {
+  // Build a diskStorage-shaped file: content lives at `path`, no `buffer`.
+  function diskFile(content: Buffer | string, originalname: string, mimetype: string) {
+    const buf = Buffer.isBuffer(content) ? content : Buffer.from(content);
+    const p = path.join(srcDir, `${Math.random().toString(36).slice(2)}.tmp`);
+    fs.writeFileSync(p, buf);
+    srcFiles.push(p);
+    return { path: p, originalname, size: buf.length, mimetype };
+  }
+
+  describe('upload — streams from temp file path', () => {
+    it('writes file content correctly by streaming from file.path', async () => {
       const strategy = makeStrategy(tmpDir);
       const content = 'Hello, stream pipeline test!';
-      const file = {
-        buffer: Buffer.from(content),
-        originalname: 'test.txt',
-        size: Buffer.byteLength(content),
-        mimetype: 'text/plain',
-      };
+      const file = diskFile(content, 'test.txt', 'text/plain');
 
       const result = await strategy.upload(file);
 
-      // Verify file was written to disk
+      // Verify file was written to destination
       expect(fs.existsSync(result.path)).toBe(true);
-
-      // Verify content matches
       const written = fs.readFileSync(result.path, 'utf8');
       expect(written).toBe(content);
     });
 
     it('returns correct upload result metadata', async () => {
       const strategy = makeStrategy(tmpDir);
-      const file = {
-        buffer: Buffer.from('test data'),
-        originalname: 'photo.png',
-        size: 9,
-        mimetype: 'image/png',
-      };
+      const file = diskFile('test data', 'photo.png', 'image/png');
 
       const result = await strategy.upload(file);
 
@@ -77,37 +78,41 @@ describe('LocalStorageStrategy', () => {
       expect(result.mimetype).toBe('image/png');
     });
 
-    it('handles large buffers without error', async () => {
+    it('handles large files without error (streamed)', async () => {
       const strategy = makeStrategy(tmpDir);
-      // 1MB buffer to verify pipeline handles backpressure
-      const largeBuffer = Buffer.alloc(1024 * 1024, 0x42);
-      const file = {
-        buffer: largeBuffer,
-        originalname: 'large.bin',
-        size: largeBuffer.length,
-        mimetype: 'application/octet-stream',
-      };
+      // 1MB to verify pipeline handles backpressure
+      const large = Buffer.alloc(1024 * 1024, 0x42);
+      const file = diskFile(large, 'large.bin', 'application/octet-stream');
 
       const result = await strategy.upload(file);
 
       const stat = fs.statSync(result.path);
-      expect(stat.size).toBe(largeBuffer.length);
+      expect(stat.size).toBe(large.length);
     });
 
     it('generates unique filenames for concurrent uploads', async () => {
       const strategy = makeStrategy(tmpDir);
-      const files = Array.from({ length: 5 }, (_, i) => ({
-        buffer: Buffer.from(`content-${i}`),
-        originalname: 'same.txt',
-        size: 10,
-        mimetype: 'text/plain',
-      }));
+      const files = Array.from({ length: 5 }, (_, i) =>
+        diskFile(`content-${i}`, 'same.txt', 'text/plain'),
+      );
 
       const results = await Promise.all(files.map((f) => strategy.upload(f)));
       const filenames = results.map((r) => r.filename);
 
-      // All filenames should be unique
       expect(new Set(filenames).size).toBe(5);
+    });
+
+    it('falls back to buffer when path is absent (back-compat)', async () => {
+      const strategy = makeStrategy(tmpDir);
+      const file = {
+        buffer: Buffer.from('legacy buffer'),
+        originalname: 'legacy.txt',
+        size: 13,
+        mimetype: 'text/plain',
+      };
+
+      const result = await strategy.upload(file);
+      expect(fs.readFileSync(result.path, 'utf8')).toBe('legacy buffer');
     });
   });
 });

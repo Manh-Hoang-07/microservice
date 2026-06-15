@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { I18nService } from 'nestjs-i18n';
-import { RedisService } from '@package/redis';
+import { RedisService, CacheVersionService } from '@package/redis';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { UpdatePostDto } from '../dtos/update-post.dto';
 import { SlugHelper, t, createPaginationMeta, parseQueryOptions } from '@package/common';
@@ -15,6 +15,7 @@ export class AdminPostService {
   constructor(
     private readonly postRepo: PostRepository,
     private readonly i18n: I18nService,
+    private readonly cacheVersion: CacheVersionService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -140,9 +141,9 @@ export class AdminPostService {
       if (slug) {
         await this.redis?.del(`post:public:detail:${slug}`);
       }
-      // Increment the list version so all old list cache keys become stale.
+      // Bump the list version so all old list cache keys become stale.
       // Old keys expire naturally via their TTL (60s). No SCAN needed.
-      await this.redis?.incr('post:public:list:v');
+      await this.cacheVersion.bump('post:public:list');
     } catch (err: any) {
       this.logger.warn('Failed to clear post caches', (err as Error).message);
     }

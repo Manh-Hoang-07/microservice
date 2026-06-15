@@ -29,10 +29,11 @@ export { createPaginationMeta, parseQueryOptions, DEFAULT_MAX_TAKE, MAX_PAGE, ty
 // Shared DTOs
 export { BaseListQueryDto } from './dtos/base-list-query.dto';
 export { parseDurationToSeconds } from './helpers/duration.helper';
+export { jitterTtl } from './helpers/jitter.helper';
 export { t } from './helpers/i18n.helper';
 export { LruSet } from './helpers/lru-set.helper';
 export { SlugHelper } from './helpers/slug.helper';
-export { buildSearchText } from './helpers/search-text.helper';
+export { buildSearchText, capSearch, MAX_SEARCH_LENGTH } from './helpers/search-text.helper';
 export { EnumModule, type EnumItem } from './helpers/enum-module.helper';
 export { SanitizeHtmlPipe } from './pipes/sanitize-html.pipe';
 export { ParseBigIntPipe } from './pipes/parse-bigint.pipe';

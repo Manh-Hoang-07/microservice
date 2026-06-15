@@ -62,8 +62,7 @@ function makeMockRepo() {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
-    getMembers: jest.fn(),
-    countMembers: jest.fn(),
+    findMemberIds: jest.fn().mockResolvedValue([]),
     addMember: jest.fn(),
     removeMember: jest.fn(),
     // Run the callback with a fake tx so create/update flows execute.
@@ -74,15 +73,23 @@ function makeMockRepo() {
 function makeMockMemberRoleRepo() {
   return {
     assignByRoleCode: jest.fn(),
+    findUserIdsByRole: jest.fn().mockResolvedValue([]),
+  };
+}
+
+function makeMockMembersService() {
+  return {
+    listMembers: jest.fn().mockResolvedValue({ data: [], meta: { total: 0 } }),
   };
 }
 
 function createService() {
   const repo = makeMockRepo();
   const memberRoleRepo = makeMockMemberRoleRepo();
+  const membersService = makeMockMembersService();
   const i18n = {} as any;
-  const service = new GroupService(repo as any, memberRoleRepo as any, i18n);
-  return { service, repo, memberRoleRepo };
+  const service = new GroupService(repo as any, memberRoleRepo as any, membersService as any, i18n);
+  return { service, repo, memberRoleRepo, membersService };
 }
 
 // ---------------------------------------------------------------------------
@@ -224,15 +231,25 @@ describe('GroupService', () => {
   });
 
   describe('getMembers', () => {
-    it('returns paginated members', async () => {
-      const { service, repo } = createService();
+    it('verifies the group exists then delegates to the shared members service', async () => {
+      const { service, repo, membersService } = createService();
       repo.findById.mockResolvedValue({ id: BigInt(1) });
-      repo.getMembers.mockResolvedValue([{ userId: 'u1' }]);
-      repo.countMembers.mockResolvedValue(1);
+      const expected = { data: [{ id: '5' }], meta: { total: 1 } };
+      membersService.listMembers.mockResolvedValue(expected);
 
-      const result = await service.getMembers(BigInt(1), {});
-      expect(result.data).toHaveLength(1);
-      expect(result.meta).toBeDefined();
+      const result = await service.getMembers(BigInt(1), { search: 'x' });
+
+      expect(repo.findById).toHaveBeenCalledWith(BigInt(1));
+      expect(membersService.listMembers).toHaveBeenCalledWith(BigInt(1), { search: 'x' });
+      expect(result).toEqual(expected);
+    });
+
+    it('throws NotFoundException when group not found (does not call members service)', async () => {
+      const { service, repo, membersService } = createService();
+      repo.findById.mockResolvedValue(null);
+
+      await expect(service.getMembers(BigInt(999), {})).rejects.toThrow(NotFoundException);
+      expect(membersService.listMembers).not.toHaveBeenCalled();
     });
   });
 

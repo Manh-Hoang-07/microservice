@@ -1,22 +1,22 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
 import { CreateBannerDto } from '../dtos/create-banner.dto';
 import { UpdateBannerDto } from '../dtos/update-banner.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
 import { BannerFilter, BannerRepository } from '../../repositories/banner.repository';
 import { BannerLocationRepository } from '../../../banner-location/repositories/banner-location.repository';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class AdminBannerService {
   constructor(
     private readonly bannerRepo: BannerRepository,
     private readonly locationRepo: BannerLocationRepository,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
   private async clearCache(): Promise<void> {
-    await this.redis?.del('cms:public:banners:list').catch(() => {});
+    await this.cacheVersion.bump('cms:public:banners');
   }
 
   async getList(query: any = {}) {

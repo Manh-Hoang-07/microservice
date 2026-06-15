@@ -1,17 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { t, parseQueryOptions, createPaginationMeta } from '@package/common';
+import { t } from '@package/common';
 import { GroupRepository } from '../../repositories/group.repository';
 import { GroupMemberRoleRepository } from '../../repositories/group-member-role.repository';
-import { AddMemberDto } from '../../admin/dtos/add-member.dto';
+import { GroupMembersService } from '../../services/group-members.service';
+import { AuthClient } from '../../../../clients/auth.client';
+import { AddMemberByIdentifierDto } from '../dtos/add-member-by-identifier.dto';
 import { AssignMemberRoleDto } from '../dtos/assign-member-role.dto';
 import { SyncMemberRolesDto } from '../dtos/sync-member-roles.dto';
+import { ListMembersQueryDto } from '../dtos/list-members.query.dto';
+import { UpdateGroupInfoDto } from '../dtos/update-group-info.dto';
 
 @Injectable()
 export class GroupOwnerService {
   constructor(
     private readonly groupRepo: GroupRepository,
     private readonly memberRoleRepo: GroupMemberRoleRepository,
+    private readonly authClient: AuthClient,
+    private readonly membersService: GroupMembersService,
     private readonly i18n: I18nService,
   ) {}
 
@@ -21,16 +27,28 @@ export class GroupOwnerService {
     return group;
   }
 
-  private async assertMember(groupId: string, userId: string) {
-    const members = await this.groupRepo.findMemberIds(BigInt(groupId));
-    const isMember = members.some((id) => String(id) === userId);
-    if (!isMember) throw new NotFoundException(t(this.i18n, 'group.MEMBER_NOT_FOUND'));
+  // ─── Group info ──────────────────────────────────────────────────────────────
+
+  async getGroupInfo(groupId: string) {
+    return this.assertGroup(groupId);
   }
+
+  async updateGroupInfo(groupId: string, dto: UpdateGroupInfoDto) {
+    await this.assertGroup(groupId);
+    const data: Record<string, any> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.description !== undefined) data.description = dto.description;
+    return this.groupRepo.update(groupId, data);
+  }
+
+  // ─── Assignable roles ────────────────────────────────────────────────────────
 
   async getAssignableRoles(groupId: string) {
     await this.assertGroup(groupId);
     return this.memberRoleRepo.findAllGroupRoles();
   }
+
+  // ─── Member roles ────────────────────────────────────────────────────────────
 
   async getMemberRoles(groupId: string, memberId: string) {
     await this.assertGroup(groupId);
@@ -39,7 +57,8 @@ export class GroupOwnerService {
 
   async assignRole(groupId: string, memberId: string, dto: AssignMemberRoleDto) {
     await this.assertGroup(groupId);
-    await this.assertMember(groupId, memberId);
+    const isMember = await this.groupRepo.isMember(groupId, memberId);
+    if (!isMember) throw new NotFoundException(t(this.i18n, 'group.MEMBER_NOT_FOUND'));
     await this.memberRoleRepo.assign(memberId, groupId, dto.roleId);
     return { message: t(this.i18n, 'group.ROLE_ASSIGNED') };
   }
@@ -52,25 +71,33 @@ export class GroupOwnerService {
 
   async syncRoles(groupId: string, memberId: string, dto: SyncMemberRolesDto) {
     await this.assertGroup(groupId);
-    await this.assertMember(groupId, memberId);
+    const isMember = await this.groupRepo.isMember(groupId, memberId);
+    if (!isMember) throw new NotFoundException(t(this.i18n, 'group.MEMBER_NOT_FOUND'));
     await this.memberRoleRepo.syncRoles(memberId, groupId, dto.roleIds);
     return { message: t(this.i18n, 'group.ROLES_SYNCED') };
   }
 
-  async getMembers(groupId: string, query: any) {
+  // ─── Members ─────────────────────────────────────────────────────────────────
+
+  async getMembers(groupId: string, query: ListMembersQueryDto) {
     await this.assertGroup(groupId);
-    const options = parseQueryOptions(query);
-    const [data, total] = await Promise.all([
-      this.groupRepo.getMembers(groupId, options.skip, options.take),
-      this.groupRepo.countMembers(groupId),
-    ]);
-    return { data, meta: createPaginationMeta(options, total) };
+    return this.membersService.listMembers(groupId, query);
   }
 
-  async addMember(groupId: string, dto: AddMemberDto) {
+  async addMember(groupId: string, dto: AddMemberByIdentifierDto) {
     await this.assertGroup(groupId);
-    await this.groupRepo.addMember(groupId, dto.userId);
-    return { message: t(this.i18n, 'group.MEMBER_ADDED') };
+
+    const user = dto.email
+      ? await this.authClient.lookupByEmail(dto.email)
+      : await this.authClient.lookupByUsername(dto.username!);
+
+    if (!user) throw new NotFoundException(t(this.i18n, 'group.USER_NOT_FOUND'));
+
+    const alreadyMember = await this.groupRepo.isMember(groupId, user.id);
+    if (alreadyMember) throw new ConflictException(t(this.i18n, 'group.ALREADY_MEMBER'));
+
+    await this.groupRepo.addMember(groupId, user.id);
+    return { message: t(this.i18n, 'group.MEMBER_ADDED'), user };
   }
 
   async removeMember(groupId: string, userId: string) {

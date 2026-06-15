@@ -149,6 +149,105 @@ describe('RbacPermissionIndexService', () => {
     });
   });
 
+  // --- expandAssigned (precomputed descendants) ---
+  describe('expandAssigned', () => {
+    // Reference impl mirroring the ORIGINAL O(N×depth) logic: for every code,
+    // include it if an ancestor (or itself) is in the assigned set.
+    function referenceExpand(perms: Array<{ code: string; parentId: any }>, assigned: Set<string>): Set<string> {
+      const byId = new Map<string, { code: string; parentId: string | null }>();
+      for (const p of perms) byId.set(String((p as any).id), { code: p.code, parentId: p.parentId != null ? String(p.parentId) : null });
+      const byCode = new Map<string, { code: string; parentCode: string | null }>();
+      for (const p of perms) {
+        const parent = p.parentId != null ? byId.get(String(p.parentId)) : null;
+        byCode.set(p.code, { code: p.code, parentCode: parent?.code ?? null });
+      }
+      const grants = (need: string): boolean => {
+        if (assigned.has('system.manage')) return true;
+        if (assigned.has(need)) return true;
+        const visited = new Set<string>();
+        for (let cur = byCode.get(need); cur?.parentCode; ) {
+          if (visited.has(cur.parentCode)) break;
+          visited.add(cur.parentCode);
+          const parent = byCode.get(cur.parentCode);
+          if (!parent) break;
+          if (parent.code && assigned.has(parent.code)) return true;
+          cur = parent;
+        }
+        return false;
+      };
+      if (assigned.has('system.manage')) return new Set(byCode.keys());
+      const out = new Set(assigned);
+      for (const code of byCode.keys()) if (grants(code)) out.add(code);
+      return out;
+    }
+
+    const allCodes = ['system.manage', 'role', 'role.view', 'comic', 'comic.manage', 'comic.view'];
+    // Every subset would be 2^6; sample a representative set incl. edge cases.
+    const inputs: string[][] = [
+      [],
+      ['role.view'],
+      ['comic'],
+      ['comic.manage'],
+      ['comic.view'],
+      ['role', 'comic.manage'],
+      ['system.manage'],
+      ['system.manage', 'role.view'],
+      ['unknown.code'],
+      ['role', 'role.view', 'comic'],
+    ];
+
+    it.each(inputs)('matches the original behavior for assigned=%j', async (...assignedArr) => {
+      const { service, rbacRepo } = createService();
+      const perms = samplePermissions();
+      rbacRepo.findPermissions.mockResolvedValue(perms);
+      await service.prepare();
+
+      const assigned = new Set(assignedArr as string[]);
+      const expected = referenceExpand(perms, assigned);
+      const actual = service.expandAssigned(assigned);
+
+      expect([...actual].sort()).toEqual([...expected].sort());
+    });
+
+    it('system.manage expands to ALL known permission codes', async () => {
+      const { service, rbacRepo } = createService();
+      rbacRepo.findPermissions.mockResolvedValue(samplePermissions());
+      await service.prepare();
+
+      const result = service.expandAssigned(new Set(['system.manage']));
+      expect([...result].sort()).toEqual([...allCodes].sort());
+    });
+
+    it('uses precomputed descendants (parent expands to all descendants)', async () => {
+      const { service, rbacRepo } = createService();
+      rbacRepo.findPermissions.mockResolvedValue(samplePermissions());
+      await service.prepare();
+
+      const result = service.expandAssigned(new Set(['comic']));
+      expect(result.has('comic.manage')).toBe(true);
+      expect(result.has('comic.view')).toBe(true);
+      // unrelated branch not included
+      expect(result.has('role.view')).toBe(false);
+    });
+
+    it('rebuilds descendants on refresh (new tree reflected)', async () => {
+      const { service, rbacRepo } = createService();
+      rbacRepo.findPermissions.mockResolvedValueOnce(samplePermissions());
+      await service.prepare();
+
+      // New tree: comic.view re-parented away from comic.manage.
+      rbacRepo.findPermissions.mockResolvedValueOnce([
+        { id: BigInt(4), code: 'comic', parentId: null },
+        { id: BigInt(5), code: 'comic.manage', parentId: BigInt(4) },
+        { id: BigInt(6), code: 'comic.view', parentId: null },
+      ]);
+      await service.refreshNow();
+
+      const result = service.expandAssigned(new Set(['comic.manage']));
+      expect(result.has('comic.view')).toBe(false);
+    });
+  });
+
   // --- hasAnyRequiredFromAssigned ---
   describe('hasAnyRequiredFromAssigned', () => {
     it('should return true if any required permission matches', async () => {

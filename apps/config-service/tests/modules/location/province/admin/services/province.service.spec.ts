@@ -13,7 +13,12 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
+
+// CacheVersionService is provided by @package/redis (no per-service wrapper).
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 
@@ -48,19 +53,16 @@ function makeMockI18n() {
   return { t: jest.fn((_key: string) => _key) };
 }
 
-function makeMockRedis() {
-  return {
-    keys: jest.fn().mockResolvedValue([]),
-    deleteMany: jest.fn().mockResolvedValue(1),
-  };
+function makeMockCacheVersion() {
+  return { bump: jest.fn().mockResolvedValue(undefined) };
 }
 
 function createService(overrides: any = {}) {
   const repo = overrides.repo ?? makeMockRepo();
   const i18n = overrides.i18n ?? makeMockI18n();
-  const redis = overrides.redis ?? makeMockRedis();
-  const service = new ProvinceService(repo as any, i18n as any, redis as any);
-  return { service, repo, i18n, redis };
+  const cacheVersion = overrides.cacheVersion ?? makeMockCacheVersion();
+  const service = new ProvinceService(repo as any, i18n as any, cacheVersion as any);
+  return { service, repo, i18n, cacheVersion };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,11 +113,11 @@ describe('ProvinceService (admin)', () => {
   });
 
   describe('create', () => {
-    it('should create and clear cache', async () => {
-      const { service, repo, redis } = createService();
+    it('should create and bump the provinces cache version', async () => {
+      const { service, cacheVersion } = createService();
       const result = await service.create({ name: 'HCM' });
       expect(result).toBeDefined();
-      expect(redis.keys).toHaveBeenCalledWith('config:public:provinces:*');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:provinces');
     });
   });
 
@@ -159,27 +161,20 @@ describe('ProvinceService (admin)', () => {
     });
   });
 
-  describe('cache clearing', () => {
-    it('should delete matching keys when they exist', async () => {
-      const { service, repo, redis } = createService();
+  describe('cache invalidation', () => {
+    it('bumps the provinces version on update', async () => {
+      const { service, repo, cacheVersion } = createService();
       repo.findById.mockResolvedValue({ id: '1' });
-      redis.keys.mockResolvedValue(['config:public:provinces:1', 'config:public:provinces:2']);
-
-      await service.create({ name: 'X' });
-
-      expect(redis.deleteMany).toHaveBeenCalledWith([
-        'config:public:provinces:1',
-        'config:public:provinces:2',
-      ]);
+      await service.update('1', { name: 'X' });
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:provinces');
     });
 
-    it('should not call deleteMany when no keys found', async () => {
-      const { service, repo, redis } = createService();
-      redis.keys.mockResolvedValue([]);
-
-      await service.create({ name: 'X' });
-
-      expect(redis.deleteMany).not.toHaveBeenCalled();
+    it('bumps the provinces version on delete', async () => {
+      const { service, repo, cacheVersion } = createService();
+      repo.findById.mockResolvedValue({ id: '1' });
+      repo.countWards.mockResolvedValue(0);
+      await service.delete('1');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:provinces');
     });
   });
 });

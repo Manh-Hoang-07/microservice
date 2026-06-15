@@ -69,20 +69,29 @@ function makeMockConfig() {
   return { get: jest.fn().mockReturnValue(false) };
 }
 
+function makeMockCacheVersion() {
+  return {
+    bump: jest.fn().mockResolvedValue(undefined),
+    getVersion: jest.fn().mockResolvedValue(0),
+  };
+}
+
 function buildService() {
   const chapterRepo = makeMockChapterRepo();
   const i18n = makeMockI18n();
   const config = makeMockConfig();
   const redis = makeMockRedis();
+  const cacheVersion = makeMockCacheVersion();
 
   const service = new AdminChapterService(
     chapterRepo as any,
     i18n as any,
     config as any,
+    cacheVersion as any,
     redis as any,
   );
 
-  return { service, chapterRepo, i18n, config, redis };
+  return { service, chapterRepo, i18n, config, redis, cacheVersion };
 }
 
 const sampleChapter = {
@@ -257,7 +266,7 @@ describe('AdminChapterService', () => {
     });
 
     it('clears caches after create', async () => {
-      const { service, chapterRepo, redis } = buildService();
+      const { service, chapterRepo, redis, cacheVersion } = buildService();
       const created = { ...sampleChapter, id: 2n };
       chapterRepo.findByIndex.mockResolvedValue(null);
       chapterRepo.create.mockResolvedValue(created);
@@ -267,8 +276,8 @@ describe('AdminChapterService', () => {
 
       expect(redis.del).toHaveBeenCalledWith('comic:public:chapter:2');
       expect(redis.del).toHaveBeenCalledWith('comic:public:pages:2');
-      expect(redis.incr).toHaveBeenCalledWith('comic:public:chapters:v');
-      expect(redis.incr).toHaveBeenCalledWith('comic:public:nav:v');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('comic:public:chapters');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('comic:public:nav');
     });
   });
 

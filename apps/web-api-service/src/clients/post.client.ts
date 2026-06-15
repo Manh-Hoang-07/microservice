@@ -27,7 +27,7 @@ export class PostClient implements OnModuleInit {
   private readonly internalSecret: string;
 
   constructor(private readonly config: ConfigService) {
-    this.baseUrl = config.get<string>('gateway.postServiceUrl', 'http://localhost:3007/api');
+    this.baseUrl = config.get<string>('gateway.postServiceUrl', 'http://localhost:3008/api/posts');
     this.timeout = config.get<number>('gateway.serviceTimeoutMs', 5000);
     this.internalSecret = config.get<string>('gateway.internalApiSecret', '');
   }

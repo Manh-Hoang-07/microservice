@@ -1,11 +1,6 @@
 // ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
-jest.mock('@package/common', () => ({
-  createPaginationMeta: jest.fn((opts: any, total: number) => ({ page: 1, total })),
-  parseQueryOptions: jest.fn((q: any) => ({ skip: 0, take: q.limit ?? 20 })),
-}));
-
 jest.mock('@package/bootstrap', () => ({ FileLogger: jest.fn() }));
 
 jest.mock('nestjs-i18n', () => ({
@@ -13,7 +8,11 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+// Keep the real CachedService (pure, crypto-based) but stub RedisService class.
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 
@@ -55,11 +54,24 @@ function makeMockProvinceService() {
   };
 }
 
-function makeMockRedis(enabled = true) {
+/** Map-backed fake Redis tracking keys actually written. */
+function makeFakeRedis() {
+  const store = new Map<string, string>();
+  const setCalls: Array<{ key: string; value: string }> = [];
   return {
-    isEnabled: jest.fn().mockReturnValue(enabled),
-    get: jest.fn().mockResolvedValue(null),
-    set: jest.fn().mockResolvedValue('OK'),
+    store,
+    setCalls,
+    isEnabled: jest.fn().mockReturnValue(true),
+    get: jest.fn(async (k: string) => (store.has(k) ? store.get(k)! : null)),
+    set: jest.fn(async (k: string, v: string) => {
+      store.set(k, v);
+      setCalls.push({ key: k, value: v });
+    }),
+    incr: jest.fn(async (k: string) => {
+      const n = Number(store.get(k) ?? '0') + 1;
+      store.set(k, String(n));
+      return n;
+    }),
   };
 }
 
@@ -70,23 +82,8 @@ describe('PublicCountryService', () => {
   afterEach(() => jest.restoreAllMocks());
 
   describe('getList', () => {
-    it('should return cached countries from Redis', async () => {
-      const redis = makeMockRedis();
-      const cached = { data: [{ id: '1', name: 'VN' }], meta: { total: 1 } };
-      redis.get.mockResolvedValue(JSON.stringify(cached));
-
-      const service = new PublicCountryService(
-        makeMockCountryService() as any,
-        makeMockProvinceService() as any,
-        redis as any,
-      );
-
-      const result = await service.getList();
-      expect(result).toEqual(cached);
-    });
-
-    it('should fetch from admin service on cache miss', async () => {
-      const redis = makeMockRedis();
+    it('should fetch from admin service on cache miss and write a versioned key', async () => {
+      const redis = makeFakeRedis();
       const countryService = makeMockCountryService();
       countryService.getList.mockResolvedValue({ data: [{ id: '1' }], meta: { total: 1 } });
 
@@ -101,9 +98,45 @@ describe('PublicCountryService', () => {
       expect(countryService.getList).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'active' }),
       );
+      // Dynamic, version-aware key under the countries entity.
+      expect(redis.setCalls[0].key).toMatch(/^config:public:countries:list:v0:[0-9a-f]{16}$/);
     });
 
-    it('should work without Redis', async () => {
+    it('serves a second identical query from cache (loader runs once)', async () => {
+      const redis = makeFakeRedis();
+      const countryService = makeMockCountryService();
+      countryService.getList.mockResolvedValue({ data: [{ id: '1' }] });
+
+      const service = new PublicCountryService(
+        countryService as any,
+        makeMockProvinceService() as any,
+        redis as any,
+      );
+
+      await service.getList();
+      const second = await service.getList();
+      expect(second).toEqual({ data: [{ id: '1' }] });
+      expect(countryService.getList).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses distinct keys for different query variants (no collision)', async () => {
+      const redis = makeFakeRedis();
+      const countryService = makeMockCountryService();
+      const service = new PublicCountryService(
+        countryService as any,
+        makeMockProvinceService() as any,
+        redis as any,
+      );
+
+      await service.getList({ page: 1, search: 'a' });
+      await service.getList({ page: 2, search: 'a' });
+      await service.getList({ page: 1, search: 'b' });
+
+      expect(new Set(redis.setCalls.map((c) => c.key)).size).toBe(3);
+      expect(countryService.getList).toHaveBeenCalledTimes(3);
+    });
+
+    it('should work without Redis (passthrough)', async () => {
       const countryService = makeMockCountryService();
       const service = new PublicCountryService(
         countryService as any,
@@ -117,8 +150,8 @@ describe('PublicCountryService', () => {
   });
 
   describe('getProvinces', () => {
-    it('should return provinces for a country', async () => {
-      const redis = makeMockRedis();
+    it('should return provinces for a country under the provinces entity key', async () => {
+      const redis = makeFakeRedis();
       const provinceService = makeMockProvinceService();
       provinceService.getList.mockResolvedValue({ data: [{ id: '10' }], meta: { total: 1 } });
 
@@ -133,13 +166,11 @@ describe('PublicCountryService', () => {
       expect(provinceService.getList).toHaveBeenCalledWith(
         expect.objectContaining({ countryId: '1', status: 'active' }),
       );
+      expect(redis.setCalls[0].key).toMatch(/^config:public:provinces:list:v0:/);
     });
 
-    it('should use cached provinces', async () => {
-      const redis = makeMockRedis();
-      const cached = { data: [{ id: '10' }] };
-      redis.get.mockResolvedValue(JSON.stringify(cached));
-
+    it('uses distinct keys per country (no cross-country collision)', async () => {
+      const redis = makeFakeRedis();
       const provinceService = makeMockProvinceService();
       const service = new PublicCountryService(
         makeMockCountryService() as any,
@@ -147,9 +178,11 @@ describe('PublicCountryService', () => {
         redis as any,
       );
 
-      const result = await service.getProvinces('1');
-      expect(result).toEqual(cached);
-      expect(provinceService.getList).not.toHaveBeenCalled();
+      await service.getProvinces('1');
+      await service.getProvinces('2');
+
+      expect(new Set(redis.setCalls.map((c) => c.key)).size).toBe(2);
+      expect(provinceService.getList).toHaveBeenCalledTimes(2);
     });
   });
 });

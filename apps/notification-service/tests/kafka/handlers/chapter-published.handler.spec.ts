@@ -101,4 +101,60 @@ describe('ChapterPublishedHandler', () => {
       handler.handle({ comic_id: '1', comic_title: 'T', chapter_label: 'Ch1' }),
     ).rejects.toThrow('1 batch(es) failed');
   });
+
+  it('should split followers into 500-sized batches and cover every follower', async () => {
+    // 1100 followers → 3 batches (500, 500, 100)
+    const followers = Array.from({ length: 1100 }, (_, i) => ({ userId: BigInt(i + 1) }));
+    followersProjectionRepo.findByComicId.mockResolvedValue(followers);
+
+    await handler.handle({ comic_id: '7', comic_title: 'C', chapter_label: 'Ch1' });
+
+    expect(notifService.createMany).toHaveBeenCalledTimes(3);
+    const sizes = notifService.createMany.mock.calls.map((c) => c[0].length);
+    expect(sizes).toEqual([500, 500, 100]);
+    // Every follower id appears exactly once across all batches.
+    const allIds = notifService.createMany.mock.calls.flatMap((c) => c[0].map((n: any) => n.userId));
+    expect(allIds).toHaveLength(1100);
+    expect(new Set(allIds).size).toBe(1100);
+  });
+
+  it('should run batches with bounded concurrency (max 4 in flight)', async () => {
+    // 10 batches worth of followers (5000 → 10 batches).
+    const followers = Array.from({ length: 5000 }, (_, i) => ({ userId: BigInt(i + 1) }));
+    followersProjectionRepo.findByComicId.mockResolvedValue(followers);
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    notifService.createMany.mockImplementation(async () => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return { count: 500 };
+    });
+
+    await handler.handle({ comic_id: '9', comic_title: 'C', chapter_label: 'Ch1' });
+
+    expect(notifService.createMany).toHaveBeenCalledTimes(10);
+    expect(maxInFlight).toBeGreaterThan(1); // actually parallel
+    expect(maxInFlight).toBeLessThanOrEqual(4); // but bounded
+  });
+
+  it('should process all batches even if some fail, then throw with failure count', async () => {
+    const followers = Array.from({ length: 1500 }, (_, i) => ({ userId: BigInt(i + 1) }));
+    followersProjectionRepo.findByComicId.mockResolvedValue(followers);
+
+    let call = 0;
+    notifService.createMany.mockImplementation(async () => {
+      call++;
+      if (call === 2) throw new Error('DB error');
+      return { count: 500 };
+    });
+
+    await expect(
+      handler.handle({ comic_id: '3', comic_title: 'C', chapter_label: 'Ch1' }),
+    ).rejects.toThrow('1 batch(es) failed');
+    // All 3 batches attempted despite the failure.
+    expect(notifService.createMany).toHaveBeenCalledTimes(3);
+  });
 });

@@ -1,12 +1,14 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { RedisService } from '@package/redis';
-import { CachedService } from '../../../../core/cache/cached.service';
+import { CachedService, RedisService } from '@package/redis';
 import { MenuRepository, MenuFilter } from '../../repositories/menu.repository';
 import { buildMenuTree, filterPublicMenus } from '../../helpers/menu.helper';
 import { BasicStatus } from '../../enums/basic-status.enum';
 
 @Injectable()
 export class PublicMenuService extends CachedService {
+  protected readonly cacheEntity = 'menu';
+  protected readonly cacheNamespace = 'config:public';
+
   constructor(
     private readonly menuRepo: MenuRepository,
     @Optional() redis?: RedisService,

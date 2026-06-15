@@ -58,6 +58,8 @@ function makeMockRbacCache() {
   return {
     getPermissions: jest.fn(),
     setPermissions: jest.fn(),
+    getEffective: jest.fn().mockResolvedValue({ cached: false, codes: [] }),
+    setEffective: jest.fn().mockResolvedValue(undefined),
     bumpVersion: jest.fn(),
     clearAllUserCaches: jest.fn(),
   };
@@ -68,6 +70,7 @@ function makeMockPermissionIndex() {
     prepare: jest.fn(),
     matchesAssigned: jest.fn(),
     hasAnyRequiredFromAssigned: jest.fn(),
+    expandAssigned: jest.fn((s: Set<string>) => s),
   };
 }
 
@@ -194,6 +197,48 @@ describe('RbacService', () => {
       expect(r2).toEqual(new Set(['perm1']));
       // prepare was called only once because the second call joined the in-flight
       expect(permIndex.prepare).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // --- getEffectivePermissions (expanded-set cache + single-flight) ---
+  describe('getEffectivePermissions', () => {
+    it('returns the cached expanded set without recomputing', async () => {
+      const { service, rbacCache, permIndex } = createService();
+      rbacCache.getEffective.mockResolvedValue({ cached: true, codes: ['a', 'b'] });
+
+      const result = await service.getEffectivePermissions('1');
+      expect(result).toEqual(new Set(['a', 'b']));
+      expect(permIndex.prepare).not.toHaveBeenCalled();
+      expect(permIndex.expandAssigned).not.toHaveBeenCalled();
+      expect(rbacCache.setEffective).not.toHaveBeenCalled();
+    });
+
+    it('computes, expands and caches on a miss', async () => {
+      const { service, rbacCache, permIndex } = createService();
+      rbacCache.getEffective.mockResolvedValue({ cached: false, codes: [] });
+      rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['a'] });
+      permIndex.expandAssigned.mockReturnValue(new Set(['a', 'a.child']));
+
+      const result = await service.getEffectivePermissions('1');
+      expect(result).toEqual(new Set(['a', 'a.child']));
+      expect(rbacCache.setEffective).toHaveBeenCalledWith('1', ['a', 'a.child']);
+    });
+
+    it('coalesces concurrent misses for the same user (single-flight)', async () => {
+      const { service, rbacCache, permIndex } = createService();
+      rbacCache.getEffective.mockResolvedValue({ cached: false, codes: [] });
+      rbacCache.getPermissions.mockResolvedValue({ cached: true, codes: ['a'] });
+      let unblock!: () => void;
+      permIndex.prepare.mockReturnValue(new Promise<void>((r) => { unblock = r; }));
+      permIndex.expandAssigned.mockReturnValue(new Set(['a']));
+
+      const p1 = service.getEffectivePermissions('1');
+      const p2 = service.getEffectivePermissions('1');
+      unblock();
+      await Promise.all([p1, p2]);
+
+      expect(permIndex.prepare).toHaveBeenCalledTimes(1);
+      expect(rbacCache.setEffective).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, Patch, Body } from '@nestjs/common';
-import { Permission, session } from '@package/common';
+import { Permission, AuditLog, ParseBigIntPipe, session } from '@package/common';
 import { toPrimaryKey } from 'src/types';
 import { AdminContactService } from '../services/contact.service';
 import { ReplyContactDto } from '../dtos/reply-contact.dto';
@@ -19,30 +19,33 @@ export class AdminContactController {
 
   @Permission('cms.contact.manage')
   @Get(':id')
-  async getOne(@Param('id') id: string) {
-    return this.contactService.getOne(toPrimaryKey(id));
+  async getOne(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.contactService.getOne(id);
   }
 
   @Permission('cms.contact.manage')
+  @AuditLog({ action: 'cms.contact.reply', resource: 'contact' })
   @Patch(':id/reply')
   async reply(
-    @Param('id') id: string,
+    @Param('id', ParseBigIntPipe) id: bigint,
     @Body() body: ReplyContactDto,
   ) {
     const ctx = session()!;
     const actorId = ctx.userId ? toPrimaryKey(ctx.userId) : undefined;
-    return this.contactService.reply(toPrimaryKey(id), body.reply, actorId);
+    return this.contactService.reply(id, body.reply, actorId);
   }
 
   @Permission('cms.contact.manage')
+  @AuditLog({ action: 'cms.contact.mark_read', resource: 'contact' })
   @Patch(':id/read')
-  async markAsRead(@Param('id') id: string) {
-    return this.contactService.markAsRead(toPrimaryKey(id));
+  async markAsRead(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.contactService.markAsRead(id);
   }
 
   @Permission('cms.contact.manage')
+  @AuditLog({ action: 'cms.contact.close', resource: 'contact' })
   @Patch(':id/close')
-  async closeContact(@Param('id') id: string) {
-    return this.contactService.closeContact(toPrimaryKey(id));
+  async closeContact(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.contactService.closeContact(id);
   }
 }

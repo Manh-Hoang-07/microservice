@@ -1,33 +1,19 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
+import { CachedService, RedisService } from '@package/redis';
 import { GalleryFilter, GalleryRepository } from '../../repositories/gallery.repository';
 import { BasicStatus } from '../../../../common/enums/status.enum';
 
 @Injectable()
-export class PublicGalleryService {
-  private readonly inflight = new Map<string, Promise<any>>();
+export class PublicGalleryService extends CachedService {
+  protected readonly cacheEntity = 'gallery';
+  protected readonly cacheNamespace = 'cms:public';
 
   constructor(
     private readonly galleryRepo: GalleryRepository,
-    @Optional() private readonly redis?: RedisService,
-  ) {}
-
-  private async getOrSet<T>(key: string, ttl: number, loader: () => Promise<T>): Promise<T> {
-    const cached = await this.redis?.get(key).catch(() => null);
-    if (cached) return JSON.parse(cached);
-    const existing = this.inflight.get(key);
-    if (existing) return existing;
-    const promise = loader().then(async (result) => {
-      this.inflight.delete(key);
-      await this.redis?.set(key, JSON.stringify(result), ttl).catch(() => {});
-      return result;
-    }).catch((err) => {
-      this.inflight.delete(key);
-      throw err;
-    });
-    this.inflight.set(key, promise);
-    return promise;
+    @Optional() redis?: RedisService,
+  ) {
+    super(redis);
   }
 
   async getList(query: any = {}) {
@@ -38,7 +24,7 @@ export class PublicGalleryService {
       filter.featured = query.featured === 'true' || query.featured === true;
     }
 
-    return this.getOrSet('introduction:public:gallery:list', 300, async () => {
+    return this.cachedList(filter, options, 300, async () => {
       const [data, total] = await Promise.all([
         this.galleryRepo.findMany(filter, options),
         this.galleryRepo.count(filter),
@@ -48,7 +34,7 @@ export class PublicGalleryService {
   }
 
   async getBySlug(slug: string) {
-    return this.getOrSet(`introduction:public:gallery:detail:${slug}`, 600, async () => {
+    return this.cachedDetail(slug, 600, async () => {
       const item = await this.galleryRepo.findActiveBySlug(slug);
       if (!item) throw new NotFoundException('Gallery not found');
       return item;

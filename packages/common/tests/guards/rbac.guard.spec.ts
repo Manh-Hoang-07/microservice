@@ -20,6 +20,7 @@ type RedisStub = {
   get: jest.Mock;
   set: jest.Mock;
   getOrSet: jest.Mock;
+  getOrSetWithLock: jest.Mock;
 };
 
 function buildReflector(perms: string[] | undefined): ReflectorStub {
@@ -40,6 +41,17 @@ function buildRedis(overrides: Partial<RedisStub> = {}): RedisStub {
     get: jest.fn().mockResolvedValue(null),
     set: jest.fn().mockResolvedValue(undefined),
     getOrSet: jest.fn().mockImplementation(async (key, factory, ttl) => {
+      const cached = await stub.get(key);
+      if (cached !== null && cached !== undefined) {
+        return JSON.parse(cached);
+      }
+      const fresh = await factory();
+      await stub.set(key, JSON.stringify(fresh), ttl);
+      return fresh;
+    }),
+    // Mirror getOrSet semantics — the guard now uses getOrSetWithLock; the
+    // distributed lock is exercised in the RedisService spec, not here.
+    getOrSetWithLock: jest.fn().mockImplementation(async (key, factory, ttl) => {
       const cached = await stub.get(key);
       if (cached !== null && cached !== undefined) {
         return JSON.parse(cached);

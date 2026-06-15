@@ -13,7 +13,12 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
+
+// CacheVersionService is provided by @package/redis (no per-service wrapper).
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 
@@ -55,12 +60,17 @@ function makeMockRedis() {
   return { del: jest.fn().mockResolvedValue(1) };
 }
 
+function makeMockCacheVersion() {
+  return { bump: jest.fn().mockResolvedValue(undefined) };
+}
+
 function createService(overrides: any = {}) {
   const repo = overrides.repo ?? makeMockMenuRepo();
   const i18n = overrides.i18n ?? makeMockI18n();
+  const cacheVersion = overrides.cacheVersion ?? makeMockCacheVersion();
   const redis = overrides.redis ?? makeMockRedis();
-  const service = new MenuService(repo as any, i18n as any, redis as any);
-  return { service, repo, i18n, redis };
+  const service = new MenuService(repo as any, i18n as any, cacheVersion as any, redis as any);
+  return { service, repo, i18n, cacheVersion, redis };
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +153,7 @@ describe('MenuService (admin)', () => {
   // --- create ---
   describe('create', () => {
     it('should create a menu item', async () => {
-      const { service, repo, redis } = createService();
+      const { service, repo, redis, cacheVersion } = createService();
       const dto = { name: 'New Menu', code: 'new_menu' };
       repo.findByCode.mockResolvedValue(null);
       repo.create.mockResolvedValue({ id: '1', ...dto });
@@ -153,6 +163,8 @@ describe('MenuService (admin)', () => {
       expect(result).toEqual({ id: '1', ...dto });
       expect(repo.create).toHaveBeenCalledWith(dto);
       expect(redis.del).toHaveBeenCalledWith('config:public:menu');
+      // Also bump the version key shared with UserMenuService's raw-menu cache.
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:menu');
     });
 
     it('should throw BadRequestException if code already exists', async () => {
@@ -374,7 +386,8 @@ describe('MenuService (admin)', () => {
     it('should work when Redis is undefined', async () => {
       const repo = makeMockMenuRepo();
       const i18n = makeMockI18n();
-      const service = new MenuService(repo as any, i18n as any, undefined);
+      const cacheVersion = makeMockCacheVersion();
+      const service = new MenuService(repo as any, i18n as any, cacheVersion as any, undefined);
 
       repo.findByCode.mockResolvedValue(null);
       repo.create.mockResolvedValue({ id: '1' });

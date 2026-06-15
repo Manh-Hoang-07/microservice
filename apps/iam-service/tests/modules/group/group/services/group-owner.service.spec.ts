@@ -22,7 +22,7 @@ jest.mock('src/types', () => ({ toPrimaryKey: (v) => BigInt(v) }), { virtual: tr
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { GroupOwnerService } from '../../../../../src/modules/group/group/services/group-owner.service';
 
 // ---------------------------------------------------------------------------
@@ -35,29 +35,45 @@ function makeGroup(id) {
 function makeService({
   group = undefined,
   memberIds = [],
-  members = [],
-  memberCount = 0,
+  roleUserIds = [],
+  users = [],
   roles = [],
   allGroupRoles = [],
+  isMember = false,
 } = {}) {
   const groupRepo = {
     findById: jest.fn().mockResolvedValue(group),
     findMemberIds: jest.fn().mockResolvedValue(memberIds),
-    getMembers: jest.fn().mockResolvedValue(members),
-    countMembers: jest.fn().mockResolvedValue(memberCount),
+    isMember: jest.fn().mockResolvedValue(isMember),
     addMember: jest.fn().mockResolvedValue({}),
     removeMember: jest.fn().mockResolvedValue({ count: 1 }),
+    update: jest.fn().mockResolvedValue({}),
   };
   const memberRoleRepo = {
     findByUserAndGroup: jest.fn().mockResolvedValue(roles),
+    findUserIdsByRole: jest.fn().mockResolvedValue(roleUserIds),
     assign: jest.fn().mockResolvedValue({}),
     remove: jest.fn().mockResolvedValue({ count: 1 }),
     syncRoles: jest.fn().mockResolvedValue(undefined),
     findAllGroupRoles: jest.fn().mockResolvedValue(allGroupRoles),
   };
+  const authClient = {
+    getUsersByIds: jest.fn().mockResolvedValue(users),
+    lookupByEmail: jest.fn().mockResolvedValue(null),
+    lookupByUsername: jest.fn().mockResolvedValue(null),
+  };
+  const membersService = {
+    listMembers: jest.fn().mockResolvedValue({ data: users, meta: { total: users.length, page: 1, take: 10 } }),
+  };
   const i18n = {} as any;
-  const service = new GroupOwnerService(groupRepo as any, memberRoleRepo as any, i18n);
-  return { service, groupRepo, memberRoleRepo };
+  const service = new GroupOwnerService(
+    groupRepo as any,
+    memberRoleRepo as any,
+    authClient as any,
+    membersService as any,
+    i18n,
+  );
+  return { service, groupRepo, memberRoleRepo, authClient, membersService };
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +102,7 @@ describe('GroupOwnerService.assignRole', () => {
   it('assigns role when target is a member', async () => {
     const { service, memberRoleRepo } = makeService({
       group: makeGroup('10'),
-      memberIds: [BigInt('5'), BigInt('6')],
+      isMember: true,
     });
 
     const result = await service.assignRole('10', '5', { roleId: '1' });
@@ -98,7 +114,7 @@ describe('GroupOwnerService.assignRole', () => {
   it('throws NotFoundException when target is not a member', async () => {
     const { service } = makeService({
       group: makeGroup('10'),
-      memberIds: [BigInt('6')],
+      isMember: false,
     });
 
     await expect(service.assignRole('10', '5', { roleId: '1' })).rejects.toThrow(NotFoundException);
@@ -136,7 +152,7 @@ describe('GroupOwnerService.syncRoles', () => {
   it('syncs roles when target is a member', async () => {
     const { service, memberRoleRepo } = makeService({
       group: makeGroup('10'),
-      memberIds: [BigInt('5')],
+      isMember: true,
     });
 
     const result = await service.syncRoles('10', '5', { roleIds: ['1', '2'] });
@@ -148,7 +164,7 @@ describe('GroupOwnerService.syncRoles', () => {
   it('throws NotFoundException when target is not a member', async () => {
     const { service } = makeService({
       group: makeGroup('10'),
-      memberIds: [BigInt('6')],
+      isMember: false,
     });
 
     await expect(service.syncRoles('10', '5', { roleIds: ['1'] })).rejects.toThrow(NotFoundException);
@@ -159,25 +175,26 @@ describe('GroupOwnerService.syncRoles', () => {
 // Tests — getMembers
 // ---------------------------------------------------------------------------
 describe('GroupOwnerService.getMembers', () => {
-  it('returns paginated members', async () => {
-    const members = [{ userId: BigInt('5'), groupId: BigInt('10'), joinedAt: new Date() }];
-    const { service, groupRepo } = makeService({
+  it('verifies the group exists then delegates to the shared members service', async () => {
+    const users = [
+      { id: '5', name: 'A', email: 'a@x.com', username: 'ua', status: 'active' },
+    ];
+    const { service, groupRepo, membersService } = makeService({
       group: makeGroup('10'),
-      members,
-      memberCount: 1,
+      users,
     });
 
-    const result = await service.getMembers('10', {});
+    const result = await service.getMembers('10', { roleId: '2' } as any);
 
-    expect(result.data).toEqual(members);
-    expect(result.meta.total).toBe(1);
-    expect(groupRepo.getMembers).toHaveBeenCalledWith('10', 0, 10);
-    expect(groupRepo.countMembers).toHaveBeenCalledWith('10');
+    expect(groupRepo.findById).toHaveBeenCalledWith('10');
+    expect(membersService.listMembers).toHaveBeenCalledWith('10', { roleId: '2' });
+    expect(result.data).toEqual(users);
   });
 
-  it('throws NotFoundException when group not found', async () => {
-    const { service } = makeService({ group: null });
-    await expect(service.getMembers('10', {})).rejects.toThrow(NotFoundException);
+  it('throws NotFoundException when group not found (does not delegate)', async () => {
+    const { service, membersService } = makeService({ group: null });
+    await expect(service.getMembers('10', {} as any)).rejects.toThrow(NotFoundException);
+    expect(membersService.listMembers).not.toHaveBeenCalled();
   });
 });
 
@@ -185,18 +202,53 @@ describe('GroupOwnerService.getMembers', () => {
 // Tests — addMember
 // ---------------------------------------------------------------------------
 describe('GroupOwnerService.addMember', () => {
-  it('adds a member', async () => {
-    const { service, groupRepo } = makeService({ group: makeGroup('10') });
+  it('adds a member by email', async () => {
+    const { service, groupRepo, authClient } = makeService({
+      group: makeGroup('10'),
+      isMember: false,
+    });
+    authClient.lookupByEmail.mockResolvedValue({ id: '5', email: 'a@x.com' });
 
-    const result = await service.addMember('10', { userId: '5' });
+    const result = await service.addMember('10', { email: 'a@x.com' });
 
     expect(result.message).toBe('group.MEMBER_ADDED');
+    expect(authClient.lookupByEmail).toHaveBeenCalledWith('a@x.com');
     expect(groupRepo.addMember).toHaveBeenCalledWith('10', '5');
+  });
+
+  it('adds a member by username', async () => {
+    const { service, groupRepo, authClient } = makeService({
+      group: makeGroup('10'),
+      isMember: false,
+    });
+    authClient.lookupByUsername.mockResolvedValue({ id: '7', username: 'ub' });
+
+    const result = await service.addMember('10', { username: 'ub' });
+
+    expect(result.message).toBe('group.MEMBER_ADDED');
+    expect(authClient.lookupByUsername).toHaveBeenCalledWith('ub');
+    expect(groupRepo.addMember).toHaveBeenCalledWith('10', '7');
+  });
+
+  it('throws NotFoundException when user not found', async () => {
+    const { service } = makeService({ group: makeGroup('10') });
+    // lookup mocks default to null
+
+    await expect(service.addMember('10', { email: 'missing@x.com' })).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('throws ConflictException when already a member', async () => {
+    const { service, authClient } = makeService({ group: makeGroup('10'), isMember: true });
+    authClient.lookupByEmail.mockResolvedValue({ id: '5', email: 'a@x.com' });
+
+    await expect(service.addMember('10', { email: 'a@x.com' })).rejects.toThrow(ConflictException);
   });
 
   it('throws NotFoundException when group not found', async () => {
     const { service } = makeService({ group: null });
-    await expect(service.addMember('10', { userId: '5' })).rejects.toThrow(NotFoundException);
+    await expect(service.addMember('10', { email: 'a@x.com' })).rejects.toThrow(NotFoundException);
   });
 });
 

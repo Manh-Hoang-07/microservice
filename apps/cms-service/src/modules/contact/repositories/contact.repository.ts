@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { toPrimaryKey } from 'src/types';
+import { capSearch } from '@package/common';
 import { PrismaService } from '../../../core/database/prisma.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
@@ -38,10 +39,11 @@ export class ContactRepository {
   private buildWhere(filter: ContactFilter): Prisma.ContactWhereInput {
     const where: Prisma.ContactWhereInput = {};
     if (filter.search) {
+      const search = capSearch(filter.search);
       where.OR = [
-        { name: { contains: filter.search } },
-        { email: { contains: filter.search } },
-        { message: { contains: filter.search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { message: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status as Prisma.ContactWhereInput['status'];

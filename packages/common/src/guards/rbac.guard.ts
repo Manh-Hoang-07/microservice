@@ -16,6 +16,7 @@ import { createCircuitBreaker } from '@package/circuit-breaker';
 import { RedisService } from '@package/redis';
 import { PERMS_KEY } from '../decorators/permission.decorator';
 import { RbacVersionTracker } from '../rbac/rbac-version-tracker';
+import { jitterTtl } from '../helpers/jitter.helper';
 import { commonMsg } from '../i18n/common-messages';
 
 const RBAC_TIMEOUT_MS = 5_000;
@@ -129,10 +130,15 @@ export class RbacGuard implements CanActivate {
       });
 
       if (this.redis?.isEnabled()) {
-        effective = await this.redis.getOrSet<string[]>(
+        // getOrSetWithLock: a Redis SETNX lock collapses concurrent misses
+        // ACROSS pods to a single IAM fetch (plain getOrSet only dedups
+        // within one process). On a version bump every pod's cache expires
+        // at once — without the lock, N pods × M users all stampede IAM.
+        // jitterTtl spreads expiry so refreshes don't re-synchronise.
+        effective = await this.redis.getOrSetWithLock<string[]>(
           cacheKey,
           fetchEffective,
-          RBAC_GUARD_CACHE_TTL_S,
+          jitterTtl(RBAC_GUARD_CACHE_TTL_S),
         );
       } else {
         effective = await fetchEffective();

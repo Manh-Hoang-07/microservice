@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { Authenticated } from '@package/common';
+import { Controller, Get, Query } from '@nestjs/common';
+import { Authenticated, BaseListQueryDto } from '@package/common';
 import { UserGroupService } from '../services/user-group.service';
 
 @Controller('user/groups')
@@ -8,7 +8,7 @@ export class UserGroupController {
 
   @Authenticated()
   @Get()
-  getUserGroups() {
-    return this.service.getList({});
+  getMyGroups(@Query() query: BaseListQueryDto) {
+    return this.service.getList(query);
   }
 }

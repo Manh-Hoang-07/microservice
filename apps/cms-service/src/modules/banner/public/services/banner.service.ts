@@ -1,37 +1,19 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
+import { CachedService, RedisService } from '@package/redis';
 import { BannerFilter, BannerRepository } from '../../repositories/banner.repository';
 import { BannerStatus } from '../../enums/banner-status.enum';
 
 @Injectable()
-export class PublicBannerService {
-  private readonly inflight = new Map<string, Promise<any>>();
+export class PublicBannerService extends CachedService {
+  protected readonly cacheEntity = 'banners';
+  protected readonly cacheNamespace = 'cms:public';
 
   constructor(
     private readonly bannerRepo: BannerRepository,
-    @Optional() private readonly redis?: RedisService,
-  ) {}
-
-  private async getOrSet<T>(key: string, ttl: number, loader: () => Promise<T>): Promise<T> {
-    if (this.redis?.isEnabled()) {
-      const cached = await this.redis.get(key);
-      if (cached) return JSON.parse(cached);
-    }
-    const existing = this.inflight.get(key);
-    if (existing) return existing;
-    const promise = loader().then(async (result) => {
-      this.inflight.delete(key);
-      if (this.redis?.isEnabled()) {
-        await this.redis.set(key, JSON.stringify(result, (_, v) => (typeof v === 'bigint' ? Number(v) : v)), ttl).catch(() => {});
-      }
-      return result;
-    }).catch((err) => {
-      this.inflight.delete(key);
-      throw err;
-    });
-    this.inflight.set(key, promise);
-    return promise;
+    @Optional() redis?: RedisService,
+  ) {
+    super(redis);
   }
 
   async getList(query: any = {}) {
@@ -44,7 +26,11 @@ export class PublicBannerService {
     if (query.locationId) filter.locationId = query.locationId;
     if (query.locationCode) filter.locationCode = query.locationCode;
 
-    return this.getOrSet('cms:public:banners:list', 300, async () => {
+    // `activeAt` is "now" on every call — exclude it from the cache key so it
+    // does not bust the cache each request. The 300s TTL bounds staleness.
+    const { activeAt: _activeAt, ...keyFilter } = filter;
+
+    return this.cachedList(keyFilter, options, 300, async () => {
       const [data, total] = await Promise.all([
         this.bannerRepo.findManyPublic(filter, options),
         this.bannerRepo.count(filter),

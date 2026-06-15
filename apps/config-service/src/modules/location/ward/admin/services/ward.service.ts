@@ -1,15 +1,15 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { RedisService } from '@package/redis';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { WardRepository, WardFilter } from '../../repositories/ward.repository';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class WardService {
   constructor(
     private readonly wardRepo: WardRepository,
     private readonly i18n: I18nService,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
   async getList(query: any = {}) {
@@ -66,7 +66,7 @@ export class WardService {
   }
 
   private async clearWardCaches(): Promise<void> {
-    const keys = await this.redis?.keys('config:public:wards:*');
-    if (keys?.length) await this.redis?.deleteMany(keys);
+    // Version bump invalidates every cached ward query variant in one incr.
+    await this.cacheVersion.bump('config:public:wards');
   }
 }

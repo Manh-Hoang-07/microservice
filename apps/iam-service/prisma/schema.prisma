@@ -29,6 +29,9 @@ model Group {
   groupMemberRoles GroupMemberRole[]
 
   @@unique([type, code], map: "groups_idx_groups_type_code")
+  @@index([status], map: "groups_idx_status")
+  @@index([ownerId], map: "groups_idx_owner_id")
+  @@index([type], map: "groups_idx_type")
   @@map("groups")
 }
 
@@ -95,6 +98,7 @@ model Role {
 
   @@unique([code], map: "roles_code_key")
   @@index([roleType], map: "roles_idx_role_type")
+  @@index([roleType, status], map: "roles_idx_role_type_status")
   @@map("roles")
 }
 
@@ -109,7 +113,7 @@ model GroupMemberRole {
 
   @@id([userId, groupId, roleId])
   @@index([userId, groupId], map: "group_member_roles_idx_user_group")
-  @@index([groupId],         map: "group_member_roles_idx_group")
+  @@index([groupId, roleId], map: "group_member_roles_idx_group_role")
   @@map("group_member_roles")
 }
 

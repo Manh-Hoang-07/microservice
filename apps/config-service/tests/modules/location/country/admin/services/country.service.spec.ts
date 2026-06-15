@@ -13,7 +13,12 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
+
+// CacheVersionService is provided by @package/redis (no per-service wrapper).
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 
@@ -48,16 +53,16 @@ function makeMockI18n() {
   return { t: jest.fn((_key: string) => _key) };
 }
 
-function makeMockRedis() {
-  return { del: jest.fn().mockResolvedValue(1) };
+function makeMockCacheVersion() {
+  return { bump: jest.fn().mockResolvedValue(undefined) };
 }
 
 function createService(overrides: any = {}) {
   const repo = overrides.repo ?? makeMockRepo();
   const i18n = overrides.i18n ?? makeMockI18n();
-  const redis = overrides.redis ?? makeMockRedis();
-  const service = new CountryService(repo as any, i18n as any, redis as any);
-  return { service, repo, i18n, redis };
+  const cacheVersion = overrides.cacheVersion ?? makeMockCacheVersion();
+  const service = new CountryService(repo as any, i18n as any, cacheVersion as any);
+  return { service, repo, i18n, cacheVersion };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,23 +116,23 @@ describe('CountryService (admin)', () => {
 
   describe('create', () => {
     it('should create and clear cache', async () => {
-      const { service, repo, redis } = createService();
+      const { service, repo, cacheVersion } = createService();
       const result = await service.create({ name: 'US', code: 'US' });
       expect(result).toEqual(expect.objectContaining({ name: 'US' }));
-      expect(redis.del).toHaveBeenCalledWith('config:public:countries');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:countries');
     });
   });
 
   describe('update', () => {
     it('should update and clear cache', async () => {
-      const { service, repo, redis } = createService();
+      const { service, repo, cacheVersion } = createService();
       repo.findById.mockResolvedValue({ id: '1', name: 'VN' });
       repo.update.mockResolvedValue({ id: '1', name: 'Vietnam' });
 
       const result = await service.update('1', { name: 'Vietnam' });
 
       expect(result).toEqual({ id: '1', name: 'Vietnam' });
-      expect(redis.del).toHaveBeenCalledWith('config:public:countries');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:countries');
     });
 
     it('should throw NotFoundException if country does not exist', async () => {
@@ -138,14 +143,14 @@ describe('CountryService (admin)', () => {
 
   describe('delete', () => {
     it('should delete country with no provinces', async () => {
-      const { service, repo, redis } = createService();
+      const { service, repo, cacheVersion } = createService();
       repo.findById.mockResolvedValue({ id: '1' });
       repo.countProvinces.mockResolvedValue(0);
 
       const result = await service.delete('1');
 
       expect(result).toBe(true);
-      expect(redis.del).toHaveBeenCalledWith('config:public:countries');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:countries');
     });
 
     it('should throw ConflictException when country has provinces', async () => {

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
-import { RedisService } from '@package/redis';
+import { RedisService, CacheVersionService } from '@package/redis';
 import { I18nService } from 'nestjs-i18n';
 import { t } from '@package/common';
 import { ChapterRepository } from '../../repositories/chapter.repository';
@@ -12,6 +12,7 @@ export class PublicChapterService {
   constructor(
     private readonly chapterRepo: ChapterRepository,
     private readonly i18n: I18nService,
+    private readonly cacheVersion: CacheVersionService,
     private readonly redis: RedisService,
   ) {}
 
@@ -38,7 +39,7 @@ export class PublicChapterService {
   }
 
   async getNext(id: PrimaryKey) {
-    const version = await this.getVersion('comic:public:nav:v');
+    const version = await this.cacheVersion.getVersion('comic:public:nav');
     const cacheKey = `comic:public:chapternav:${version}:${id}:next`;
 
     return this.getOrSetRaw(cacheKey, 300, async () => {
@@ -49,7 +50,7 @@ export class PublicChapterService {
   }
 
   async getPrev(id: PrimaryKey) {
-    const version = await this.getVersion('comic:public:nav:v');
+    const version = await this.cacheVersion.getVersion('comic:public:nav');
     const cacheKey = `comic:public:chapternav:${version}:${id}:prev`;
 
     return this.getOrSetRaw(cacheKey, 300, async () => {
@@ -57,15 +58,6 @@ export class PublicChapterService {
       if (!current) throw new NotFoundException(t(this.i18n, 'comic.CHAPTER_NOT_FOUND'));
       return (await this.chapterRepo.findPublishedNeighbor(current.comicId, current.chapterIndex, 'prev')) || null;
     });
-  }
-
-  private async getVersion(key: string): Promise<string> {
-    try {
-      if (this.redis.isEnabled()) {
-        return (await this.redis.get(key)) || '0';
-      }
-    } catch {}
-    return '0';
   }
 
   /**

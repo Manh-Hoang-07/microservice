@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Menu, Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { toPrimaryKey } from '../../../types';
+import { capSearch } from '@package/common';
 
 export interface MenuFilter {
   search?: string;
@@ -39,9 +40,10 @@ export class MenuRepository {
     const where: Prisma.MenuWhereInput = {};
     if (filter.search) {
       // Postgres `contains` is case-sensitive by default — use insensitive mode.
+      const search = capSearch(filter.search);
       where.OR = [
-        { name: { contains: filter.search, mode: 'insensitive' } },
-        { code: { contains: filter.search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (filter.status) where.status = filter.status as any;

@@ -37,7 +37,7 @@ export class ComicClient implements OnModuleInit {
   private readonly internalSecret: string;
 
   constructor(private readonly config: ConfigService) {
-    this.baseUrl = config.get<string>('gateway.comicServiceUrl', 'http://localhost:3001/api');
+    this.baseUrl = config.get<string>('gateway.comicServiceUrl', 'http://localhost:3009/api/comics');
     this.timeout = config.get<number>('gateway.serviceTimeoutMs', 5000);
     this.internalSecret = config.get<string>('gateway.internalApiSecret', '');
   }

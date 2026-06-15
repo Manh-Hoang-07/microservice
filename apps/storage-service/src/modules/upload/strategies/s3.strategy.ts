@@ -13,6 +13,7 @@ import {
   ListObjectsV2CommandOutput,
 } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import * as fs from 'fs';
 import * as path from 'path';
 import { Readable } from 'stream';
 import {
@@ -91,13 +92,23 @@ export class S3StorageStrategy implements IUploadStrategy {
     const ext = safeExtension(file.originalname);
     const filename = `${Date.now()}-${randomUUID()}${ext}`;
 
+    // Stream từ file tạm trên đĩa (file.path) thay vì nạp toàn bộ buffer vào
+    // RAM. Truyền ContentLength (file.size) để PutObject không cần biết
+    // trước độ dài của một stream không seek được. Fallback sang buffer nếu
+    // vì lý do nào đó không có path (vd. test cũ / memoryStorage).
+    const body: Readable | Buffer =
+      typeof file.path === 'string' && file.path.length > 0
+        ? fs.createReadStream(file.path)
+        : Readable.from(file.buffer);
+
     // ContentType is forced to octet-stream + Content-Disposition: attachment
     // so any polyglot (HTML/SVG/JS smuggled past validation) cannot be
     // executed when fetched directly from the bucket origin.
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: filename,
-      Body: Readable.from(file.buffer),
+      Body: body,
+      ContentLength: file.size,
       ContentType: 'application/octet-stream',
       ContentDisposition: `attachment; filename="${filename}"`,
     });

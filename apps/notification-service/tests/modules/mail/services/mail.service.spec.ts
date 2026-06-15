@@ -440,6 +440,98 @@ describe('MailService', () => {
     });
   });
 
+  describe('template cache', () => {
+    const activeTemplate = {
+      id: 1n, code: 'welcome', name: 'Welcome', content: '<p>Hi {{ name }}</p>',
+      metadata: { subject: 'Welcome!' }, type: 'email', category: 'render', status: 'active',
+    };
+
+    it('cache miss → loads from DB then writes to cache (BigInt-safe)', async () => {
+      redis.get.mockResolvedValue(null);
+      templateRepo.findActiveByCode!.mockResolvedValue(activeTemplate);
+
+      await service.sendTemplate('welcome', { to: 'u@e.com', variables: { name: 'Jo' } });
+
+      expect(redis.get).toHaveBeenCalledWith('mail:tpl:welcome');
+      expect(templateRepo.findActiveByCode).toHaveBeenCalledWith('welcome');
+      expect(redis.set).toHaveBeenCalledWith(
+        'mail:tpl:welcome',
+        expect.any(String),
+        300,
+      );
+      // Serialized payload must be valid JSON (no BigInt throw)
+      const serialized = redis.set.mock.calls[0][1];
+      expect(() => JSON.parse(serialized)).not.toThrow();
+      expect(mockSendMail).toHaveBeenCalled();
+    });
+
+    it('cache hit → does NOT query DB', async () => {
+      redis.get.mockResolvedValue(
+        JSON.stringify({ name: 'Welcome', content: '<p>Hi {{ name }}</p>', metadata: { subject: 'Welcome!' } }),
+      );
+
+      await service.sendTemplate('welcome', { to: 'u@e.com', variables: { name: 'Jo' } });
+
+      expect(templateRepo.findActiveByCode).not.toHaveBeenCalled();
+      expect(redis.set).not.toHaveBeenCalled();
+      expect(mockSendMail).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'Welcome!', html: '<p>Hi Jo</p>' }),
+      );
+    });
+
+    it('does NOT cache a negative result when template is missing', async () => {
+      redis.get.mockResolvedValue(null);
+      templateRepo.findActiveByCode!.mockResolvedValue(null);
+
+      await service.sendTemplate('ghost', { to: 'u@e.com' });
+
+      expect(redis.set).not.toHaveBeenCalled();
+      expect(mockSendMail).not.toHaveBeenCalled();
+    });
+
+    it('does NOT cache when template content is empty', async () => {
+      redis.get.mockResolvedValue(null);
+      templateRepo.findActiveByCode!.mockResolvedValue({ ...activeTemplate, content: '' });
+
+      await service.sendTemplate('welcome', { to: 'u@e.com' });
+
+      expect(redis.set).not.toHaveBeenCalled();
+    });
+
+    it('falls back to DB when redis is disabled (no cache read/write)', async () => {
+      redis.isEnabled.mockReturnValue(false);
+      templateRepo.findActiveByCode!.mockResolvedValue(activeTemplate);
+
+      await service.sendTemplate('welcome', { to: 'u@e.com', variables: { name: 'Jo' } });
+
+      expect(redis.get).not.toHaveBeenCalled();
+      expect(redis.set).not.toHaveBeenCalled();
+      expect(templateRepo.findActiveByCode).toHaveBeenCalled();
+      expect(mockSendMail).toHaveBeenCalled();
+    });
+
+    it('falls back to DB when cache read throws', async () => {
+      redis.get.mockRejectedValue(new Error('redis down'));
+      templateRepo.findActiveByCode!.mockResolvedValue(activeTemplate);
+
+      await service.sendTemplate('welcome', { to: 'u@e.com', variables: { name: 'Jo' } });
+
+      expect(templateRepo.findActiveByCode).toHaveBeenCalled();
+      expect(mockSendMail).toHaveBeenCalled();
+    });
+
+    it('invalidateTemplate deletes the cache key', async () => {
+      await service.invalidateTemplate('welcome');
+      expect(redis.del).toHaveBeenCalledWith('mail:tpl:welcome');
+    });
+
+    it('invalidateTemplate is a no-op when redis disabled', async () => {
+      redis.isEnabled.mockReturnValue(false);
+      await service.invalidateTemplate('welcome');
+      expect(redis.del).not.toHaveBeenCalled();
+    });
+  });
+
   describe('ensureFreshConfig', () => {
     it('should not reload when config is fresh', async () => {
       configClient.getEmailConfig!.mockClear();

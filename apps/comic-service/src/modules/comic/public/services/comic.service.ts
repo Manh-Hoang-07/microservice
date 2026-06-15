@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RedisService } from '@package/redis';
+import { RedisService, CacheVersionService } from '@package/redis';
 import { I18nService } from 'nestjs-i18n';
 import { t, createPaginationMeta, parseQueryOptions } from '@package/common';
 import { PUBLIC_COMIC_STATUSES } from '../../enums/comic-status.enum';
@@ -15,11 +15,12 @@ export class PublicComicService {
   constructor(
     private readonly comicRepo: ComicRepository,
     private readonly i18n: I18nService,
+    private readonly cacheVersion: CacheVersionService,
     private readonly redis: RedisService,
   ) {}
 
   async getList(query: any = {}) {
-    const version = await this.getVersion('comic:public:list:v');
+    const version = await this.cacheVersion.getVersion('comic:public:list');
     const cacheKey = `comic:public:list:${version}:${this.hashQuery(query, LIST_KEYS)}`;
 
     return this.getOrSet(cacheKey, 60, async () => {
@@ -76,7 +77,7 @@ export class PublicComicService {
       }
     }
 
-    const chaptersVersion = await this.getVersion('comic:public:chapters:v');
+    const chaptersVersion = await this.cacheVersion.getVersion('comic:public:chapters');
     const cacheKey = `comic:public:chapters:${chaptersVersion}:${slug}:${this.hashQuery(query, CHAPTER_KEYS)}`;
 
     return this.getOrSet(cacheKey, 60, async () => {
@@ -117,15 +118,6 @@ export class PublicComicService {
     }
 
     return item;
-  }
-
-  private async getVersion(key: string): Promise<string> {
-    try {
-      if (this.redis.isEnabled()) {
-        return (await this.redis.get(key)) || '0';
-      }
-    } catch {}
-    return '0';
   }
 
   private hashQuery(query: any, allowedKeys?: string[]): string {

@@ -1,10 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { createPaginationMeta } from '@package/common';
+import { RedisService } from '@package/redis';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { toPrimaryKey } from 'src/types';
 
 type Tx = Prisma.TransactionClient | PrismaService;
+
+// Gioi han so member keo ve 1 lan — chong DoS khi nhom qua lon.
+const MEMBER_FETCH_CAP = 500;
+// Cache danh sach member ids — invalidate khi them/bot thanh vien.
+const MEMBER_IDS_TTL = 60;
+const memberIdsKey = (groupId: string | bigint) => `iam:group:${groupId}:member_ids`;
+
+const USER_GROUP_SELECT = {
+  id: true,
+  code: true,
+  name: true,
+  type: true,
+  status: true,
+  description: true,
+  ownerId: true,
+  metadata: true,
+} satisfies Prisma.GroupSelect;
 
 export interface GroupFilter {
   search?: string;
@@ -25,7 +43,12 @@ const LIST_SELECT = {
 
 @Injectable()
 export class GroupRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(GroupRepository.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly redis?: RedisService,
+  ) {}
 
   async withTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(fn);
@@ -38,8 +61,8 @@ export class GroupRepository {
     if (filter.search) {
       andConditions.push({
         OR: [
-          { code: { startsWith: filter.search, mode: 'insensitive' } },
-          { name: { startsWith: filter.search, mode: 'insensitive' } },
+          { code: { contains: filter.search, mode: 'insensitive' } },
+          { name: { contains: filter.search, mode: 'insensitive' } },
         ],
       });
     }
@@ -125,6 +148,13 @@ export class GroupRepository {
     return tx.group.delete({ where: { id: toPrimaryKey(id) } });
   }
 
+  async isMember(groupId: string | bigint, userId: string | bigint): Promise<boolean> {
+    const count = await this.prisma.userGroup.count({
+      where: { groupId: toPrimaryKey(groupId), userId: toPrimaryKey(userId) },
+    });
+    return count > 0;
+  }
+
   getMembers(groupId: string | bigint, skip: number, take: number) {
     return this.prisma.userGroup.findMany({
       where: { groupId: toPrimaryKey(groupId) },
@@ -139,54 +169,91 @@ export class GroupRepository {
   }
 
   /**
-   * Returns list of userIds belonging to the group.
-   * Used by internal API for auth-service group scope filtering.
+   * Returns list of userIds belonging to the group (capped at MEMBER_FETCH_CAP).
+   * Cached in Redis (TTL 60s), invalidated on add/remove member.
+   * Used by member listing + internal API for auth-service group scope filtering.
    */
   async findMemberIds(groupId: bigint): Promise<bigint[]> {
+    const key = memberIdsKey(groupId);
+    const cached = await this.redis?.get(key);
+    if (cached) {
+      try {
+        return (JSON.parse(cached) as string[]).map(BigInt);
+      } catch {
+        // cache hong — bo qua, doc lai tu DB
+      }
+    }
+
     const records = await this.prisma.userGroup.findMany({
       where: { groupId: toPrimaryKey(groupId) },
       select: { userId: true },
+      take: MEMBER_FETCH_CAP,
     });
-    return records.map(r => r.userId);
+    if (records.length === MEMBER_FETCH_CAP) {
+      this.logger.warn(`Group ${groupId} member list capped at ${MEMBER_FETCH_CAP}`);
+    }
+
+    const ids = records.map((r) => r.userId);
+    await this.redis?.set(key, JSON.stringify(ids.map(String)), MEMBER_IDS_TTL);
+    return ids;
   }
 
-  addMember(groupId: string | bigint, userId: string | bigint, tx: Tx = this.prisma) {
+  async addMember(groupId: string | bigint, userId: string | bigint, tx: Tx = this.prisma) {
     const gid = toPrimaryKey(groupId);
     const uid = toPrimaryKey(userId);
-    return tx.userGroup.upsert({
+    const result = await tx.userGroup.upsert({
       where: { userId_groupId: { userId: uid, groupId: gid } },
       create: { userId: uid, groupId: gid },
       update: {},
     });
+    await this.redis?.del(memberIdsKey(groupId));
+    return result;
   }
 
   findUserGroups(userId: string | bigint) {
     const uid = toPrimaryKey(userId);
     return this.prisma.userGroup.findMany({
       where: { userId: uid },
-      include: {
-        group: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            type: true,
-            status: true,
-            description: true,
-            ownerId: true,
-            metadata: true,
-          },
-        },
-      },
+      include: { group: { select: USER_GROUP_SELECT } },
       orderBy: { joinedAt: 'asc' },
     });
   }
 
-  removeMember(groupId: string | bigint, userId: string | bigint, tx: Tx = this.prisma) {
+  /** Paged variant for the "my groups" list — DB-level pagination + optional name search. */
+  findUserGroupsPaged(
+    userId: string | bigint,
+    options: { skip: number; take: number; search?: string },
+  ) {
+    return this.prisma.userGroup.findMany({
+      where: this.buildUserGroupWhere(userId, options.search),
+      include: { group: { select: USER_GROUP_SELECT } },
+      orderBy: { joinedAt: 'asc' },
+      skip: options.skip,
+      take: options.take,
+    });
+  }
+
+  countUserGroups(userId: string | bigint, search?: string) {
+    return this.prisma.userGroup.count({
+      where: this.buildUserGroupWhere(userId, search),
+    });
+  }
+
+  private buildUserGroupWhere(userId: string | bigint, search?: string): Prisma.UserGroupWhereInput {
+    const where: Prisma.UserGroupWhereInput = { userId: toPrimaryKey(userId) };
+    if (search) {
+      where.group = { name: { contains: search.slice(0, 100), mode: 'insensitive' } };
+    }
+    return where;
+  }
+
+  async removeMember(groupId: string | bigint, userId: string | bigint, tx: Tx = this.prisma) {
     const gid = toPrimaryKey(groupId);
     const uid = toPrimaryKey(userId);
-    return tx.userGroup.deleteMany({
+    const result = await tx.userGroup.deleteMany({
       where: { userId: uid, groupId: gid },
     });
+    await this.redis?.del(memberIdsKey(groupId));
+    return result;
   }
 }

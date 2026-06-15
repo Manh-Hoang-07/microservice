@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import { randomUUID } from 'crypto';
+import * as fs from 'fs';
+import { Readable } from 'stream';
 import * as path from 'path';
 import {
   FileMetadata,
@@ -64,7 +66,15 @@ export class CloudinaryStorageStrategy implements IUploadStrategy {
         },
       );
 
-      stream.end(file.buffer);
+      // Pipe file tạm trên đĩa (file.path) vào upload_stream của Cloudinary
+      // để không nạp toàn bộ file vào RAM. Fallback sang buffer nếu không có
+      // path. Bắt lỗi đọc đĩa và forward sang reject.
+      const source: NodeJS.ReadableStream =
+        typeof file.path === 'string' && file.path.length > 0
+          ? fs.createReadStream(file.path)
+          : Readable.from(file.buffer);
+      source.on('error', reject);
+      source.pipe(stream);
     }).catch((error) => {
       throw new BadRequestException(
         this.translate('storage.CLOUDINARY_UPLOAD_FAILED', { message: error.message }),

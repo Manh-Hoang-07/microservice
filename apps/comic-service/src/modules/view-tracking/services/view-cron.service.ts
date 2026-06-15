@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { randomUUID } from 'node:crypto';
 import { RedisService } from '@package/redis';
 import { ViewTrackingRepository } from '../repositories/view-tracking.repository';
+
+const LOCK_KEY = 'comic:views:buffer:lock';
+const LOCK_TTL_SECONDS = 60;
 
 @Injectable()
 export class ViewCronService {
@@ -16,7 +20,12 @@ export class ViewCronService {
   async flushViewBuffer() {
     if (!this.redis.isEnabled()) return;
 
-    const locked = await this.redis.setnx('comic:views:buffer:lock', '1', 60);
+    // Unique token + Lua compare-and-delete release: if a flush overruns the
+    // lock TTL and a second instance acquires the lock, this instance's
+    // releaseLock won't delete the new holder's lock (token mismatch). The
+    // previous `setnx`+`del` could delete another instance's lock.
+    const lockToken = randomUUID();
+    const locked = await this.redis.acquireLock(LOCK_KEY, lockToken, LOCK_TTL_SECONDS);
     if (!locked) return;
 
     try {
@@ -67,8 +76,15 @@ export class ViewCronService {
         await Promise.all(
           batch.map(async ({ comicIdStr, comicId, count }) => {
             try {
-              await this.viewRepo.upsertStats(comicId, count);
-              await this.viewRepo.upsertDailyStats(comicId, today, count);
+              // upsertStats (stats table) and upsertDailyStats (dailyStats
+              // table) touch independent rows in independent tables, so they
+              // run concurrently rather than sequentially. Both are idempotent
+              // `increment` upserts; on any failure the whole count is restored
+              // to the live buffer for the next tick to retry.
+              await Promise.all([
+                this.viewRepo.upsertStats(comicId, count),
+                this.viewRepo.upsertDailyStats(comicId, today, count),
+              ]);
             } catch (err: any) {
               // On failure, restore the unflushed entries to the live buffer
               // so the next tick retries instead of losing the count forever.
@@ -85,7 +101,7 @@ export class ViewCronService {
     } catch (err: any) {
       this.logger.error('View buffer flush error', err);
     } finally {
-      await this.redis.del('comic:views:buffer:lock');
+      await this.redis.releaseLock(LOCK_KEY, lockToken);
     }
   }
 }

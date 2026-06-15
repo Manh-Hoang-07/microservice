@@ -1,7 +1,10 @@
 // ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
 jest.mock('@package/bootstrap', () => ({ FileLogger: jest.fn() }));
 
 jest.mock('../../../../../src/modules/menu/repositories/menu.repository', () => ({
@@ -56,7 +59,7 @@ describe('PublicMenuService', () => {
 
     expect(repo.findAllWithChildren).toHaveBeenCalledWith({
       status: 'active',
-      group: 'client',
+      context: 'client',
     });
     // Only show_in_menu items pass the .filter
     expect(result).toBeDefined();

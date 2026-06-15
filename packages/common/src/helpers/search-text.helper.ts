@@ -14,3 +14,18 @@ export function buildSearchText(...fields: (string | null | undefined)[]): strin
     .map(f => f.trim().toLowerCase())
     .join(' ');
 }
+
+/** Default cap for a user-supplied search term in a repository `contains`/`LIKE`. */
+export const MAX_SEARCH_LENGTH = 100;
+
+/**
+ * Cap a user-supplied search term to a safe length before it reaches a DB
+ * `contains`/`startsWith`/`LIKE`. An unbounded term lets a client force
+ * expensive full-column scans — a cheap DoS. Trims first, then truncates.
+ *
+ * @example where.OR = [{ name: { contains: capSearch(filter.search), mode: 'insensitive' } }]
+ */
+export function capSearch(term: string | null | undefined, max = MAX_SEARCH_LENGTH): string {
+  if (typeof term !== 'string') return '';
+  return term.trim().slice(0, max);
+}

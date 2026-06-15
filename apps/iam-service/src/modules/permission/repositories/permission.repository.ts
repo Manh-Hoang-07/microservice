@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { toPrimaryKey } from 'src/types';
+import { capSearch } from '@package/common';
 
 export interface PermissionFilter {
   search?: string;
@@ -28,10 +29,11 @@ export class PermissionRepository {
     const andConditions: Prisma.PermissionWhereInput[] = [];
 
     if (filter.search) {
+      const search = capSearch(filter.search);
       andConditions.push({
         OR: [
-          { code: { startsWith: filter.search, mode: 'insensitive' } },
-          { name: { startsWith: filter.search, mode: 'insensitive' } },
+          { code: { startsWith: search, mode: 'insensitive' } },
+          { name: { startsWith: search, mode: 'insensitive' } },
         ],
       });
     }
@@ -92,11 +94,12 @@ export class PermissionRepository {
   }
 
   findSimple(search?: string) {
-    const where: Prisma.PermissionWhereInput = search
+    const capped = capSearch(search);
+    const where: Prisma.PermissionWhereInput = capped
       ? {
           OR: [
-            { code: { contains: search, mode: 'insensitive' } },
-            { name: { contains: search, mode: 'insensitive' } },
+            { code: { contains: capped, mode: 'insensitive' } },
+            { name: { contains: capped, mode: 'insensitive' } },
           ],
         }
       : {};

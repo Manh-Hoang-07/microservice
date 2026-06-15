@@ -84,9 +84,15 @@ export class LocalStorageStrategy implements IUploadStrategy {
       const filename = `${Date.now()}-${randomUUID()}${ext}`;
       const filePath = this.safePath(filename);
       try {
-        // Use pipeline for proper backpressure handling instead of manual write
+        // Stream từ file tạm (file.path) sang đích để không nạp toàn bộ file
+        // vào RAM; pipeline xử lý backpressure. Flag 'wx' đảm bảo không ghi
+        // đè (collision-safe). Fallback sang buffer nếu không có path.
+        const source: NodeJS.ReadableStream =
+          typeof file.path === 'string' && file.path.length > 0
+            ? fs.createReadStream(file.path)
+            : Readable.from(file.buffer);
         await pipeline(
-          Readable.from(file.buffer),
+          source,
           fs.createWriteStream(filePath, { flags: 'wx' }),
         );
         return {

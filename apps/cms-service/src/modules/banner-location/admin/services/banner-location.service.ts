@@ -1,23 +1,24 @@
-import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrimaryKey } from 'src/types';
-import { RedisService } from '@package/redis';
 import { CreateBannerLocationDto } from '../dtos/create-banner-location.dto';
 import { UpdateBannerLocationDto } from '../dtos/update-banner-location.dto';
 import { ChangeStatusDto } from '../dtos/change-status.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
 import { BannerLocationFilter, BannerLocationRepository } from '../../repositories/banner-location.repository';
 import { BannerStatus } from '../../../banner/enums/banner-status.enum';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class AdminBannerLocationService {
   constructor(
     private readonly locationRepo: BannerLocationRepository,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
   private async clearCache(): Promise<void> {
-    await this.redis?.del('cms:public:banners:list').catch(() => {});
+    // Banner public payloads embed location data, so invalidate the banner cache.
+    await this.cacheVersion.bump('cms:public:banners');
   }
 
   private mapP2002(err: any): never {

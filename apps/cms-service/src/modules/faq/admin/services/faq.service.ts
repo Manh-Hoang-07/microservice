@@ -1,23 +1,20 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
 import { CreateFaqDto } from '../dtos/create-faq.dto';
 import { UpdateFaqDto } from '../dtos/update-faq.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
 import { FaqFilter, FaqRepository } from '../../repositories/faq.repository';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class AdminFaqService {
   constructor(
     private readonly faqRepo: FaqRepository,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
-  private async clearCache(id?: any) {
-    await this.redis?.del('introduction:public:faq:list').catch(() => {});
-    if (id !== undefined) {
-      await this.redis?.del(`introduction:public:faq:detail:${id}`).catch(() => {});
-    }
+  private async clearCache() {
+    await this.cacheVersion.bump('cms:public:faq');
   }
 
   async getList(query: any = {}) {
@@ -61,14 +58,14 @@ export class AdminFaqService {
       status: dto.status,
       sortOrder: dto.sortOrder,
     });
-    await this.clearCache(id);
+    await this.clearCache();
     return result;
   }
 
   async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.faqRepo.delete(id);
-    await this.clearCache(id);
+    await this.clearCache();
     return { success: true };
   }
 }

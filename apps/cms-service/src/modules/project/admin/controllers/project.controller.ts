@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
+import { Permission, AuditLog, ParseBigIntPipe } from '@package/common';
 import { AdminProjectService } from '../services/project.service';
 import { CreateProjectDto } from '../dtos/create-project.dto';
 import { UpdateProjectDto } from '../dtos/update-project.dto';
@@ -18,25 +17,28 @@ export class AdminProjectController {
 
   @Permission('cms.project.manage')
   @Get(':id')
-  async getOne(@Param('id') id: string) {
-    return this.projectService.getOne(toPrimaryKey(id));
+  async getOne(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.projectService.getOne(id);
   }
 
   @Permission('cms.project.manage')
+  @AuditLog({ action: 'cms.project.create', resource: 'project' })
   @Post()
   async create(@Body() dto: CreateProjectDto) {
     return this.projectService.create(dto);
   }
 
   @Permission('cms.project.manage')
+  @AuditLog({ action: 'cms.project.update', resource: 'project' })
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
-    return this.projectService.update(toPrimaryKey(id), dto);
+  async update(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: UpdateProjectDto) {
+    return this.projectService.update(id, dto);
   }
 
   @Permission('cms.project.manage')
+  @AuditLog({ action: 'cms.project.delete', resource: 'project' })
   @Delete(':id')
-  async delete(@Param('id') id: string) {
-    return this.projectService.delete(toPrimaryKey(id));
+  async delete(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.projectService.delete(id);
   }
 }

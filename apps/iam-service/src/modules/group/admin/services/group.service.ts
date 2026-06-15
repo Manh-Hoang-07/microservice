@@ -1,9 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { CrudService, t, getSessionUserId, parseQueryOptions, createPaginationMeta } from '@package/common';
+import { CrudService, t, getSessionUserId } from '@package/common';
 import { PrimaryKey } from 'src/types';
 import { GroupRepository } from '../../repositories/group.repository';
 import { GroupMemberRoleRepository } from '../../repositories/group-member-role.repository';
+import { GroupMembersService } from '../../services/group-members.service';
 import { GROUP_OWNER_ROLE } from '../../constants/group-role.constant';
 import { CreateGroupDto } from '../dtos/create-group.dto';
 import { UpdateGroupDto } from '../dtos/update-group.dto';
@@ -14,15 +15,12 @@ export class GroupService extends CrudService<GroupRepository> {
   constructor(
     groupRepo: GroupRepository,
     private readonly memberRoleRepo: GroupMemberRoleRepository,
+    private readonly membersService: GroupMembersService,
     private readonly i18n: I18nService,
   ) {
     super(groupRepo);
   }
 
-  /**
-   * Owner phai la member + duoc gan vai tro `group_manager` (day du quyen noi
-   * dung nhom) → owner thay/lam moi thu trong nhom. Khong phu thuoc loai nhom.
-   */
   private async setupOwner(groupId: PrimaryKey, ownerId: string | bigint, tx: any) {
     await this.repository.addMember(groupId, ownerId, tx);
     await this.memberRoleRepo.assignByRoleCode(ownerId, groupId, GROUP_OWNER_ROLE, tx);
@@ -82,12 +80,7 @@ export class GroupService extends CrudService<GroupRepository> {
 
   async getMembers(id: PrimaryKey, query: any) {
     await this.getOne(id);
-    const options = parseQueryOptions(query);
-    const [data, total] = await Promise.all([
-      this.repository.getMembers(id, options.skip, options.take),
-      this.repository.countMembers(id),
-    ]);
-    return { data, meta: createPaginationMeta(options, total) };
+    return this.membersService.listMembers(id as any, query);
   }
 
   async addMember(id: PrimaryKey, dto: AddMemberDto) {

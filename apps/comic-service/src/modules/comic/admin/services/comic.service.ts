@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from 'src/generated/prisma';
 import { PrimaryKey } from 'src/types';
-import { RedisService } from '@package/redis';
+import { RedisService, CacheVersionService } from '@package/redis';
 import { I18nService } from 'nestjs-i18n';
 import { CreateComicDto } from '../dtos/create-comic.dto';
 import { UpdateComicDto } from '../dtos/update-comic.dto';
@@ -15,6 +15,7 @@ export class AdminComicService {
   constructor(
     private readonly comicRepo: ComicRepository,
     private readonly i18n: I18nService,
+    private readonly cacheVersion: CacheVersionService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -130,9 +131,9 @@ export class AdminComicService {
       if (slug) {
         await this.redis?.del(`comic:public:detail:${slug}`);
       }
-      // Increment the list version so all old list cache keys become stale.
+      // Bump the list version so all old list cache keys become stale.
       // Old keys expire naturally via their TTL (60s). No SCAN needed.
-      await this.redis?.incr('comic:public:list:v');
+      await this.cacheVersion.bump('comic:public:list');
     } catch (err: any) {
       this.logger.warn('Failed to clear comic caches', (err as Error).message);
     }

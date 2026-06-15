@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from '@package/redis';
+import { RedisService, CacheVersionService } from '@package/redis';
 import { I18nService } from 'nestjs-i18n';
 import { CreateChapterDto } from '../dtos/create-chapter.dto';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
@@ -16,6 +16,7 @@ export class AdminChapterService {
     private readonly chapterRepo: ChapterRepository,
     private readonly i18n: I18nService,
     private readonly config: ConfigService,
+    private readonly cacheVersion: CacheVersionService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -133,10 +134,10 @@ export class AdminChapterService {
     try {
       await this.redis?.del(`comic:public:chapter:${chapterId}`);
       await this.redis?.del(`comic:public:pages:${chapterId}`);
-      // Increment version keys so all old cache keys become stale.
+      // Bump version keys so all old cache keys become stale.
       // Old keys expire naturally via their TTL (60-300s). No SCAN needed.
-      await this.redis?.incr('comic:public:chapters:v');
-      await this.redis?.incr('comic:public:nav:v');
+      await this.cacheVersion.bump('comic:public:chapters');
+      await this.cacheVersion.bump('comic:public:nav');
     } catch (err: any) {
       this.logger.warn('Failed to clear chapter caches', (err as Error).message);
     }

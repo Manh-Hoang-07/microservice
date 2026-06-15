@@ -1,23 +1,20 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
 import { CreateTestimonialDto } from '../dtos/create-testimonial.dto';
 import { UpdateTestimonialDto } from '../dtos/update-testimonial.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
 import { TestimonialFilter, TestimonialRepository } from '../../repositories/testimonial.repository';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class AdminTestimonialService {
   constructor(
     private readonly testimonialRepo: TestimonialRepository,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
-  private async clearCache(id?: any) {
-    await this.redis?.del('introduction:public:testimonial:list').catch(() => {});
-    if (id !== undefined) {
-      await this.redis?.del(`introduction:public:testimonial:detail:${id}`).catch(() => {});
-    }
+  private async clearCache() {
+    await this.cacheVersion.bump('cms:public:testimonial');
   }
 
   async getList(query: any = {}) {
@@ -77,14 +74,14 @@ export class AdminTestimonialService {
       status: dto.status,
       sortOrder: dto.sortOrder,
     });
-    await this.clearCache(id);
+    await this.clearCache();
     return result;
   }
 
   async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.testimonialRepo.delete(id);
-    await this.clearCache(id);
+    await this.clearCache();
     return { success: true };
   }
 }

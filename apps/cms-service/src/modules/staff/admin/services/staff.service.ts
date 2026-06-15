@@ -1,23 +1,20 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrimaryKey } from 'src/types';
 import { CreateStaffDto } from '../dtos/create-staff.dto';
 import { UpdateStaffDto } from '../dtos/update-staff.dto';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
-import { RedisService } from '@package/redis';
 import { StaffFilter, StaffRepository } from '../../repositories/staff.repository';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class AdminStaffService {
   constructor(
     private readonly staffRepo: StaffRepository,
-    @Optional() private readonly redis?: RedisService,
+    private readonly cacheVersion: CacheVersionService,
   ) {}
 
-  private async clearCache(id?: any) {
-    await this.redis?.del('introduction:public:staff:list').catch(() => {});
-    if (id !== undefined) {
-      await this.redis?.del(`introduction:public:staff:detail:${id}`).catch(() => {});
-    }
+  private async clearCache() {
+    await this.cacheVersion.bump('cms:public:staff');
   }
 
   async getList(query: any = {}) {
@@ -78,14 +75,14 @@ export class AdminStaffService {
       status: dto.status,
       sortOrder: dto.sortOrder,
     });
-    await this.clearCache(id);
+    await this.clearCache();
     return result;
   }
 
   async delete(id: PrimaryKey) {
     await this.getOne(id);
     await this.staffRepo.delete(id);
-    await this.clearCache(id);
+    await this.clearCache();
     return { success: true };
   }
 }

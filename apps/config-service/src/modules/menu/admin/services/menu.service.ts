@@ -10,12 +10,14 @@ import { MenuRepository, MenuFilter } from '../../repositories/menu.repository';
 import { MenuTreeItem } from '../../interfaces/menu-tree-item.interface';
 import { buildMenuTree } from '../../helpers/menu.helper';
 import { createPaginationMeta, parseQueryOptions } from '@package/common';
+import { CacheVersionService } from '@package/redis';
 
 @Injectable()
 export class MenuService {
   constructor(
     private readonly menuRepo: MenuRepository,
     private readonly i18n: I18nService,
+    private readonly cacheVersion: CacheVersionService,
     @Optional() private readonly redis?: RedisService,
   ) {}
 
@@ -126,7 +128,10 @@ export class MenuService {
   }
 
   private async clearMenuCaches(): Promise<void> {
+    // Static client-menu tree key (PublicMenuService) + version bump for the
+    // raw admin-menu list cache shared by every UserMenuService request.
     await this.redis?.del('config:public:menu');
+    await this.cacheVersion.bump('config:public:menu');
   }
 
   /**

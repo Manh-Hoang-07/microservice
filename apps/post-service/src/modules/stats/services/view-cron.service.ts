@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { randomUUID } from 'node:crypto';
 import { RedisService } from '@package/redis';
 import { StatsRepository } from '../repositories/stats.repository';
+
+const LOCK_KEY = 'post:views:buffer:lock';
+const LOCK_TTL_SECONDS = 60;
 
 @Injectable()
 export class ViewCronService {
@@ -16,7 +20,12 @@ export class ViewCronService {
   async flushViewBuffer() {
     if (!this.redis.isEnabled()) return;
 
-    const locked = await this.redis.setnx('post:views:buffer:lock', '1', 60);
+    // Unique token + Lua compare-and-delete release: if a flush overruns the
+    // lock TTL and a second instance acquires the lock, this instance's
+    // releaseLock won't delete the new holder's lock (token mismatch). The
+    // previous `setnx`+`del` could delete another instance's lock.
+    const lockToken = randomUUID();
+    const locked = await this.redis.acquireLock(LOCK_KEY, lockToken, LOCK_TTL_SECONDS);
     if (!locked) return;
 
     try {
@@ -68,8 +77,14 @@ export class ViewCronService {
         await Promise.all(
           batch.map(async ({ postIdStr, postId, count }) => {
             try {
-              await this.statsRepo.upsertStats(postId, count);
-              await this.statsRepo.upsertDailyStats(postId, today, count);
+              // The two upserts hit independent tables (post stats vs. daily
+              // stats), so run them concurrently. Promise.all rejects on the
+              // first failure; the catch below restores the count exactly once
+              // regardless of which upsert failed.
+              await Promise.all([
+                this.statsRepo.upsertStats(postId, count),
+                this.statsRepo.upsertDailyStats(postId, today, count),
+              ]);
             } catch (err: any) {
               // On failure, restore unflushed entries to the live buffer so we
               // retry next tick instead of losing the count permanently.
@@ -86,7 +101,7 @@ export class ViewCronService {
     } catch (err: any) {
       this.logger.error('View buffer flush error', err);
     } finally {
-      await this.redis.del('post:views:buffer:lock');
+      await this.redis.releaseLock(LOCK_KEY, lockToken);
     }
   }
 }

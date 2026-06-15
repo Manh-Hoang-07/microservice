@@ -13,7 +13,12 @@ jest.mock('nestjs-i18n', () => ({
   I18nService: jest.fn(),
 }));
 
-jest.mock('@package/redis', () => ({ RedisService: jest.fn() }));
+jest.mock('@package/redis', () => ({
+  ...jest.requireActual('@package/redis'),
+  RedisService: jest.fn(),
+}));
+
+// CacheVersionService is provided by @package/redis (no per-service wrapper).
 
 jest.mock('src/types', () => ({ toPrimaryKey: (v: string) => BigInt(v) }), { virtual: true });
 
@@ -47,19 +52,16 @@ function makeMockI18n() {
   return { t: jest.fn((_key: string) => _key) };
 }
 
-function makeMockRedis() {
-  return {
-    keys: jest.fn().mockResolvedValue([]),
-    deleteMany: jest.fn().mockResolvedValue(1),
-  };
+function makeMockCacheVersion() {
+  return { bump: jest.fn().mockResolvedValue(undefined) };
 }
 
 function createService(overrides: any = {}) {
   const repo = overrides.repo ?? makeMockRepo();
   const i18n = overrides.i18n ?? makeMockI18n();
-  const redis = overrides.redis ?? makeMockRedis();
-  const service = new WardService(repo as any, i18n as any, redis as any);
-  return { service, repo, i18n, redis };
+  const cacheVersion = overrides.cacheVersion ?? makeMockCacheVersion();
+  const service = new WardService(repo as any, i18n as any, cacheVersion as any);
+  return { service, repo, i18n, cacheVersion };
 }
 
 // ---------------------------------------------------------------------------
@@ -109,11 +111,11 @@ describe('WardService (admin)', () => {
   });
 
   describe('create', () => {
-    it('should create and clear cache', async () => {
-      const { service, redis } = createService();
+    it('should create and bump the wards cache version', async () => {
+      const { service, cacheVersion } = createService();
       const result = await service.create({ name: 'Ward 1' });
       expect(result).toBeDefined();
-      expect(redis.keys).toHaveBeenCalledWith('config:public:wards:*');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:wards');
     });
   });
 
@@ -144,19 +146,19 @@ describe('WardService (admin)', () => {
     });
   });
 
-  describe('cache clearing', () => {
-    it('should delete matching keys', async () => {
-      const { service, repo, redis } = createService();
-      redis.keys.mockResolvedValue(['config:public:wards:1']);
-      await service.create({ name: 'X' });
-      expect(redis.deleteMany).toHaveBeenCalledWith(['config:public:wards:1']);
+  describe('cache invalidation', () => {
+    it('bumps the wards version on update', async () => {
+      const { service, repo, cacheVersion } = createService();
+      repo.findById.mockResolvedValue({ id: '1' });
+      await service.update('1', { name: 'X' });
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:wards');
     });
 
-    it('should skip deleteMany when no keys found', async () => {
-      const { service, redis } = createService();
-      redis.keys.mockResolvedValue([]);
-      await service.create({ name: 'X' });
-      expect(redis.deleteMany).not.toHaveBeenCalled();
+    it('bumps the wards version on delete', async () => {
+      const { service, repo, cacheVersion } = createService();
+      repo.findById.mockResolvedValue({ id: '1' });
+      await service.delete('1');
+      expect(cacheVersion.bump).toHaveBeenCalledWith('config:public:wards');
     });
   });
 });

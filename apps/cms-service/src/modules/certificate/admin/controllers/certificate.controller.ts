@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { Permission } from '@package/common';
-import { toPrimaryKey } from 'src/types';
+import { Permission, AuditLog, ParseBigIntPipe } from '@package/common';
 import { AdminCertificateService } from '../services/certificate.service';
 import { CreateCertificateDto } from '../dtos/create-certificate.dto';
 import { UpdateCertificateDto } from '../dtos/update-certificate.dto';
@@ -18,25 +17,28 @@ export class AdminCertificateController {
 
   @Permission('cms.certificate.manage')
   @Get(':id')
-  async getOne(@Param('id') id: string) {
-    return this.certificateService.getOne(toPrimaryKey(id));
+  async getOne(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.certificateService.getOne(id);
   }
 
   @Permission('cms.certificate.manage')
+  @AuditLog({ action: 'cms.certificate.create', resource: 'certificate' })
   @Post()
   async create(@Body() dto: CreateCertificateDto) {
     return this.certificateService.create(dto);
   }
 
   @Permission('cms.certificate.manage')
+  @AuditLog({ action: 'cms.certificate.update', resource: 'certificate' })
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateCertificateDto) {
-    return this.certificateService.update(toPrimaryKey(id), dto);
+  async update(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: UpdateCertificateDto) {
+    return this.certificateService.update(id, dto);
   }
 
   @Permission('cms.certificate.manage')
+  @AuditLog({ action: 'cms.certificate.delete', resource: 'certificate' })
   @Delete(':id')
-  async delete(@Param('id') id: string) {
-    return this.certificateService.delete(toPrimaryKey(id));
+  async delete(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.certificateService.delete(id);
   }
 }
