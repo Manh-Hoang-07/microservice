@@ -1,5 +1,6 @@
 import './register'; // Must be first — patches Module._resolveFilename for src/* paths
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
 import * as path from 'path';
 import { createApp } from '@package/bootstrap';
 
@@ -9,9 +10,25 @@ const MONOLITH_ENV = path.resolve(__dirname, '../.env');
 // Load service-specific env vars THEN set monolith overrides on top.
 // Called immediately before each dynamic import so that ConfigModule.forRoot()
 // (which validates env at decorator evaluation time) sees the correct values.
+// NODE_ENV set externally (cross-env, Docker, system) always wins over .env files.
+// Load order: .env → .env.{NODE_ENV} → .env.local → monolith overrides
+function applyEnvFile(filePath: string): void {
+  try {
+    const parsed = dotenv.parse(fs.readFileSync(filePath, 'utf8'));
+    Object.assign(process.env, parsed);
+  } catch (_) {
+    // file not found — skip silently
+  }
+}
+
 function loadEnv(serviceName: string) {
-  dotenv.config({ path: path.join(APPS_DIR, serviceName, '.env'), override: true });
-  dotenv.config({ path: MONOLITH_ENV, override: true });
+  const externalNodeEnv = process.env.NODE_ENV;
+  const serviceDir = path.join(APPS_DIR, serviceName);
+  applyEnvFile(path.join(serviceDir, '.env'));
+  if (externalNodeEnv) applyEnvFile(path.join(serviceDir, `.env.${externalNodeEnv}`));
+  applyEnvFile(path.join(serviceDir, '.env.local'));
+  applyEnvFile(MONOLITH_ENV);
+  if (externalNodeEnv) process.env.NODE_ENV = externalNodeEnv;
 }
 
 async function bootstrap() {

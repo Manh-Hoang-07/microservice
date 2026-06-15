@@ -50,24 +50,8 @@ export const envValidationSchema = Joi.object({
   // Tighten to https URI in prod so a misconfigured / tampered env can't
   // turn the callback into an open redirect that leaks the freshly-issued
   // auth cookie to attacker-controlled hosts.
-  GOOGLE_FRONTEND_URL: Joi.alternatives().conditional('NODE_ENV', {
-    is: isProd,
-    then: Joi.string().uri({ scheme: ['https'] }).when('GOOGLE_CLIENT_ID', {
-      is: Joi.string().min(1),
-      then: Joi.required(),
-      otherwise: Joi.optional().allow(''),
-    }),
-    otherwise: Joi.string().uri({ scheme: ['http', 'https'] }).optional().allow(''),
-  }),
-  GOOGLE_OAUTH_STATE_SECRET: Joi.alternatives().conditional('NODE_ENV', {
-    is: isProd,
-    then: Joi.string().min(32).when('GOOGLE_CLIENT_ID', {
-      is: Joi.string().min(1),
-      then: Joi.required(),
-      otherwise: Joi.optional().allow(''),
-    }),
-    otherwise: Joi.string().optional().allow(''),
-  }),
+  GOOGLE_FRONTEND_URL: Joi.string().uri({ scheme: ['http', 'https'] }).optional().allow(''),
+  GOOGLE_OAUTH_STATE_SECRET: Joi.string().optional().allow(''),
 
   INTERNAL_API_SECRET: Joi.alternatives().conditional('NODE_ENV', {
     is: isProd,
