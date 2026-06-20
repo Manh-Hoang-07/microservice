@@ -1,0 +1,62 @@
+# syntax=docker/dockerfile:1.7
+#
+# All-in-one monolith: nginx (port 80) + 9 NestJS services (ts-node --swc).
+# Deploy as a single Railway service — no separate nginx container needed.
+#
+# Railway env vars to set:
+#   NODE_ENV=production, EVENT_DRIVER=redis
+#   REDIS_URL, INTERNAL_API_SECRET
+#   AUTH_SERVICE_DATABASE_URL, IAM_SERVICE_DATABASE_URL, ...  (one per service)
+#   Plus all auth/jwt/google/... vars from each service's .env.production
+
+ARG NODE_VERSION=22-alpine
+ARG PNPM_VERSION=11.4.0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1: build — install deps, build shared packages, generate Prisma clients
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION} AS build
+ARG PNPM_VERSION
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+WORKDIR /workspace
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
+COPY packages packages
+COPY apps apps
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm --filter "./packages/*" build
+RUN pnpm --filter "./apps/*" -r --if-present prisma:generate
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2: runtime — node + nginx + supervisord in one image
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION} AS runtime
+ARG PNPM_VERSION
+
+ENV NODE_ENV=production \
+    NODE_OPTIONS="--max-old-space-size=2048" \
+    EVENT_DRIVER=redis \
+    UV_THREADPOOL_SIZE=16
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate && \
+    apk add --no-cache nginx supervisor curl dumb-init && \
+    addgroup -S app && adduser -S app -G app && \
+    mkdir -p /var/log/supervisor /run/nginx
+
+WORKDIR /workspace
+COPY --from=build --chown=app:app /workspace /workspace
+
+COPY infrastructure/nginx/nginx.monolith.conf /etc/nginx/http.d/default.conf
+COPY infrastructure/docker/supervisord.monolith.conf /etc/supervisord.conf
+COPY infrastructure/docker/entrypoint.monolith.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
+  CMD curl -fsS "http://localhost/health/ready" >/dev/null || exit 1
+
+ENTRYPOINT ["dumb-init", "--", "/usr/local/bin/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

@@ -4,70 +4,69 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createApp } from '@package/bootstrap';
 
-const APPS_DIR = path.resolve(__dirname, '../..');
-const MONOLITH_ENV = path.resolve(__dirname, '../.env');
+const MONOLITH_DIR = path.resolve(__dirname, '..');
 
-// Load service-specific env vars THEN set monolith overrides on top.
-// Called immediately before each dynamic import so that ConfigModule.forRoot()
-// (which validates env at decorator evaluation time) sees the correct values.
-// NODE_ENV set externally (cross-env, Docker, system) always wins over .env files.
-// Load order: .env → .env.{NODE_ENV} → .env.local → monolith overrides
-function applyEnvFile(filePath: string): void {
-  try {
-    const parsed = dotenv.parse(fs.readFileSync(filePath, 'utf8'));
-    Object.assign(process.env, parsed);
-  } catch (_) {
-    // file not found — skip silently
+// Load monolith env files ONCE at startup.
+// Priority: .env → .env.{NODE_ENV} → .env.local
+// NODE_ENV from process (cross-env/Docker) always wins.
+(function loadMonolithEnv() {
+  const externalNodeEnv = process.env.NODE_ENV;
+  for (const file of ['.env', externalNodeEnv ? `.env.${externalNodeEnv}` : null, '.env.local']) {
+    if (!file) continue;
+    try {
+      Object.assign(process.env, dotenv.parse(fs.readFileSync(path.join(MONOLITH_DIR, file), 'utf8')));
+    } catch (_) {}
+  }
+  if (externalNodeEnv) process.env.NODE_ENV = externalNodeEnv;
+})();
+
+// Before each service import, map AUTH_SERVICE_DATABASE_URL → DATABASE_URL etc.
+function useService(serviceName: string) {
+  const prefix = serviceName.toUpperCase().replace(/-/g, '_') + '_';
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith(prefix)) {
+      process.env[key.slice(prefix.length)] = process.env[key]!;
+    }
   }
 }
 
-function loadEnv(serviceName: string) {
-  const externalNodeEnv = process.env.NODE_ENV;
-  const serviceDir = path.join(APPS_DIR, serviceName);
-  applyEnvFile(path.join(serviceDir, '.env'));
-  if (externalNodeEnv) applyEnvFile(path.join(serviceDir, `.env.${externalNodeEnv}`));
-  applyEnvFile(path.join(serviceDir, '.env.local'));
-  applyEnvFile(MONOLITH_ENV);
-  if (externalNodeEnv) process.env.NODE_ENV = externalNodeEnv;
-}
-
 async function bootstrap() {
-  // Dynamic imports are used so each module is evaluated AFTER loadEnv() sets
+  // Dynamic imports are used so each module is evaluated AFTER useService() sets
   // the correct DATABASE_URL / REDIS_URL for that service.
 
-  loadEnv('auth-service');
+  useService('auth-service');
   const { AppModule: AuthAppModule } = await import('../../auth-service/src/app.module');
   await createApp({ serviceName: 'Auth Service', defaultPort: 3001, module: AuthAppModule, excludePrefixes: ['.well-known/*path'] });
 
-  loadEnv('iam-service');
+  useService('iam-service');
   const { AppModule: IamAppModule } = await import('../../iam-service/src/app.module');
   await createApp({ serviceName: 'IAM Service', defaultPort: 3002, module: IamAppModule });
 
-  loadEnv('config-service');
+  useService('config-service');
   const { ConfigAppModule } = await import('../../config-service/src/app.module');
   await createApp({ serviceName: 'Config Service', defaultPort: 3003, module: ConfigAppModule });
 
-  loadEnv('storage-service');
+  useService('storage-service');
   const { StorageAppModule } = await import('../../storage-service/src/app.module');
   await createApp({ serviceName: 'Storage Service', defaultPort: 3004, module: StorageAppModule });
 
-  loadEnv('notification-service');
+  useService('notification-service');
   const { NotificationAppModule } = await import('../../notification-service/src/app.module');
   await createApp({ serviceName: 'Notification Service', defaultPort: 3005, module: NotificationAppModule });
 
-  loadEnv('cms-service');
+  useService('cms-service');
   const { AppModule: CmsAppModule } = await import('../../cms-service/src/app.module');
   await createApp({ serviceName: 'CMS Service', defaultPort: 3006, module: CmsAppModule });
 
-  loadEnv('post-service');
+  useService('post-service');
   const { AppModule: PostAppModule } = await import('../../post-service/src/app.module');
   await createApp({ serviceName: 'Post Service', defaultPort: 3008, module: PostAppModule });
 
-  loadEnv('comic-service');
+  useService('comic-service');
   const { AppModule: ComicAppModule } = await import('../../comic-service/src/app.module');
   await createApp({ serviceName: 'Comic Service', defaultPort: 3009, module: ComicAppModule });
 
-  loadEnv('web-api-service');
+  useService('web-api-service');
   const { GatewayAppModule } = await import('../../web-api-service/src/app.module');
   await createApp({ serviceName: 'Web API Service', defaultPort: 3010, module: GatewayAppModule });
 
